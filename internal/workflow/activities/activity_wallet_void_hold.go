@@ -3,7 +3,7 @@ package activities
 import (
 	"context"
 
-	"github.com/formancehq/formance-sdk-go/v2/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
 	"go.temporal.io/sdk/workflow"
 )
 

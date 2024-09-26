@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/formancehq/formance-sdk-go/v2/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/workflow"
 )

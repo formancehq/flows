@@ -1,16 +1,12 @@
 VERSION 0.8
 
-IMPORT github.com/formancehq/earthly:tags/v0.15.0 AS core
-IMPORT ../.. AS stack
-IMPORT ../../releases AS releases
-IMPORT .. AS ee
+IMPORT github.com/formancehq/earthly:tags/v0.16.2 AS core
 
 FROM core+base-image
 
 sources:
     WORKDIR src
-    COPY --pass-args (releases+sdk-generate/go) /src/releases/sdks/go
-    WORKDIR /src/ee/orchestration
+    WORKDIR /src
     COPY go.* .
     COPY --dir pkg cmd internal .
     COPY main.go .
@@ -21,7 +17,7 @@ generate:
     RUN apk update && apk add openjdk11
     DO --pass-args core+GO_INSTALL --package=go.uber.org/mock/mockgen@latest
     COPY (+sources/*) /src
-    WORKDIR /src/ee/orchestration
+    WORKDIR /src
     DO --pass-args core+GO_GENERATE
     SAVE ARTIFACT internal AS LOCAL internal
     SAVE ARTIFACT pkg AS LOCAL pkg
@@ -30,7 +26,7 @@ generate:
 compile:
     FROM core+builder-image
     COPY (+sources/*) /src
-    WORKDIR /src/ee/orchestration
+    WORKDIR /src
     ARG VERSION=latest
     DO --pass-args core+GO_COMPILE --VERSION=$VERSION
 
@@ -46,7 +42,7 @@ build-image:
 tests:
     FROM core+builder-image
     COPY (+sources/*) /src
-    WORKDIR /src/ee/orchestration
+    WORKDIR /src
     WITH DOCKER --pull=postgres:15-alpine
         DO --pass-args core+GO_TESTS
     END
@@ -61,14 +57,14 @@ deploy:
     RUN kubectl patch Versions.formance.com default -p "{\"spec\":{\"orchestration\": \"${tag}\"}}" --type=merge
 
 deploy-staging:
-    BUILD --pass-args stack+deployer-module --MODULE=orchestration
+    BUILD --pass-args core+deploy-staging
 
 lint:
     FROM core+builder-image
     COPY (+sources/*) /src
     COPY --pass-args +tidy/go.* .
-    WORKDIR /src/ee/orchestration
-    DO --pass-args stack+GO_LINT
+    WORKDIR /src
+    DO --pass-args core+GO_LINT
     SAVE ARTIFACT cmd AS LOCAL cmd
     SAVE ARTIFACT internal AS LOCAL internal
     SAVE ARTIFACT pkg AS LOCAL pkg
@@ -84,7 +80,7 @@ openapi:
     FROM node:20-alpine
     RUN apk update && apk add yq
     RUN npm install -g openapi-merge-cli
-    WORKDIR /src/ee/orchestration
+    WORKDIR /src
     COPY --dir openapi openapi
     RUN openapi-merge-cli --config ./openapi/openapi-merge.json
     RUN yq -oy ./openapi.json > openapi.yaml
@@ -93,8 +89,11 @@ openapi:
 tidy:
     FROM core+builder-image
     COPY --pass-args (+sources/src) /src
-    WORKDIR /src/ee/orchestration
-    DO --pass-args stack+GO_TIDY
+    WORKDIR /src
+    DO --pass-args core+GO_TIDY
 
 release:
-    BUILD --pass-args stack+goreleaser --path=ee/orchestration
+    FROM core+builder-image
+    ARG mode=local
+    COPY --dir . /src
+    DO core+GORELEASER --mode=$mode

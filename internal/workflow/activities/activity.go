@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	sdk "github.com/formancehq/formance-sdk-go/v2"
+	sdk "github.com/formancehq/formance-sdk-go/v3"
 	"github.com/formancehq/go-libs/pointer"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/pkg/errors"
