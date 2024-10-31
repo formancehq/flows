@@ -20,8 +20,8 @@ require (
 	github.com/uptrace/bun v1.2.3
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/trace v1.30.0
-	go.temporal.io/api v1.39.0
-	go.temporal.io/sdk v1.29.1
+	go.temporal.io/api v1.40.0
+	go.temporal.io/sdk v1.30.0
 	go.temporal.io/sdk/contrib/opentelemetry v0.6.0
 	go.uber.org/fx v1.22.2
 	go.uber.org/mock v0.4.0
@@ -121,7 +121,7 @@ require (
 	github.com/nats-io/nats.go v1.37.0 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/nexus-rpc/sdk-go v0.0.10 // indirect
+	github.com/nexus-rpc/sdk-go v0.0.11 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.20.2 // indirect
 	github.com/onsi/gomega v1.34.2 // indirect
