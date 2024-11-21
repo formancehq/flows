@@ -1,8 +1,7 @@
 module github.com/formancehq/orchestration
 
 go 1.22.0
-
-toolchain go1.22.7
+toolchain go1.23.3
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.7
@@ -17,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/uptrace/bun v1.2.3
+	github.com/uptrace/bun v1.2.6
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/trace v1.30.0
 	go.temporal.io/api v1.39.0
@@ -172,7 +171,7 @@ require (
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
