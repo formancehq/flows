@@ -24,7 +24,7 @@ type Activities struct {
 }
 
 func (a Activities) processTrigger(ctx context.Context, request ProcessEventRequest, trigger Trigger) bool {
-	ctx, span := workflow.Tracer.Start(ctx, "Triggers:CheckRequirements", trace.WithAttributes(
+	_, span := workflow.Tracer.Start(ctx, "Triggers:CheckRequirements", trace.WithAttributes(
 		attribute.String("trigger-id", trigger.ID),
 	))
 	defer span.End()

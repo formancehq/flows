@@ -10,7 +10,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: Server information
           content:
             application/json:
@@ -36,7 +36,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: List of triggers
           content:
             application/json:
@@ -59,7 +59,7 @@ paths:
             schema:
               $ref: '#/components/schemas/TriggerData'
       responses:
-        "201":
+        '201':
           description: Created trigger
           content:
             application/json:
@@ -85,7 +85,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: A specific trigger
           content:
             application/json:
@@ -103,7 +103,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "204":
+        '204':
           description: Trigger deleted
         default:
           $ref: '#/components/responses/ErrorResponse'
@@ -125,7 +125,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: List of triggers occurrences
           content:
             application/json:
@@ -144,7 +144,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: List of workflows
           content:
             application/json:
@@ -167,7 +167,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateWorkflowRequest'
       responses:
-        "201":
+        '201':
           description: Created workflow
           content:
             application/json:
@@ -194,7 +194,7 @@ paths:
       description: Get a flow by id
       operationId: getWorkflow
       responses:
-        "200":
+        '200':
           description: The workflow
           content:
             application/json:
@@ -212,7 +212,7 @@ paths:
       description: Delete a flow by id
       operationId: deleteWorkflow
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/ErrorResponse'
@@ -247,7 +247,7 @@ paths:
             schema:
               $ref: '#/components/schemas/RunWorkflowRequest'
       responses:
-        "201":
+        '201':
           description: The workflow instance
           content:
             application/json:
@@ -281,7 +281,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: List of workflow instances
           content:
             application/json:
@@ -308,7 +308,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: The workflow instance
           content:
             application/json:
@@ -345,7 +345,7 @@ paths:
                 name:
                   type: string
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/ErrorResponse'
@@ -368,7 +368,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/ErrorResponse'
@@ -391,7 +391,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: The workflow instance history
           content:
             application/json:
@@ -425,7 +425,7 @@ paths:
       tags:
         - orchestration.v1
       responses:
-        "200":
+        '200':
           description: The workflow instance stage history
           content:
             application/json:
@@ -444,7 +444,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: Server information
           content:
             application/json:
@@ -473,7 +473,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: List of triggers
           content:
             application/json:
@@ -497,7 +497,7 @@ paths:
             schema:
               $ref: '#/components/schemas/V2TriggerData'
       responses:
-        "201":
+        '201':
           description: Created trigger
           content:
             application/json:
@@ -524,7 +524,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: A specific trigger
           content:
             application/json:
@@ -543,7 +543,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "204":
+        '204':
           description: Trigger deleted
         default:
           $ref: '#/components/responses/V2ErrorResponse'
@@ -572,7 +572,7 @@ paths:
               type: object
               additionalProperties: true
       responses:
-        "200":
+        '200':
           description: Test a trigger
           content:
             application/json:
@@ -602,7 +602,7 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/PageSize'
       responses:
-        "200":
+        '200':
           description: List of triggers occurrences
           content:
             application/json:
@@ -625,7 +625,7 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/PageSize'
       responses:
-        "200":
+        '200':
           description: List of workflows
           content:
             application/json:
@@ -649,7 +649,7 @@ paths:
             schema:
               $ref: '#/components/schemas/V2CreateWorkflowRequest'
       responses:
-        "201":
+        '201':
           description: Created workflow
           content:
             application/json:
@@ -677,7 +677,7 @@ paths:
       operationId: v2GetWorkflow
       x-speakeasy-name-override: GetWorkflow
       responses:
-        "200":
+        '200':
           description: The workflow
           content:
             application/json:
@@ -696,7 +696,7 @@ paths:
       operationId: v2DeleteWorkflow
       x-speakeasy-name-override: DeleteWorkflow
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/V2ErrorResponse'
@@ -732,7 +732,7 @@ paths:
             schema:
               $ref: '#/components/schemas/V2RunWorkflowRequest'
       responses:
-        "201":
+        '201':
           description: The workflow instance
           content:
             application/json:
@@ -769,7 +769,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: List of workflow instances
           content:
             application/json:
@@ -797,7 +797,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: The workflow instance
           content:
             application/json:
@@ -835,7 +835,7 @@ paths:
                 name:
                   type: string
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/V2ErrorResponse'
@@ -859,7 +859,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "204":
+        '204':
           description: No content
         default:
           $ref: '#/components/responses/V2ErrorResponse'
@@ -883,7 +883,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: The workflow instance history
           content:
             application/json:
@@ -918,7 +918,7 @@ paths:
       tags:
         - orchestration.v2
       responses:
-        "200":
+        '200':
           description: The workflow instance stage history
           content:
             application/json:
@@ -929,6 +929,9 @@ paths:
       security:
         - Authorization:
             - orchestration:read
+  x-speakeasy-errors:
+    statusCodes:
+      - default
 components:
   schemas:
     ServerInfo:
@@ -1367,11 +1370,13 @@ components:
           default: false
         metadata:
           type: object
-          description: |
+          description: >
             A set of key/value pairs that you can attach to a transfer object.
+
             It can be useful for storing additional information about the transfer in a structured format.
+
           example:
-            order_id: "6735"
+            order_id: '6735'
     ActivityStripeTransfer:
       $ref: '#/components/schemas/StripeTransferRequest'
     ActivityListWallets:
@@ -1439,7 +1444,7 @@ components:
           example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
         next:
           type: string
-          example: ""
+          example: ''
     ActivityGetAccount:
       type: object
       required:
@@ -1534,7 +1539,7 @@ components:
           asset: USD/2
           amount: 100
         metadata:
-          key: ""
+          key: ''
         sources: []
     LedgerAccountSubject:
       type: object
@@ -1584,7 +1589,8 @@ components:
           $ref: '#/components/schemas/Monetary'
         pending:
           type: boolean
-          description: Set to true to create a pending hold. If false, the wallet will be debited immediately.
+          description: >-
+            Set to true to create a pending hold. If false, the wallet will be debited immediately.
         metadata:
           type: object
           additionalProperties:
@@ -1608,7 +1614,7 @@ components:
           asset: USD/2
           amount: 100
         metadata:
-          key: ""
+          key: ''
         pending: true
     ActivityGetWallet:
       type: object
@@ -1964,14 +1970,7 @@ components:
           properties:
             plain:
               type: string
-              example: |
-                vars {
-                account $user
-                }
-                send [COIN 10] (
-                	source = @world
-                	destination = $user
-                )
+              example: "vars {\naccount $user\n}\nsend [COIN 10] (\n\tsource = @world\n\tdestination = $user\n)\n"
             vars:
               type: object
               properties: {}
@@ -1990,7 +1989,7 @@ components:
       additionalProperties:
         type: string
       example:
-        admin: "true"
+        admin: 'true'
     Posting:
       type: object
       properties:
@@ -2042,7 +2041,7 @@ components:
           additionalProperties:
             type: string
           example:
-            admin: "true"
+            admin: 'true'
         volumes:
           $ref: '#/components/schemas/Volumes'
         effectiveVolumes:
@@ -2265,7 +2264,7 @@ components:
               example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
             next:
               type: string
-              example: ""
+              example: ''
             data:
               type: array
               items:
@@ -2347,7 +2346,7 @@ components:
               example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
             next:
               type: string
-              example: ""
+              example: ''
             data:
               type: array
               items:
@@ -2378,7 +2377,7 @@ components:
               example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
             next:
               type: string
-              example: ""
+              example: ''
             data:
               type: array
               items:
@@ -2436,7 +2435,7 @@ components:
               example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
             next:
               type: string
-              example: ""
+              example: ''
             data:
               type: array
               items:
@@ -2604,11 +2603,13 @@ components:
           default: false
         metadata:
           type: object
-          description: |
+          description: >
             A set of key/value pairs that you can attach to a transfer object.
+
             It can be useful for storing additional information about the transfer in a structured format.
+
           example:
-            order_id: "6735"
+            order_id: '6735'
     V2ActivityStripeTransfer:
       $ref: '#/components/schemas/V2StripeTransferRequest'
     V2ActivityListWallets:
@@ -2676,7 +2677,7 @@ components:
           example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
         next:
           type: string
-          example: ""
+          example: ''
     V2ActivityGetAccount:
       type: object
       required:
@@ -2761,7 +2762,7 @@ components:
           asset: USD/2
           amount: 100
         metadata:
-          key: ""
+          key: ''
         sources: []
     V2LedgerAccountSubject:
       type: object
@@ -2811,7 +2812,8 @@ components:
           $ref: '#/components/schemas/V2Monetary'
         pending:
           type: boolean
-          description: Set to true to create a pending hold. If false, the wallet will be debited immediately.
+          description: >-
+            Set to true to create a pending hold. If false, the wallet will be debited immediately.
         metadata:
           type: object
           additionalProperties:
@@ -2835,7 +2837,7 @@ components:
           asset: USD/2
           amount: 100
         metadata:
-          key: ""
+          key: ''
         pending: true
     V2ActivityGetWallet:
       type: object
@@ -3182,14 +3184,7 @@ components:
           properties:
             plain:
               type: string
-              example: |
-                vars {
-                account $user
-                }
-                send [COIN 10] (
-                	source = @world
-                	destination = $user
-                )
+              example: "vars {\naccount $user\n}\nsend [COIN 10] (\n\tsource = @world\n\tdestination = $user\n)\n"
             vars:
               type: object
               properties: {}
@@ -3208,7 +3203,7 @@ components:
       additionalProperties:
         type: string
       example:
-        admin: "true"
+        admin: 'true'
     V2Posting:
       type: object
       properties:
@@ -3260,7 +3255,7 @@ components:
           additionalProperties:
             type: string
           example:
-            admin: "true"
+            admin: 'true'
         volumes:
           $ref: '#/components/schemas/V2Volumes'
         effectiveVolumes:
@@ -3359,3 +3354,13 @@ components:
         format: int64
         minimum: 1
         maximum: 1000
+  securitySchemes:
+    Authorization:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: "/oauth/token"
+          refreshUrl: "/oauth/token"
+          scopes: {}
+servers:
+  - url: http://localhost:8080/

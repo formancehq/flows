@@ -5,6 +5,7 @@
 //
 //	mockgen -source backend.go -destination backend_generated.go -package api . Backend
 //
+
 // Package api is a generated GoMock package.
 package api
 
@@ -12,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	bunpaginate "github.com/formancehq/go-libs/v2/bun/bunpaginate"
 	triggers "github.com/formancehq/orchestration/internal/triggers"
 	workflow "github.com/formancehq/orchestration/internal/workflow"
-	bunpaginate "github.com/formancehq/go-libs/v2/bun/bunpaginate"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -22,6 +23,7 @@ import (
 type MockBackend struct {
 	ctrl     *gomock.Controller
 	recorder *MockBackendMockRecorder
+	isgomock struct{}
 }
 
 // MockBackendMockRecorder is the mock recorder for MockBackend.

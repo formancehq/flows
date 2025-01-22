@@ -19,8 +19,7 @@ func listTriggers(backend api.Backend) func(writer http.ResponseWriter, request 
 				return nil, err
 			}
 
-			var name string = ""
-			name = r.URL.Query().Get("name")
+			name := r.URL.Query().Get("name")
 
 			return &triggers.ListTriggersQuery{
 				PageSize: pageSize,

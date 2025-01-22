@@ -1,0 +1,15 @@
+# WorkflowInstance
+
+
+## Fields
+
+| Field                                                              | Type                                                               | Required                                                           | Description                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `WorkflowID`                                                       | *string*                                                           | :heavy_check_mark:                                                 | N/A                                                                |
+| `ID`                                                               | *string*                                                           | :heavy_check_mark:                                                 | N/A                                                                |
+| `CreatedAt`                                                        | [time.Time](https://pkg.go.dev/time#Time)                          | :heavy_check_mark:                                                 | N/A                                                                |
+| `UpdatedAt`                                                        | [time.Time](https://pkg.go.dev/time#Time)                          | :heavy_check_mark:                                                 | N/A                                                                |
+| `Status`                                                           | [][components.StageStatus](../../models/components/stagestatus.md) | :heavy_minus_sign:                                                 | N/A                                                                |
+| `Terminated`                                                       | *bool*                                                             | :heavy_check_mark:                                                 | N/A                                                                |
+| `TerminatedAt`                                                     | [*time.Time](https://pkg.go.dev/time#Time)                         | :heavy_minus_sign:                                                 | N/A                                                                |
+| `Error`                                                            | **string*                                                          | :heavy_minus_sign:                                                 | N/A                                                                |

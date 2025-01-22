@@ -1,0 +1,9 @@
+# GetInstanceHistoryResponse
+
+
+## Fields
+
+| Field                                                                                                           | Type                                                                                                            | Required                                                                                                        | Description                                                                                                     |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `HTTPMeta`                                                                                                      | [components.HTTPMetadata](../../models/components/httpmetadata.md)                                              | :heavy_check_mark:                                                                                              | N/A                                                                                                             |
+| `GetWorkflowInstanceHistoryResponse`                                                                            | [*components.GetWorkflowInstanceHistoryResponse](../../models/components/getworkflowinstancehistoryresponse.md) | :heavy_minus_sign:                                                                                              | The workflow instance history                                                                                   |

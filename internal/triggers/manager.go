@@ -102,6 +102,9 @@ func (m *TriggerManager) DeleteTrigger(ctx context.Context, triggerID string) er
 		Where("id = ?", triggerID).
 		Set("deleted_at = ?", time.Now()).
 		Exec(ctx)
+	if err != nil {
+		return err
+	}
 	rowsAffected, err := updated.RowsAffected()
 	if err != nil {
 		panic(err)
