@@ -1,0 +1,10 @@
+# V2StageSendDestination
+
+
+## Fields
+
+| Field                                                                                                 | Type                                                                                                  | Required                                                                                              | Description                                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Wallet`                                                                                              | [*components.V2StageSendDestinationWallet](../../models/components/v2stagesenddestinationwallet.md)   | :heavy_minus_sign:                                                                                    | N/A                                                                                                   |
+| `Account`                                                                                             | [*components.V2StageSendDestinationAccount](../../models/components/v2stagesenddestinationaccount.md) | :heavy_minus_sign:                                                                                    | N/A                                                                                                   |
+| `Payment`                                                                                             | [*components.V2StageSendDestinationPayment](../../models/components/v2stagesenddestinationpayment.md) | :heavy_minus_sign:                                                                                    | N/A                                                                                                   |

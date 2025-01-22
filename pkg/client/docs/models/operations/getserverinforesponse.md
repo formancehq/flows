@@ -1,0 +1,9 @@
+# GetServerInfoResponse
+
+
+## Fields
+
+| Field                                                              | Type                                                               | Required                                                           | Description                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `HTTPMeta`                                                         | [components.HTTPMetadata](../../models/components/httpmetadata.md) | :heavy_check_mark:                                                 | N/A                                                                |
+| `ServerInfo`                                                       | [*components.ServerInfo](../../models/components/serverinfo.md)    | :heavy_minus_sign:                                                 | Server information                                                 |

@@ -1,0 +1,9 @@
+# V2GetInstanceResponse
+
+
+## Fields
+
+| Field                                                                                                 | Type                                                                                                  | Required                                                                                              | Description                                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `HTTPMeta`                                                                                            | [components.HTTPMetadata](../../models/components/httpmetadata.md)                                    | :heavy_check_mark:                                                                                    | N/A                                                                                                   |
+| `V2GetWorkflowInstanceResponse`                                                                       | [*components.V2GetWorkflowInstanceResponse](../../models/components/v2getworkflowinstanceresponse.md) | :heavy_minus_sign:                                                                                    | The workflow instance                                                                                 |

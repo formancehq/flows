@@ -1,0 +1,10 @@
+# StageSendSource
+
+
+## Fields
+
+| Field                                                                                   | Type                                                                                    | Required                                                                                | Description                                                                             |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Wallet`                                                                                | [*components.StageSendSourceWallet](../../models/components/stagesendsourcewallet.md)   | :heavy_minus_sign:                                                                      | N/A                                                                                     |
+| `Account`                                                                               | [*components.StageSendSourceAccount](../../models/components/stagesendsourceaccount.md) | :heavy_minus_sign:                                                                      | N/A                                                                                     |
+| `Payment`                                                                               | [*components.StageSendSourcePayment](../../models/components/stagesendsourcepayment.md) | :heavy_minus_sign:                                                                      | N/A                                                                                     |

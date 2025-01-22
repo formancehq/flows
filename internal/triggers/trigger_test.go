@@ -81,7 +81,7 @@ func TestEvalVariables(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"data": {"role": "admin"}}`))
+		_, _ = w.Write([]byte(`{"data": {"role": "admin"}}`))
 	}))
 	t.Cleanup(srv.Close)
 

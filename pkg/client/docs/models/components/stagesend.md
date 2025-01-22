@@ -1,0 +1,12 @@
+# StageSend
+
+
+## Fields
+
+| Field                                                                               | Type                                                                                | Required                                                                            | Description                                                                         |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `Amount`                                                                            | [*components.Monetary](../../models/components/monetary.md)                         | :heavy_minus_sign:                                                                  | N/A                                                                                 |
+| `Destination`                                                                       | [*components.StageSendDestination](../../models/components/stagesenddestination.md) | :heavy_minus_sign:                                                                  | N/A                                                                                 |
+| `Source`                                                                            | [*components.StageSendSource](../../models/components/stagesendsource.md)           | :heavy_minus_sign:                                                                  | N/A                                                                                 |
+| `Metadata`                                                                          | map[string]*string*                                                                 | :heavy_minus_sign:                                                                  | N/A                                                                                 |
+| `Timestamp`                                                                         | [*time.Time](https://pkg.go.dev/time#Time)                                          | :heavy_minus_sign:                                                                  | N/A                                                                                 |

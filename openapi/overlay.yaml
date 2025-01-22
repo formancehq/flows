@@ -1,0 +1,15 @@
+paths:
+  x-speakeasy-errors:
+    statusCodes:
+      - default
+components:
+  securitySchemes:
+    Authorization:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: "/oauth/token"
+          refreshUrl: "/oauth/token"
+          scopes: { }
+servers:
+  - url: http://localhost:8080/
