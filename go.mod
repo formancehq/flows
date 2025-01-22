@@ -10,7 +10,7 @@ require (
 	github.com/formancehq/formance-sdk-go/v3 v3.2.0
 	github.com/formancehq/go-libs/v2 v2.0.1-0.20250120193835-4b6354eeda8d
 	github.com/go-chi/chi/v5 v5.2.0
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.24.0
 	github.com/google/uuid v1.6.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/pkg/errors v0.9.1
@@ -73,7 +73,7 @@ require (
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-chi/render v1.0.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
