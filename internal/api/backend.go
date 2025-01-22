@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/formancehq/go-libs/bun/bunpaginate"
+	"github.com/formancehq/go-libs/v2/bun/bunpaginate"
 
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/formancehq/orchestration/internal/workflow"

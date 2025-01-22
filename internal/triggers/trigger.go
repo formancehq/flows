@@ -6,7 +6,7 @@ import (
 
 	"github.com/formancehq/orchestration/internal/workflow"
 
-	"github.com/formancehq/go-libs/publish"
+	"github.com/formancehq/go-libs/v2/publish"
 
 	"github.com/expr-lang/expr"
 	"github.com/google/uuid"

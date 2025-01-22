@@ -5,26 +5,26 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/formancehq/go-libs/bun/bunmigrate"
-	"github.com/formancehq/go-libs/licence"
+	"github.com/formancehq/go-libs/v2/bun/bunmigrate"
+	"github.com/formancehq/go-libs/v2/licence"
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/uptrace/bun"
 
-	"github.com/formancehq/go-libs/bun/bunconnect"
+	"github.com/formancehq/go-libs/v2/bun/bunconnect"
 
-	"github.com/formancehq/go-libs/auth"
-	"github.com/formancehq/go-libs/otlp"
+	"github.com/formancehq/go-libs/v2/auth"
+	"github.com/formancehq/go-libs/v2/otlp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/formancehq/orchestration/internal/workflow"
 
-	"github.com/formancehq/go-libs/publish"
+	"github.com/formancehq/go-libs/v2/publish"
 	"github.com/formancehq/orchestration/internal/temporalclient"
 
-	"github.com/formancehq/go-libs/otlp/otlptraces"
-	"github.com/formancehq/go-libs/service"
+	"github.com/formancehq/go-libs/v2/otlp/otlptraces"
+	"github.com/formancehq/go-libs/v2/service"
 	_ "github.com/formancehq/orchestration/internal/workflow/stages/all"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
@@ -68,6 +68,8 @@ func NewRootCommand() *cobra.Command {
 			return storage.Migrate(cmd.Context(), db)
 		}),
 	)
+	otlp.AddFlags(cmd.PersistentFlags())
+	otlptraces.AddFlags(cmd.PersistentFlags())
 
 	return cmd
 }
@@ -90,6 +92,7 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 	temporalInitSearchAttributes, _ := cmd.Flags().GetBool(temporalInitSearchAttributes)
 
 	return fx.Options(
+		otlp.FXModuleFromFlags(cmd),
 		otlptraces.FXModuleFromFlags(cmd),
 		temporalclient.NewModule(
 			temporalAddress,

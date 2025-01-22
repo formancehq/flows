@@ -7,10 +7,10 @@ import (
 
 	"go.temporal.io/sdk/temporal"
 
-	"github.com/formancehq/go-libs/collectionutils"
+	"github.com/formancehq/go-libs/v2/collectionutils"
 
 	"github.com/expr-lang/expr"
-	"github.com/formancehq/go-libs/api"
+	"github.com/formancehq/go-libs/v2/api"
 	"github.com/pkg/errors"
 )
 

@@ -7,8 +7,8 @@ import (
 	"github.com/formancehq/orchestration/internal/temporalworker"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/collectionutils"
-	"github.com/formancehq/go-libs/pointer"
+	"github.com/formancehq/go-libs/v2/collectionutils"
+	"github.com/formancehq/go-libs/v2/pointer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/formancehq/orchestration/pkg/events"
 	"github.com/uptrace/bun"

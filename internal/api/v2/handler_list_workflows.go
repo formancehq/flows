@@ -3,11 +3,11 @@ package v2
 import (
 	"net/http"
 
-	"github.com/formancehq/go-libs/bun/bunpaginate"
+	"github.com/formancehq/go-libs/v2/bun/bunpaginate"
 
 	api2 "github.com/formancehq/orchestration/internal/api"
 
-	sharedapi "github.com/formancehq/go-libs/api"
+	sharedapi "github.com/formancehq/go-libs/v2/api"
 )
 
 func listWorkflows(backend api2.Backend) http.HandlerFunc {

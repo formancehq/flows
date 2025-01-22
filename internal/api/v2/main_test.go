@@ -8,27 +8,27 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/formancehq/go-libs/testing/docker"
-	"github.com/formancehq/go-libs/testing/utils"
+	"github.com/formancehq/go-libs/v2/testing/docker"
+	"github.com/formancehq/go-libs/v2/testing/utils"
 
-	"github.com/formancehq/go-libs/bun/bundebug"
+	"github.com/formancehq/go-libs/v2/bun/bundebug"
 
 	"go.temporal.io/sdk/worker"
 
-	"github.com/formancehq/go-libs/logging"
-	"github.com/formancehq/go-libs/publish"
+	"github.com/formancehq/go-libs/v2/logging"
+	"github.com/formancehq/go-libs/v2/publish"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/workflow/stages"
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/formancehq/go-libs/bun/bunconnect"
+	"github.com/formancehq/go-libs/v2/bun/bunconnect"
 
 	"github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/triggers"
 
-	"github.com/formancehq/go-libs/auth"
-	"github.com/formancehq/go-libs/testing/platform/pgtesting"
+	"github.com/formancehq/go-libs/v2/auth"
+	"github.com/formancehq/go-libs/v2/testing/platform/pgtesting"
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/stretchr/testify/require"

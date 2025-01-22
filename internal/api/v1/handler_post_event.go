@@ -6,7 +6,7 @@ import (
 
 	api2 "github.com/formancehq/orchestration/internal/api"
 
-	"github.com/formancehq/go-libs/api"
+	"github.com/formancehq/go-libs/v2/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 )
 

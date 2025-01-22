@@ -7,7 +7,7 @@ import (
 
 	api "github.com/formancehq/orchestration/internal/api"
 
-	sharedapi "github.com/formancehq/go-libs/api"
+	sharedapi "github.com/formancehq/go-libs/v2/api"
 )
 
 func listInstances(backend api.Backend) http.HandlerFunc {

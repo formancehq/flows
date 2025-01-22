@@ -3,14 +3,14 @@ package storage
 import (
 	"context"
 
-	"github.com/formancehq/go-libs/migrations"
+	"github.com/formancehq/go-libs/v2/migrations"
 	"github.com/uptrace/bun"
 )
 
 var _migrations = []migrations.Migration{
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					create table "workflows" (
 						config jsonb,
 						id varchar not null,
@@ -40,8 +40,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					alter table "workflow_instances" add column terminated bool;
 					alter table "workflow_instances" add column terminated_at timestamp default null;
 				`); err != nil {
@@ -51,8 +51,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					alter table "workflow_instances" add column error varchar;
 				`); err != nil {
 				return err
@@ -61,8 +61,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					alter table "workflows" add column if not exists deleted_at timestamp default null;
 				`); err != nil {
 				return err
@@ -71,8 +71,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					create table triggers (
 					    id varchar primary key,
 					    workflow_id varchar references workflows(id),
@@ -97,8 +97,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 					alter table "workflow_instance_stage_statuses" 
 					drop constraint workflow_instance_stage_statuses_pkey;
 					
@@ -117,8 +117,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 				alter table "triggers_occurrences"
 				add column error varchar;
 				`); err != nil {
@@ -128,8 +128,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 				alter table "triggers_occurrences" 
 				drop constraint triggers_occurrences_pkey;
 
@@ -151,8 +151,8 @@ var _migrations = []migrations.Migration{
 		},
 	},
 	{
-		Up: func(tx bun.Tx) error {
-			if _, err := tx.Exec(`
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
 				alter table "triggers"
 				add column name varchar;
 				`); err != nil {
@@ -168,8 +168,8 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 }
 
 func MigrateUntil(ctx context.Context, db *bun.DB, until int) error {
-	migrator := migrations.NewMigrator()
+	migrator := migrations.NewMigrator(db)
 	migrator.RegisterMigrations(_migrations[:until]...)
 
-	return migrator.Up(ctx, db)
+	return migrator.Up(ctx)
 }

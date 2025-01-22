@@ -5,9 +5,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/formancehq/go-libs/service"
+	"github.com/formancehq/go-libs/v2/service"
 
-	"github.com/formancehq/go-libs/auth"
+	"github.com/formancehq/go-libs/v2/auth"
 	"github.com/formancehq/orchestration/internal/api"
 )
 

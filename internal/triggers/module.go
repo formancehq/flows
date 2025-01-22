@@ -7,7 +7,7 @@ import (
 	"github.com/formancehq/orchestration/internal/temporalworker"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/logging"
+	"github.com/formancehq/go-libs/v2/logging"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/client"

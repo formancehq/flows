@@ -5,15 +5,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/formancehq/go-libs/auth"
-	"github.com/formancehq/go-libs/aws/iam"
-	"github.com/formancehq/go-libs/bun/bunconnect"
-	"github.com/formancehq/go-libs/licence"
-	"github.com/formancehq/go-libs/publish"
+	"github.com/formancehq/go-libs/v2/auth"
+	"github.com/formancehq/go-libs/v2/aws/iam"
+	"github.com/formancehq/go-libs/v2/bun/bunconnect"
+	"github.com/formancehq/go-libs/v2/licence"
+	"github.com/formancehq/go-libs/v2/publish"
 
-	"github.com/formancehq/go-libs/health"
-	"github.com/formancehq/go-libs/httpserver"
-	"github.com/formancehq/go-libs/service"
+	"github.com/formancehq/go-libs/v2/health"
+	"github.com/formancehq/go-libs/v2/httpserver"
+	"github.com/formancehq/go-libs/v2/service"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"

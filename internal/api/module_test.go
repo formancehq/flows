@@ -7,11 +7,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/bun/bunpaginate"
+	sharedapi "github.com/formancehq/go-libs/v2/bun/bunpaginate"
 
-	"github.com/formancehq/go-libs/auth"
+	"github.com/formancehq/go-libs/v2/auth"
 
-	"github.com/formancehq/go-libs/health"
+	"github.com/formancehq/go-libs/v2/health"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"

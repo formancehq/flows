@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/formancehq/go-libs/api"
+	"github.com/formancehq/go-libs/v2/api"
 )
 
 type ServiceInfo struct {
