@@ -7,10 +7,10 @@ import (
 
 	"github.com/formancehq/orchestration/internal/temporalworker"
 
-	"github.com/formancehq/go-libs/pointer"
+	"github.com/formancehq/go-libs/v2/pointer"
 	"github.com/formancehq/orchestration/internal/workflow"
 
-	"github.com/formancehq/go-libs/publish"
+	"github.com/formancehq/go-libs/v2/publish"
 	temporalworkflow "go.temporal.io/sdk/workflow"
 )
 

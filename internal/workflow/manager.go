@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/formancehq/go-libs/pointer"
+	"github.com/formancehq/go-libs/v2/pointer"
 
 	enums "go.temporal.io/api/enums/v1"
 	history "go.temporal.io/api/history/v1"
 
-	"github.com/formancehq/go-libs/bun/bunpaginate"
+	"github.com/formancehq/go-libs/v2/bun/bunpaginate"
 
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"

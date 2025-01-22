@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/formancehq/go-libs/time"
+	"github.com/formancehq/go-libs/v2/time"
 
-	"github.com/formancehq/go-libs/collectionutils"
-	"github.com/formancehq/go-libs/metadata"
+	"github.com/formancehq/go-libs/v2/collectionutils"
+	"github.com/formancehq/go-libs/v2/metadata"
 
 	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
 	"github.com/formancehq/orchestration/internal/workflow/activities"

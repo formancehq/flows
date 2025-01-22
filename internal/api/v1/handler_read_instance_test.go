@@ -10,9 +10,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/testing/api"
+	sharedapi "github.com/formancehq/go-libs/v2/testing/api"
 
-	"github.com/formancehq/go-libs/logging"
+	"github.com/formancehq/go-libs/v2/logging"
 	"github.com/google/uuid"
 
 	"github.com/formancehq/orchestration/internal/api"

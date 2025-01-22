@@ -3,7 +3,7 @@ package temporalworker
 import (
 	"context"
 
-	"github.com/formancehq/go-libs/logging"
+	"github.com/formancehq/go-libs/v2/logging"
 
 	temporalworkflow "go.temporal.io/sdk/workflow"
 
