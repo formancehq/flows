@@ -97,6 +97,7 @@
               just
               mockgen
               jdk11
+              yq-go
             ];
           };
         }
