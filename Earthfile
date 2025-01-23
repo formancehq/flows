@@ -41,23 +41,7 @@ deploy-staging:
     BUILD --pass-args core+deploy-staging
 
 openapi:
-    FROM node:20-alpine
-    RUN apk update && apk add yq
-    RUN npm install -g openapi-merge-cli
+    FROM core+base-image
     WORKDIR /src
-    COPY --dir openapi openapi
-    RUN openapi-merge-cli --config ./openapi/openapi-merge.json
-    RUN yq -oy ./openapi.json > openapi.yaml
-    SAVE ARTIFACT ./openapi.yaml AS LOCAL ./openapi.yaml
-
-tidy:
-    FROM core+builder-image
-    COPY --pass-args (+sources/src) /src
-    WORKDIR /src
-    DO --pass-args core+GO_TIDY
-
-release:
-    FROM core+builder-image
-    ARG mode=local
-    COPY --dir . /src
-    DO core+GORELEASER --mode=$mode
+    COPY openapi.yaml openapi.yaml
+    SAVE ARTIFACT ./openapi.yaml
