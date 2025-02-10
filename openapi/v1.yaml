@@ -512,6 +512,7 @@ components:
       type: object
       required:
         - workflowID
+        - workflow
         - id
         - createdAt
         - updatedAt
@@ -538,6 +539,8 @@ components:
           format: date-time
         error:
           type: string
+        workflow:
+          $ref: '#/components/schemas/Workflow'
     WorkflowInstanceHistoryStage:
       type: object
       required:
