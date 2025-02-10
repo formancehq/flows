@@ -5,12 +5,12 @@ import (
 
 	"github.com/formancehq/go-libs/v2/bun/bunpaginate"
 
-	api2 "github.com/formancehq/orchestration/internal/api"
+	"github.com/formancehq/orchestration/internal/api"
 
 	sharedapi "github.com/formancehq/go-libs/v2/api"
 )
 
-func listWorkflows(backend api2.Backend) http.HandlerFunc {
+func listWorkflows(backend api.Backend) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		query, err := bunpaginate.Extract[bunpaginate.OffsetPaginatedQuery[any]](r, func() (*bunpaginate.OffsetPaginatedQuery[any], error) {

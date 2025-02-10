@@ -182,11 +182,12 @@ func (m *WorkflowManager) ListInstances(ctx context.Context, pagination ListInst
 	return bunpaginate.UsingOffset[ListInstancesOptions, Instance](ctx, query, bunpaginate.OffsetPaginatedQuery[ListInstancesOptions](pagination),
 		func(query *bun.SelectQuery) *bun.SelectQuery {
 			query = query.
-				Join("JOIN workflows ON workflows.id = u.workflow_id").
-				Where("workflows.deleted_at IS NULL")
+				Relation("Workflow", func(query *bun.SelectQuery) *bun.SelectQuery {
+					return query.Where("workflow.deleted_at IS NULL")
+				})
 
 			if pagination.Options.WorkflowID != "" {
-				query = query.Where("workflows.id = ?", pagination.Options.WorkflowID)
+				query = query.Where("u.workflow_id = ?", pagination.Options.WorkflowID)
 			}
 			if pagination.Options.Running {
 				query = query.Where("u.terminated = false")
@@ -368,11 +369,12 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 }
 
 func (m *WorkflowManager) GetInstance(ctx context.Context, instanceID string) (*Instance, error) {
-	occurrence := Instance{}
+	instance := Instance{}
 	err := m.db.NewSelect().
-		Model(&occurrence).
+		Model(&instance).
 		Relation("Statuses").
-		Where("id = ?", instanceID).
+		Relation("Workflow").
+		Where("u.id = ?", instanceID).
 		Scan(ctx)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -380,7 +382,7 @@ func (m *WorkflowManager) GetInstance(ctx context.Context, instanceID string) (*
 		}
 		return nil, err
 	}
-	return &occurrence, nil
+	return &instance, nil
 }
 
 func NewManager(db *bun.DB, temporalClient client.Client, taskQueue string, includeSearchAttributes bool) *WorkflowManager {

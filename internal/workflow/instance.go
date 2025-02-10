@@ -8,7 +8,9 @@ import (
 
 type Instance struct {
 	bun.BaseModel `bun:"table:workflow_instances,alias:u"`
-	WorkflowID    string     `json:"workflowID"`
+
+	WorkflowID    string     `json:"workflowID" bun:"workflow_id,type:varchar"`
+	Workflow *Workflow `json:"workflow,omitempty" bun:"rel:belongs-to,join:workflow_id=id"`
 	ID            string     `json:"id" bun:"id,pk"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
