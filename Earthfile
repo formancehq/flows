@@ -45,3 +45,9 @@ openapi:
     WORKDIR /src
     COPY openapi.yaml openapi.yaml
     SAVE ARTIFACT ./openapi.yaml
+
+release:
+    FROM core+builder-image
+    ARG mode=local
+    COPY --dir . /src
+    DO core+GORELEASER --mode=$mode
