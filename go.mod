@@ -7,7 +7,7 @@ toolchain go1.22.7
 require (
 	github.com/ThreeDotsLabs/watermill v1.4.4
 	github.com/expr-lang/expr v1.16.9
-	github.com/formancehq/formance-sdk-go/v3 v3.2.0
+	github.com/formancehq/formance-sdk-go/v3 v3.3.0
 	github.com/formancehq/go-libs/v2 v2.0.1-0.20250120193835-4b6354eeda8d
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-playground/validator/v10 v10.24.0
