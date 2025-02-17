@@ -10,7 +10,7 @@ require (
 	github.com/formancehq/formance-sdk-go/v3 v3.2.0
 	github.com/formancehq/go-libs/v2 v2.0.1-0.20250120193835-4b6354eeda8d
 	github.com/go-chi/chi/v5 v5.2.0
-	github.com/go-playground/validator/v10 v10.24.0
+	github.com/go-playground/validator/v10 v10.25.0
 	github.com/google/uuid v1.6.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/pkg/errors v0.9.1
