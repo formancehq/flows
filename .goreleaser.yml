@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema-pro.json
 version: 2
-project_name: flows
+project_name: orchestration
 
 includes:
   - from_url:
