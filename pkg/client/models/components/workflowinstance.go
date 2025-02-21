@@ -16,6 +16,7 @@ type WorkflowInstance struct {
 	Terminated   bool          `json:"terminated"`
 	TerminatedAt *time.Time    `json:"terminatedAt,omitempty"`
 	Error        *string       `json:"error,omitempty"`
+	Workflow     Workflow      `json:"workflow"`
 }
 
 func (w WorkflowInstance) MarshalJSON() ([]byte, error) {
@@ -83,4 +84,11 @@ func (o *WorkflowInstance) GetError() *string {
 		return nil
 	}
 	return o.Error
+}
+
+func (o *WorkflowInstance) GetWorkflow() Workflow {
+	if o == nil {
+		return Workflow{}
+	}
+	return o.Workflow
 }

@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: e26e5b37-4391-4462-9a20-c517a83a166a
 management:
-  docChecksum: 99fcb08a3be2d974cb4ab731978aba69
+  docChecksum: 5063d2e2dc6e6f9b0a05c7776907c26a
   docVersion: 0.1.0
   speakeasyVersion: 1.351.0
   generationVersion: 2.384.1
-  releaseVersion: 0.1.0
-  configChecksum: e396e99f506e14ef47f767a543c5792e
+  releaseVersion: 0.1.2
+  configChecksum: 2873af2ea103ca233b2de55ceb457b48
 features:
   go:
     additionalDependencies: 0.1.0
@@ -94,10 +94,10 @@ generatedFiles:
   - /models/components/listtriggersoccurrencesresponse.go
   - /models/components/triggeroccurrence.go
   - /models/components/workflowinstance.go
-  - /models/components/stagestatus.go
-  - /models/components/listworkflowsresponse.go
   - /models/components/workflow.go
   - /models/components/workflowconfig.go
+  - /models/components/stagestatus.go
+  - /models/components/listworkflowsresponse.go
   - /models/components/createworkflowresponse.go
   - /models/components/createworkflowrequest.go
   - /models/components/getworkflowresponse.go
@@ -174,10 +174,10 @@ generatedFiles:
   - /models/components/v2listtriggersoccurrencesresponse.go
   - /models/components/v2triggeroccurrence.go
   - /models/components/v2workflowinstance.go
-  - /models/components/v2stagestatus.go
-  - /models/components/v2listworkflowsresponse.go
   - /models/components/v2workflow.go
   - /models/components/v2workflowconfig.go
+  - /models/components/v2stagestatus.go
+  - /models/components/v2listworkflowsresponse.go
   - /models/components/v2createworkflowresponse.go
   - /models/components/v2createworkflowrequest.go
   - /models/components/v2getworkflowresponse.go
@@ -319,10 +319,10 @@ generatedFiles:
   - docs/models/components/listtriggersoccurrencesresponse.md
   - docs/models/components/triggeroccurrence.md
   - docs/models/components/workflowinstance.md
-  - docs/models/components/stagestatus.md
-  - docs/models/components/listworkflowsresponse.md
   - docs/models/components/workflow.md
   - docs/models/components/workflowconfig.md
+  - docs/models/components/stagestatus.md
+  - docs/models/components/listworkflowsresponse.md
   - docs/models/components/createworkflowresponse.md
   - docs/models/components/createworkflowrequest.md
   - docs/models/components/getworkflowresponse.md
@@ -411,11 +411,11 @@ generatedFiles:
   - docs/models/components/v2listtriggersoccurrencesresponse.md
   - docs/models/components/v2triggeroccurrence.md
   - docs/models/components/v2workflowinstance.md
+  - docs/models/components/v2workflow.md
+  - docs/models/components/v2workflowconfig.md
   - docs/models/components/v2stagestatus.md
   - docs/models/components/v2listworkflowsresponsecursor.md
   - docs/models/components/v2listworkflowsresponse.md
-  - docs/models/components/v2workflow.md
-  - docs/models/components/v2workflowconfig.md
   - docs/models/components/v2createworkflowresponse.md
   - docs/models/components/v2createworkflowrequest.md
   - docs/models/components/v2getworkflowresponse.md

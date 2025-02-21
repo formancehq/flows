@@ -2155,7 +2155,6 @@ components:
       type: object
       required:
         - workflowID
-        - workflow
         - id
         - createdAt
         - updatedAt
