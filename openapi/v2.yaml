@@ -726,6 +726,8 @@ components:
           type: string
         workflowID:
           type: string
+        version:
+          tyoe: string
         filter:
           type: string
         vars:
