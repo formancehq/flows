@@ -46,6 +46,7 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 		}),
 		triggers.NewListenerModule(
 			stack,
+			stack,
 			temporalTaskQueue,
 			topics,
 		),

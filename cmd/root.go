@@ -84,6 +84,7 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 		return nil, err
 	}
 
+	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalAddress, _ := cmd.Flags().GetString(temporalAddressFlag)
 	temporalNamespace, _ := cmd.Flags().GetString(temporalNamespaceFlag)
 	temporalSSLClientKey, _ := cmd.Flags().GetString(temporalSSLClientKeyFlag)
@@ -100,13 +101,15 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 			temporalSSLClientCert,
 			temporalSSLClientKey,
 			temporalInitSearchAttributes,
+			workflow.SearchAttributes,
+			triggers.SearchAttributes,
 		),
 		bunconnect.Module(*connectionOptions, service.IsDebug(cmd)),
 		publish.FXModuleFromFlags(cmd, service.IsDebug(cmd)),
 		auth.FXModuleFromFlags(cmd),
 		licence.FXModuleFromFlags(cmd, ServiceName),
-		workflow.NewModule(temporalTaskQueue),
-		triggers.NewModule(temporalTaskQueue),
+		workflow.NewModule(stack, temporalTaskQueue),
+		triggers.NewModule(stack, temporalTaskQueue),
 		fx.Provide(func() *bunconnect.ConnectionOptions {
 			return connectionOptions
 		}),

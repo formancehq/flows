@@ -39,12 +39,12 @@ func TestWorkflow(t *testing.T) {
 	require.NoError(t, storage.Migrate(logging.TestingContext(), db))
 
 	taskQueue := uuid.NewString()
-	workflowManager := workflow.NewManager(db, devServer.Client(), taskQueue, false)
+	workflowManager := workflow.NewManager(db, devServer.Client(), "test", taskQueue, false)
 
 	worker := temporalworker.New(logging.Testing(), devServer.Client(), taskQueue,
 		[]temporalworker.DefinitionSet{
-			NewWorkflow(taskQueue, false).DefinitionSet(),
-			workflow.NewWorkflows(false).DefinitionSet(),
+			NewWorkflow("test", taskQueue, false).DefinitionSet(),
+			workflow.NewWorkflows("test", false).DefinitionSet(),
 			temporalworker.NewDefinitionSet().Append(temporalworker.Definition{
 				Name: "NoOp",
 				Func: (&stages.NoOp{}).GetWorkflow(),

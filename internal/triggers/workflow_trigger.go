@@ -3,24 +3,28 @@ package triggers
 import (
 	"time"
 
-	"go.temporal.io/api/enums/v1"
-
-	"github.com/formancehq/orchestration/internal/temporalworker"
-
 	"github.com/formancehq/go-libs/v2/pointer"
-	"github.com/formancehq/orchestration/internal/workflow"
-
 	"github.com/formancehq/go-libs/v2/publish"
+	"github.com/formancehq/orchestration/internal/temporalworker"
+	"github.com/formancehq/orchestration/internal/workflow"
+	"go.temporal.io/api/enums/v1"
 	temporalworkflow "go.temporal.io/sdk/workflow"
 )
 
 const SearchAttributeTriggerID = "OrchestrationTriggerID"
+
+var (
+	SearchAttributes = map[string]enums.IndexedValueType{
+		workflow.SearchAttributeStack: enums.INDEXED_VALUE_TYPE_TEXT,
+	}
+)
 
 type ProcessEventRequest struct {
 	Event publish.EventMessage `json:"ledger"`
 }
 
 type triggerWorkflow struct {
+	stack                   string
 	taskQueue               string
 	includeSearchAttributes bool
 }
@@ -40,7 +44,9 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 	}
 
 	for _, trigger := range triggers {
-		searchAttributes := map[string]any{}
+		searchAttributes := map[string]any{
+			workflow.SearchAttributeStack: w.stack,
+		}
 		if w.includeSearchAttributes {
 			searchAttributes[SearchAttributeTriggerID] = trigger.ID
 		}
@@ -80,6 +86,9 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 		if err := temporalworkflow.ExecuteChildWorkflow(
 			temporalworkflow.WithChildOptions(ctx, temporalworkflow.ChildWorkflowOptions{
 				TaskQueue: w.taskQueue,
+				SearchAttributes: map[string]any{
+					workflow.SearchAttributeStack: w.stack,
+				},
 			}),
 			workflow.Initiate,
 			workflow.Input{
@@ -129,8 +138,9 @@ func (w triggerWorkflow) DefinitionSet() temporalworker.DefinitionSet {
 		})
 }
 
-func NewWorkflow(taskQueue string, includeSearchAttributes bool) *triggerWorkflow {
+func NewWorkflow(stack string, taskQueue string, includeSearchAttributes bool) *triggerWorkflow {
 	return &triggerWorkflow{
+		stack:                   stack,
 		taskQueue:               taskQueue,
 		includeSearchAttributes: includeSearchAttributes,
 	}

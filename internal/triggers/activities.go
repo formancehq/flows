@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/formancehq/orchestration/internal/temporalworker"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/formancehq/go-libs/v2/collectionutils"
 	"github.com/formancehq/go-libs/v2/pointer"
+	"github.com/formancehq/orchestration/internal/temporalworker"
+	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/formancehq/orchestration/pkg/events"
 	"github.com/uptrace/bun"
@@ -24,7 +24,7 @@ type Activities struct {
 }
 
 func (a Activities) processTrigger(ctx context.Context, request ProcessEventRequest, trigger Trigger) bool {
-	_, span := workflow.Tracer.Start(ctx, "Triggers:CheckRequirements", trace.WithAttributes(
+	_, span := tracer.Tracer.Start(ctx, "Triggers:CheckRequirements", trace.WithAttributes(
 		attribute.String("trigger-id", trigger.ID),
 	))
 	defer span.End()

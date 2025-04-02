@@ -7,6 +7,7 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 
+	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -45,8 +46,7 @@ func getWorkflowIDFromEvent(event publish.EventMessage) *string {
 	}
 }
 
-func handleMessage(temporalClient client.Client, taskIDPrefix, taskQueue string, msg *message.Message) error {
-
+func handleMessage(temporalClient client.Client, stack, taskIDPrefix, taskQueue string, msg *message.Message) error {
 	defer func() {
 		if e := recover(); e != nil {
 			fmt.Println(e)
@@ -61,7 +61,7 @@ func handleMessage(temporalClient client.Client, taskIDPrefix, taskQueue string,
 		return err
 	}
 
-	ctx, span := workflow.Tracer.Start(msg.Context(), "Trigger:HandleEvent",
+	ctx, span := tracer.Tracer.Start(msg.Context(), "Trigger:HandleEvent",
 		trace.WithLinks(trace.Link{
 			SpanContext: span.SpanContext(),
 		}),
@@ -82,6 +82,9 @@ func handleMessage(temporalClient client.Client, taskIDPrefix, taskQueue string,
 
 	options := client.StartWorkflowOptions{
 		TaskQueue: taskQueue,
+		SearchAttributes: map[string]interface{}{
+			workflow.SearchAttributeStack: stack,
+		},
 	}
 	if ik := getWorkflowIDFromEvent(*event); ik != nil {
 		options.ID = taskIDPrefix + "-" + *ik
@@ -105,10 +108,10 @@ func handleMessage(temporalClient client.Client, taskIDPrefix, taskQueue string,
 }
 
 func registerListener(r *message.Router, s message.Subscriber, temporalClient client.Client,
-	taskIDPrefix, taskQueue string, topics []string) {
+	stack, taskIDPrefix, taskQueue string, topics []string) {
 	for _, topic := range topics {
 		r.AddNoPublisherHandler(fmt.Sprintf("listen-%s-events", topic), topic, s, func(msg *message.Message) error {
-			if err := handleMessage(temporalClient, taskIDPrefix, taskQueue, msg); err != nil {
+			if err := handleMessage(temporalClient, stack, taskIDPrefix, taskQueue, msg); err != nil {
 				logging.Errorf("Error executing workflow: %s", err)
 				return err
 			}

@@ -1,4 +1,4 @@
-package workflow
+package tracer
 
 import (
 	"go.opentelemetry.io/otel"

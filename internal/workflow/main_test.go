@@ -4,14 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/formancehq/go-libs/v2/testing/docker"
-	"github.com/formancehq/go-libs/v2/testing/utils"
-	"github.com/stretchr/testify/require"
-
 	"github.com/formancehq/go-libs/v2/logging"
-	"go.temporal.io/sdk/testsuite"
-
+	"github.com/formancehq/go-libs/v2/testing/docker"
 	"github.com/formancehq/go-libs/v2/testing/platform/pgtesting"
+	"github.com/formancehq/go-libs/v2/testing/utils"
+	"github.com/formancehq/orchestration/internal/temporalclient"
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/sdk/testsuite"
 )
 
 var (
@@ -25,6 +24,9 @@ func TestMain(m *testing.M) {
 
 		var err error
 		devServer, err = testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{})
+		require.NoError(t, err)
+
+		err = temporalclient.CreateSearchAttributes(logging.TestingContext(), devServer.Client(), "default", SearchAttributes)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
