@@ -69,6 +69,7 @@ func handleMessage(temporalClient client.Client, taskIDPrefix, taskQueue string,
 			attribute.String("event-id", msg.UUID),
 			attribute.Bool("duplicate", false),
 			attribute.String("event-type", event.Type),
+			attribute.String("event-version", event.Version),
 			attribute.String("event-payload", string(msg.Payload)),
 		),
 	)

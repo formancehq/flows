@@ -59,6 +59,7 @@ func (a Activities) ListTriggers(ctx context.Context, request ProcessEventReques
 		Relation("Workflow").
 		Where("trigger.deleted_at is null").
 		Where("event = ?", request.Event.Type).
+		Where("CASE WHEN trigger.version IS NULL THEN true ELSE trigger.version = ? END", request.Event.Version).
 		Scan(ctx); err != nil {
 		return nil, err
 	}
