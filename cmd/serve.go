@@ -3,21 +3,21 @@ package cmd
 import (
 	"context"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/formancehq/go-libs/v2/auth"
 	"github.com/formancehq/go-libs/v2/aws/iam"
 	"github.com/formancehq/go-libs/v2/bun/bunconnect"
-	"github.com/formancehq/go-libs/v2/licence"
-	"github.com/formancehq/go-libs/v2/publish"
-
 	"github.com/formancehq/go-libs/v2/health"
 	"github.com/formancehq/go-libs/v2/httpserver"
+	"github.com/formancehq/go-libs/v2/licence"
+	"github.com/formancehq/go-libs/v2/otlp/otlpmetrics"
+	"github.com/formancehq/go-libs/v2/publish"
 	"github.com/formancehq/go-libs/v2/service"
+	"github.com/formancehq/go-libs/v2/temporal"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"
 	"github.com/formancehq/orchestration/internal/storage"
+	"github.com/go-chi/chi/v5"
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
 	"go.uber.org/fx"
@@ -78,16 +78,9 @@ func newServeCommand() *cobra.Command {
 
 	cmd.Flags().Bool(workerFlag, false, "Enable worker mode")
 	cmd.Flags().String(listenFlag, ":8080", "Listening address")
-	cmd.Flags().Float64(temporalMaxParallelActivitiesFlag, 10, "Maximum number of parallel activities")
 	cmd.Flags().String(stackURLFlag, "", "Stack url")
 	cmd.Flags().String(stackClientIDFlag, "", "Stack client ID")
 	cmd.Flags().String(stackClientSecretFlag, "", "Stack client secret")
-	cmd.Flags().String(temporalAddressFlag, "", "Temporal server address")
-	cmd.Flags().String(temporalNamespaceFlag, "default", "Temporal namespace")
-	cmd.Flags().String(temporalSSLClientKeyFlag, "", "Temporal client key")
-	cmd.Flags().String(temporalSSLClientCertFlag, "", "Temporal client cert")
-	cmd.Flags().String(temporalTaskQueueFlag, "default", "Temporal task queue name")
-	cmd.Flags().Bool(temporalInitSearchAttributes, false, "Init temporal search attributes")
 	cmd.Flags().StringSlice(topicsFlag, []string{}, "Topics to listen")
 	cmd.Flags().String(stackFlag, "", "Stack")
 
@@ -97,6 +90,8 @@ func newServeCommand() *cobra.Command {
 	bunconnect.AddFlags(cmd.Flags())
 	iam.AddFlags(cmd.Flags())
 	licence.AddFlags(cmd.Flags())
+	otlpmetrics.AddFlags(cmd.Flags())
+	temporal.AddFlags(cmd.Flags())
 
 	return cmd
 }

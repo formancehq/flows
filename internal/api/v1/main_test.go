@@ -11,12 +11,12 @@ import (
 	"github.com/formancehq/go-libs/v2/bun/bundebug"
 	"github.com/formancehq/go-libs/v2/logging"
 	"github.com/formancehq/go-libs/v2/publish"
+	"github.com/formancehq/go-libs/v2/temporal"
 	"github.com/formancehq/go-libs/v2/testing/docker"
 	"github.com/formancehq/go-libs/v2/testing/platform/pgtesting"
 	"github.com/formancehq/go-libs/v2/testing/utils"
 	"github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/storage"
-	"github.com/formancehq/orchestration/internal/temporalclient"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/formancehq/orchestration/internal/workflow"
@@ -91,7 +91,7 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		err = temporalclient.CreateSearchAttributes(logging.TestingContext(), devServer.Client(), "default", workflow.SearchAttributes, triggers.SearchAttributes)
+		err = temporal.CreateSearchAttributes(logging.TestingContext(), devServer.Client(), "default", temporalworker.MergeSearchAttributes(workflow.SearchAttributes, triggers.SearchAttributes))
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
