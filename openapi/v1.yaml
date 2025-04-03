@@ -621,6 +621,8 @@ components:
           type: string
         workflowID:
           type: string
+        version:
+          type: string
         filter:
           type: string
         vars:

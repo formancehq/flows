@@ -161,6 +161,17 @@ var _migrations = []migrations.Migration{
 			return nil
 		},
 	},
+	{
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
+				alter table "triggers"
+				add column version varchar default NULL;
+				`); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
 }
 
 func Migrate(ctx context.Context, db *bun.DB) error {

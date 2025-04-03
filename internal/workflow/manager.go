@@ -36,6 +36,7 @@ type Event struct {
 type WorkflowManager struct {
 	db                      *bun.DB
 	temporalClient          client.Client
+	stack                   string
 	taskQueue               string
 	includeSearchAttributes bool
 }
@@ -89,9 +90,11 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 		return nil, err
 	}
 
-	searchAttributes := map[string]any{}
+	searchAttributes := map[string]any{
+		SearchAttributeStack: m.stack,
+	}
 	if m.includeSearchAttributes {
-		searchAttributes["OrchestrationWorkflowID"] = workflow.ID
+		searchAttributes[SearchAttributeWorkflowID] = workflow.ID
 	}
 
 	run, err := m.temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
@@ -385,10 +388,11 @@ func (m *WorkflowManager) GetInstance(ctx context.Context, instanceID string) (*
 	return &instance, nil
 }
 
-func NewManager(db *bun.DB, temporalClient client.Client, taskQueue string, includeSearchAttributes bool) *WorkflowManager {
+func NewManager(db *bun.DB, temporalClient client.Client, stack string, taskQueue string, includeSearchAttributes bool) *WorkflowManager {
 	return &WorkflowManager{
 		db:                      db,
 		temporalClient:          temporalClient,
+		stack:                   stack,
 		taskQueue:               taskQueue,
 		includeSearchAttributes: includeSearchAttributes,
 	}

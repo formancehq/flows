@@ -41,7 +41,7 @@ func TestConfig(t *testing.T) {
 	taskQueue := uuid.NewString()
 	worker := temporalworker.New(logging.Testing(), devServer.Client(), taskQueue,
 		[]temporalworker.DefinitionSet{
-			NewWorkflows(false).DefinitionSet(),
+			NewWorkflows("test", false).DefinitionSet(),
 			temporalworker.NewDefinitionSet().Append(temporalworker.Definition{
 				Name: "NoOp",
 				Func: (&stages.NoOp{}).GetWorkflow(),
@@ -55,7 +55,7 @@ func TestConfig(t *testing.T) {
 	require.NoError(t, worker.Start())
 	t.Cleanup(worker.Stop)
 
-	manager := NewManager(db, devServer.Client(), taskQueue, false)
+	manager := NewManager(db, devServer.Client(), "test", taskQueue, false)
 
 	config := Config{
 		Stages: []RawStage{

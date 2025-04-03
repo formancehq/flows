@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/formancehq/go-libs/v2/logging"
-
-	temporalworkflow "go.temporal.io/sdk/workflow"
-
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 	"go.uber.org/fx"
 )
 
@@ -83,4 +82,16 @@ func NewWorkerModule(taskQueue string, options worker.Options) fx.Option {
 			})
 		}),
 	)
+}
+
+func MergeSearchAttributes(
+	searchAttributes ...map[string]enums.IndexedValueType,
+) map[string]enums.IndexedValueType {
+	merged := make(map[string]enums.IndexedValueType)
+	for _, sa := range searchAttributes {
+		for k, v := range sa {
+			merged[k] = v
+		}
+	}
+	return merged
 }

@@ -14,14 +14,14 @@ import (
 	"go.uber.org/fx"
 )
 
-func NewModule(taskQueue string) fx.Option {
+func NewModule(stack, taskQueue string) fx.Option {
 	return fx.Options(
 		fx.Provide(NewManager),
 		fx.Provide(func(httpClient *http.Client) *expressionEvaluator {
 			return NewExpressionEvaluator(httpClient)
 		}),
 		fx.Provide(func() *triggerWorkflow {
-			return NewWorkflow(taskQueue, true)
+			return NewWorkflow(stack, taskQueue, true)
 		}),
 		fx.Provide(fx.Annotate(func(workflow *triggerWorkflow) temporalworker.DefinitionSet {
 			return workflow.DefinitionSet()
@@ -36,11 +36,11 @@ func NewModule(taskQueue string) fx.Option {
 	)
 }
 
-func NewListenerModule(taskIDPrefix, taskQueue string, topics []string) fx.Option {
+func NewListenerModule(stack, taskIDPrefix, taskQueue string, topics []string) fx.Option {
 	return fx.Options(
 		fx.Invoke(func(logger logging.Logger, r *message.Router, s message.Subscriber, temporalClient client.Client) {
 			logger.Infof("Listening events from topics: %s", strings.Join(topics, ","))
-			registerListener(r, s, temporalClient, taskIDPrefix, taskQueue, topics)
+			registerListener(r, s, temporalClient, stack, taskIDPrefix, taskQueue, topics)
 		}),
 	)
 }

@@ -10,13 +10,13 @@ import (
 	"go.uber.org/fx"
 )
 
-func NewModule(taskQueue string) fx.Option {
+func NewModule(stack string, taskQueue string) fx.Option {
 	ret := []fx.Option{
 		fx.Provide(func(db *bun.DB, temporalClient client.Client) *WorkflowManager {
-			return NewManager(db, temporalClient, taskQueue, true)
+			return NewManager(db, temporalClient, stack, taskQueue, true)
 		}),
 		fx.Provide(func() *Workflows {
-			return NewWorkflows(true)
+			return NewWorkflows(stack, true)
 		}),
 		fx.Provide(activities.New),
 		fx.Provide(NewActivities),

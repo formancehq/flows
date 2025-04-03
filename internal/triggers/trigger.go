@@ -51,6 +51,7 @@ func newExprCompilationError(expr string, err error) ExprCompilationError {
 type TriggerData struct {
 	Name       string             `json:"name" bun:"name,type:varchar"`
 	Event      string             `json:"event" bun:"event,type:varchar"`
+	Version    *string            `json:"version,omitempty" bun:"version,type:varchar"`
 	Filter     *string            `json:"filter,omitempty" bun:"filter,type:varchar"`
 	WorkflowID string             `json:"workflowID" bun:"workflow_id,type:varchar"`
 	Workflow   *workflow.Workflow `json:"workflow" bun:"rel:belongs-to,join:workflow_id=id"`

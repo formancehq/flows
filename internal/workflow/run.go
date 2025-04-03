@@ -9,9 +9,20 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-const SearchAttributeWorkflowID = "OrchestrationWorkflowID"
+const (
+	SearchAttributeStack      = "Stack"
+	SearchAttributeWorkflowID = "OrchestrationWorkflowID"
+)
+
+var (
+	SearchAttributes = map[string]enums.IndexedValueType{
+		SearchAttributeStack:      enums.INDEXED_VALUE_TYPE_KEYWORD,
+		SearchAttributeWorkflowID: enums.INDEXED_VALUE_TYPE_TEXT,
+	}
+)
 
 type Workflows struct {
+	stack                   string
 	includeSearchAttributes bool
 }
 
@@ -31,11 +42,11 @@ func (w Workflows) Initiate(ctx workflow.Context, input Input) (*Instance, error
 		return nil, err
 	}
 
-	searchAttributes := map[string]any{}
+	searchAttributes := map[string]any{
+		SearchAttributeStack: w.stack,
+	}
 	if w.includeSearchAttributes {
-		searchAttributes = map[string]interface{}{
-			SearchAttributeWorkflowID: input.Workflow.ID,
-		}
+		searchAttributes[SearchAttributeWorkflowID] = input.Workflow.ID
 	}
 
 	if err := workflow.ExecuteChildWorkflow(
@@ -93,8 +104,9 @@ func (w Workflows) DefinitionSet() temporalworker.DefinitionSet {
 var Initiate = Workflows{}.Initiate
 var Run = Workflows{}.Run
 
-func NewWorkflows(includeSearchAttributes bool) *Workflows {
+func NewWorkflows(stack string, includeSearchAttributes bool) *Workflows {
 	return &Workflows{
+		stack:                   stack,
 		includeSearchAttributes: includeSearchAttributes,
 	}
 }
