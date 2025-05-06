@@ -1,8 +1,7 @@
 module github.com/formancehq/orchestration
 
 go 1.22.0
-
-toolchain go1.22.7
+toolchain go1.24.1
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.4.4
@@ -24,7 +23,7 @@ require (
 	go.temporal.io/sdk v1.33.0
 	go.uber.org/fx v1.23.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/oauth2 v0.26.0
+	golang.org/x/oauth2 v0.30.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
