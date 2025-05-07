@@ -2288,7 +2288,7 @@ components:
         workflowID:
           type: string
         version:
-          tyoe: string
+          type: string
         filter:
           type: string
         vars:
