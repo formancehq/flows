@@ -5,6 +5,7 @@ package components
 type TriggerData struct {
 	Event      string         `json:"event"`
 	WorkflowID string         `json:"workflowID"`
+	Version    *string        `json:"version,omitempty"`
 	Filter     *string        `json:"filter,omitempty"`
 	Vars       map[string]any `json:"vars,omitempty"`
 	Name       *string        `json:"name,omitempty"`
@@ -22,6 +23,13 @@ func (o *TriggerData) GetWorkflowID() string {
 		return ""
 	}
 	return o.WorkflowID
+}
+
+func (o *TriggerData) GetVersion() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Version
 }
 
 func (o *TriggerData) GetFilter() *string {
