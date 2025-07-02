@@ -1,6 +1,7 @@
 package send
 
 import (
+	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
 	"math/big"
 	"testing"
 
@@ -400,10 +401,12 @@ var (
 					ID: "wallet1",
 				}},
 				Returns: []any{
-					&shared.GetWalletResponse{
-						Data: shared.WalletWithBalances{
-							ID:     "wallet1",
-							Ledger: "default",
+					&operations.GetWalletResponse{
+						ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+							Data: shared.WalletWithBalances{
+								ID:     "wallet1",
+								Ledger: "default",
+							},
 						},
 					}, nil,
 				},
@@ -884,10 +887,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "bar",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						ID:     "bar",
-						Ledger: "default",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							ID:     "bar",
+							Ledger: "default",
+						},
 					},
 				}, nil},
 			},
@@ -941,10 +946,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "wallet",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						Ledger: "ledger2",
-						ID:     "wallet",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							Ledger: "ledger2",
+							ID:     "wallet",
+						},
 					},
 				}, nil},
 			},
@@ -1090,13 +1097,15 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "foo",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						ID: "foo",
-						Metadata: map[string]string{
-							"stripeConnectID": "abcd",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							ID: "foo",
+							Metadata: map[string]string{
+								"stripeConnectID": "abcd",
+							},
+							Ledger: "default",
 						},
-						Ledger: "default",
 					},
 				}, nil},
 			},
@@ -1149,10 +1158,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "wallet",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						ID:     "wallet",
-						Ledger: "ledger1",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							ID:     "wallet",
+							Ledger: "ledger1",
+						},
 					},
 				}, nil},
 			},
@@ -1225,10 +1236,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "foo",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						ID:     "foo",
-						Ledger: "default",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							ID:     "foo",
+							Ledger: "default",
+						},
 					},
 				}, nil},
 			},
@@ -1237,10 +1250,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "bar",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						Ledger: "default",
-						ID:     "bar",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							Ledger: "default",
+							ID:     "bar",
+						},
 					},
 				}, nil},
 			},
@@ -1297,10 +1312,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "wallet1",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						Ledger: "ledger1",
-						ID:     "wallet1",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							Ledger: "ledger1",
+							ID:     "wallet1",
+						},
 					},
 				}, nil},
 			},
@@ -1309,10 +1326,12 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "wallet2",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						Ledger: "ledger2",
-						ID:     "wallet2",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							Ledger: "ledger2",
+							ID:     "wallet2",
+						},
 					},
 				}, nil},
 			},
@@ -1381,11 +1400,13 @@ var (
 				Args: []any{mock.Anything, activities.GetWalletRequest{
 					ID: "foo",
 				}},
-				Returns: []any{&shared.GetWalletResponse{
-					Data: shared.WalletWithBalances{
-						ID: "foo",
-						Metadata: map[string]string{
-							"stripeConnectID": "abcd",
+				Returns: []any{&operations.GetWalletResponse{
+					ActivityGetWalletOutput: &shared.ActivityGetWalletOutput{
+						Data: shared.WalletWithBalances{
+							ID: "foo",
+							Metadata: map[string]string{
+								"stripeConnectID": "abcd",
+							},
 						},
 					},
 				}, nil},

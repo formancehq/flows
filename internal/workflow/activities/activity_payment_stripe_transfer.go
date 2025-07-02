@@ -28,14 +28,12 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 	}
 
 	activityInfo := activity.GetInfo(ctx)
-	provider := shared.ConnectorStripe
 	ti := shared.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
 		DestinationAccountID: *request.Destination,
 		Description:          "Stripe Transfer",
 		ConnectorID:          request.ConnectorID,
-		Provider:             &provider,
 		Type:                 shared.TransferInitiationRequestTypeTransfer,
 		Reference:            activityInfo.WorkflowExecution.ID + activityInfo.ActivityID,
 		Validated:            validated,
