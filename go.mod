@@ -20,7 +20,7 @@ require (
 	github.com/uptrace/bun v1.2.15
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
-	go.temporal.io/api v1.45.0
+	go.temporal.io/api v1.51.0
 	go.temporal.io/sdk v1.33.0
 	go.uber.org/fx v1.23.0
 	go.uber.org/mock v0.5.2
