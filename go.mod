@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/ThreeDotsLabs/watermill v1.4.7
+	github.com/ThreeDotsLabs/watermill v1.5.0
 	github.com/expr-lang/expr v1.17.6
 	github.com/formancehq/formance-sdk-go/v3 v3.2.0
 	github.com/formancehq/go-libs/v2 v2.2.3
