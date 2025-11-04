@@ -12,13 +12,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/formancehq/go-libs/v2/pointer"
+	"github.com/formancehq/go-libs/v3/pointer"
 	"go.temporal.io/api/serviceerror"
 
-	"github.com/formancehq/go-libs/v2/logging"
+	"github.com/formancehq/go-libs/v3/logging"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v2/publish"
+	"github.com/formancehq/go-libs/v3/publish"
 	"github.com/pkg/errors"
 	"go.temporal.io/sdk/client"
 )

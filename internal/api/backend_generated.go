@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	bunpaginate "github.com/formancehq/go-libs/v2/bun/bunpaginate"
+	bunpaginate "github.com/formancehq/go-libs/v3/bun/bunpaginate"
 	triggers "github.com/formancehq/orchestration/internal/triggers"
 	workflow "github.com/formancehq/orchestration/internal/workflow"
 	gomock "go.uber.org/mock/gomock"

@@ -5,10 +5,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/formancehq/go-libs/v2/bun/bunpaginate"
+	"github.com/formancehq/go-libs/v3/bun/bunpaginate"
 	"github.com/formancehq/orchestration/internal/triggers"
 
-	sharedapi "github.com/formancehq/go-libs/v2/api"
+	sharedapi "github.com/formancehq/go-libs/v3/api"
 	"github.com/formancehq/orchestration/internal/api"
 )
 
