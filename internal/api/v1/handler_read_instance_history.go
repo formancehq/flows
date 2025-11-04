@@ -5,7 +5,7 @@ import (
 
 	api2 "github.com/formancehq/orchestration/internal/api"
 
-	"github.com/formancehq/go-libs/v2/api"
+	"github.com/formancehq/go-libs/v3/api"
 )
 
 func readInstanceHistory(backend api2.Backend) http.HandlerFunc {

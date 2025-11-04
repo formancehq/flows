@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	sharedapi "github.com/formancehq/go-libs/v2/api"
+	sharedapi "github.com/formancehq/go-libs/v3/api"
 	"github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/pkg/errors"
