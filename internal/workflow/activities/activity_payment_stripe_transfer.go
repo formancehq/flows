@@ -22,10 +22,7 @@ type StripeTransferRequest struct {
 }
 
 func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRequest) error {
-	validated := true
-	if request.WaitingValidation != nil && *request.WaitingValidation {
-		validated = false
-	}
+	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
 	activityInfo := activity.GetInfo(ctx)
 	provider := shared.ConnectorStripe
