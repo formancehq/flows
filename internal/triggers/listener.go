@@ -110,7 +110,7 @@ func handleMessage(temporalClient client.Client, stack, taskIDPrefix, taskQueue 
 func registerListener(r *message.Router, s message.Subscriber, temporalClient client.Client,
 	stack, taskIDPrefix, taskQueue string, topics []string) {
 	for _, topic := range topics {
-		r.AddNoPublisherHandler(fmt.Sprintf("listen-%s-events", topic), topic, s, func(msg *message.Message) error {
+		r.AddConsumerHandler(fmt.Sprintf("listen-%s-events", topic), topic, s, func(msg *message.Message) error {
 			if err := handleMessage(temporalClient, stack, taskIDPrefix, taskQueue, msg); err != nil {
 				logging.Errorf("Error executing workflow: %s", err)
 				return err
