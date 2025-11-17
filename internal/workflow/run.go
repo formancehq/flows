@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/formancehq/orchestration/internal/temporalworker"
-
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/workflow"
 )
@@ -12,12 +11,14 @@ import (
 const (
 	SearchAttributeStack      = "Stack"
 	SearchAttributeWorkflowID = "OrchestrationWorkflowID"
+	SearchAttributeTriggerID  = "OrchestrationTriggerID"
 )
 
 var (
 	SearchAttributes = map[string]enums.IndexedValueType{
 		SearchAttributeStack:      enums.INDEXED_VALUE_TYPE_KEYWORD,
 		SearchAttributeWorkflowID: enums.INDEXED_VALUE_TYPE_TEXT,
+		SearchAttributeTriggerID:  enums.INDEXED_VALUE_TYPE_TEXT,
 	}
 )
 
