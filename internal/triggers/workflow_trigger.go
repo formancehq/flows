@@ -11,8 +11,6 @@ import (
 	temporalworkflow "go.temporal.io/sdk/workflow"
 )
 
-const SearchAttributeTriggerID = "OrchestrationTriggerID"
-
 var (
 	SearchAttributes = map[string]enums.IndexedValueType{
 		workflow.SearchAttributeStack: enums.INDEXED_VALUE_TYPE_TEXT,
@@ -48,7 +46,7 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 			workflow.SearchAttributeStack: w.stack,
 		}
 		if w.includeSearchAttributes {
-			searchAttributes[SearchAttributeTriggerID] = trigger.ID
+			searchAttributes[workflow.SearchAttributeTriggerID] = trigger.ID
 		}
 
 		if err := temporalworkflow.ExecuteChildWorkflow(
