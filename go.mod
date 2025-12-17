@@ -6,7 +6,7 @@ toolchain go1.24.7
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.5.1
-	github.com/expr-lang/expr v1.17.6
+	github.com/expr-lang/expr v1.17.7
 	github.com/formancehq/formance-sdk-go/v3 v3.2.0
 	github.com/formancehq/go-libs/v3 v3.3.0
 	github.com/go-chi/chi/v5 v5.2.3
