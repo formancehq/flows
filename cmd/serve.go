@@ -43,10 +43,16 @@ func newServeCommand() *cobra.Command {
 				return err
 			}
 
+			connectionOptions, err := bunconnect.ConnectionOptionsFromFlags(cmd)
+			if err != nil {
+				return err
+			}
+
 			listen, _ := cmd.Flags().GetString(listenFlag)
 
 			options := []fx.Option{
 				commonOptions,
+				fx.Supply(connectionOptions),
 				healthCheckModule(),
 				fx.Provide(func() api.ServiceInfo {
 					return api.ServiceInfo{
