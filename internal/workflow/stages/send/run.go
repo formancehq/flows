@@ -226,9 +226,6 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
-	if destination.PSP != "stripe" {
-		return errors.New("only stripe actually supported")
-	}
 	sourceWallet, err := getWalletFromReference(ctx, source.WalletReference)
 	if err != nil {
 		return errors.Wrapf(err, "reading account: %s", source.ID)
@@ -239,15 +236,39 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 		return err
 	}
 
-	if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
-		Amount:            amount.Amount,
-		Asset:             &amount.Asset,
-		Destination:       &formanceAccountID,
-		WaitingValidation: &destination.WaitingValidation,
-		ConnectorID:       destination.ConnectorID,
-		Metadata:          m,
-	}); err != nil {
-		return err
+	// Version 1: Use generic CreateTransferInitiation (supports all PSPs)
+	// Version 0 (default): Use legacy StripeTransfer (Stripe only)
+	v := workflow.GetVersion(ctx, "generic-transfer-initiation", workflow.DefaultVersion, 1)
+	if v == workflow.DefaultVersion {
+		// Legacy behavior: Stripe only
+		if destination.PSP != "stripe" {
+			return errors.New("only stripe actually supported")
+		}
+		if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+			Amount:            amount.Amount,
+			Asset:             &amount.Asset,
+			Destination:       &formanceAccountID,
+			WaitingValidation: &destination.WaitingValidation,
+			ConnectorID:       destination.ConnectorID,
+			Metadata:          m,
+		}); err != nil {
+			return err
+		}
+	} else {
+		// New behavior: Generic transfer initiation for all supported PSPs
+		if err := activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+			Amount:            amount.Amount,
+			Asset:             &amount.Asset,
+			Provider:          &destination.PSP,
+			Type:              destination.Type,
+			Source:            destination.SourceAccount,
+			Destination:       &formanceAccountID,
+			WaitingValidation: &destination.WaitingValidation,
+			ConnectorID:       destination.ConnectorID,
+			Metadata:          m,
+		}); err != nil {
+			return err
+		}
 	}
 
 	return justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
@@ -411,9 +432,6 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
-	if destination.PSP != "stripe" {
-		return errors.New("only stripe actually supported")
-	}
 	account, err := activities.GetAccount(internal.InfiniteRetryContext(ctx), source.Ledger, source.ID)
 	if err != nil {
 		return errors.Wrapf(err, "reading account: %s", source.ID)
@@ -423,16 +441,41 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		return err
 	}
 
-	if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
-		Amount:            amount.Amount,
-		Asset:             &amount.Asset,
-		Destination:       &formanceAccountID,
-		WaitingValidation: &destination.WaitingValidation,
-		ConnectorID:       destination.ConnectorID,
-		Metadata:          m,
-	}); err != nil {
-		return err
+	// Version 1: Use generic CreateTransferInitiation (supports all PSPs)
+	// Version 0 (default): Use legacy StripeTransfer (Stripe only)
+	v := workflow.GetVersion(ctx, "generic-transfer-initiation", workflow.DefaultVersion, 1)
+	if v == workflow.DefaultVersion {
+		// Legacy behavior: Stripe only
+		if destination.PSP != "stripe" {
+			return errors.New("only stripe actually supported")
+		}
+		if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+			Amount:            amount.Amount,
+			Asset:             &amount.Asset,
+			Destination:       &formanceAccountID,
+			WaitingValidation: &destination.WaitingValidation,
+			ConnectorID:       destination.ConnectorID,
+			Metadata:          m,
+		}); err != nil {
+			return err
+		}
+	} else {
+		// New behavior: Generic transfer initiation for all supported PSPs
+		if err := activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+			Amount:            amount.Amount,
+			Asset:             &amount.Asset,
+			Provider:          &destination.PSP,
+			Type:              destination.Type,
+			Source:            destination.SourceAccount,
+			Destination:       &formanceAccountID,
+			WaitingValidation: &destination.WaitingValidation,
+			ConnectorID:       destination.ConnectorID,
+			Metadata:          m,
+		}); err != nil {
+			return err
+		}
 	}
+
 	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, activities.PostTransaction{
 		Postings: []shared.V2Posting{{
 			Amount:      amount.Amount,

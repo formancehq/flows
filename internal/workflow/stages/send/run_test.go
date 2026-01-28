@@ -1032,11 +1032,13 @@ var (
 				}, nil},
 			},
 			{
-				Activity: activities.StripeTransferActivity,
+				Activity: activities.CreateTransferInitiationActivity,
 				Args: []any{
-					mock.Anything, activities.StripeTransferRequest{
+					mock.Anything, activities.CreateTransferInitiationRequest{
 						Amount:            big.NewInt(100),
 						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "",
 						Destination:       pointer.For("abcd"),
 						ConnectorID:       nil,
 						WaitingValidation: pointer.For(false),
@@ -1391,11 +1393,13 @@ var (
 				}, nil},
 			},
 			{
-				Activity: activities.StripeTransferActivity,
+				Activity: activities.CreateTransferInitiationActivity,
 				Args: []any{
-					mock.Anything, activities.StripeTransferRequest{
+					mock.Anything, activities.CreateTransferInitiationRequest{
 						Amount:            big.NewInt(100),
 						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "",
 						Destination:       pointer.For("abcd"),
 						ConnectorID:       nil,
 						WaitingValidation: pointer.For(false),
@@ -1423,6 +1427,224 @@ var (
 			},
 		},
 	}
+	// Test with PAYOUT type
+	walletToPaymentWithPayout = stagestesting.WorkflowTestCase[Send]{
+		Name: "wallet to payment with payout type",
+		Stage: Send{
+			Source: NewSource().WithWallet(&WalletSource{
+				WalletReference: WalletReference{
+					ID: "foo",
+				},
+				Balance: "main",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:         "stripe",
+				Type:        "PAYOUT",
+				Metadata:    "stripeConnectID",
+				ConnectorID: nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetWalletActivity,
+				Args: []any{mock.Anything, activities.GetWalletRequest{
+					ID: "foo",
+				}},
+				Returns: []any{&shared.GetWalletResponse{
+					Data: shared.WalletWithBalances{
+						ID: "foo",
+						Metadata: map[string]string{
+							"stripeConnectID": "acct_xxx",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(100),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Destination:       pointer.For("acct_xxx"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.DebitWalletActivity,
+				Args: []any{
+					mock.Anything, activities.DebitWalletRequest{
+						ID: "foo",
+						Data: &activities.DebitWalletRequestPayload{
+							Amount: shared.Monetary{
+								Asset:  "USD",
+								Amount: big.NewInt(100),
+							},
+							Balances: []string{"main"},
+							Metadata: map[string]string{},
+						},
+					},
+				},
+				Returns: []any{nil, nil},
+			},
+		},
+	}
+	// Test with explicit source account
+	walletToPaymentWithSourceAccount = stagestesting.WorkflowTestCase[Send]{
+		Name: "wallet to payment with source account",
+		Stage: Send{
+			Source: NewSource().WithWallet(&WalletSource{
+				WalletReference: WalletReference{
+					ID: "foo",
+				},
+				Balance: "main",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:           "stripe",
+				Type:          "PAYOUT",
+				SourceAccount: pointer.For("internal-account-123"),
+				Metadata:      "stripeConnectID",
+				ConnectorID:   nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetWalletActivity,
+				Args: []any{mock.Anything, activities.GetWalletRequest{
+					ID: "foo",
+				}},
+				Returns: []any{&shared.GetWalletResponse{
+					Data: shared.WalletWithBalances{
+						ID: "foo",
+						Metadata: map[string]string{
+							"stripeConnectID": "acct_xxx",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(100),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Source:            pointer.For("internal-account-123"),
+						Destination:       pointer.For("acct_xxx"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.DebitWalletActivity,
+				Args: []any{
+					mock.Anything, activities.DebitWalletRequest{
+						ID: "foo",
+						Data: &activities.DebitWalletRequestPayload{
+							Amount: shared.Monetary{
+								Asset:  "USD",
+								Amount: big.NewInt(100),
+							},
+							Balances: []string{"main"},
+							Metadata: map[string]string{},
+						},
+					},
+				},
+				Returns: []any{nil, nil},
+			},
+		},
+	}
+	// Test with non-Stripe PSP (Wise)
+	accountToPaymentWithWise = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to payment with wise",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:     "foo",
+				Ledger: "default",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:           "wise",
+				Type:          "PAYOUT",
+				SourceAccount: pointer.For("wise-account-456"),
+				Metadata:      "wiseRecipientID",
+				ConnectorID:   nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(500),
+				Asset:  "EUR",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetAccountActivity,
+				Args: []any{mock.Anything, activities.GetAccountRequest{
+					Ledger: "default",
+					ID:     "foo",
+				}},
+				Returns: []any{&shared.AccountResponse{
+					Data: shared.AccountWithVolumesAndBalances{
+						Address: "foo",
+						Metadata: map[string]any{
+							"wiseRecipientID": "recipient-789",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(500),
+						Asset:             pointer.For("EUR"),
+						Provider:          pointer.For("wise"),
+						Type:              "PAYOUT",
+						Source:            pointer.For("wise-account-456"),
+						Destination:       pointer.For("recipient-789"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "default",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: "world",
+								Source:      "foo",
+							}},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
 )
 
 var testCases = []stagestesting.WorkflowTestCase[Send]{
@@ -1440,6 +1662,9 @@ var testCases = []stagestesting.WorkflowTestCase[Send]{
 	walletToWallet,
 	walletToWalletMixedLedger,
 	walletToPayment,
+	walletToPaymentWithPayout,
+	walletToPaymentWithSourceAccount,
+	accountToPaymentWithWise,
 }
 
 func TestSend(t *testing.T) {

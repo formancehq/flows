@@ -1,5 +1,11 @@
 ---
-name: "Debit wallet to stripe connected account"
+# Example: Debit wallet and initiate a payout via any PSP connector
+#
+# The 'psp' field accepts any installed connector (e.g., stripe, wise, mangopay)
+# The 'type' field can be:
+#   - TRANSFER: Internal to internal account transfer (default)
+#   - PAYOUT: Internal to external account payout
+name: "Debit wallet to payment destination"
 stages:
 - send:
     source:
@@ -8,7 +14,8 @@ stages:
         balance: "${balance}"
     destination:
       payment:
-        psp: stripe
+        psp: "${psp}"           # Any installed connector (e.g., "stripe", "wise")
+        type: "${type}"         # "PAYOUT" or "TRANSFER" (default)
     amount:
       amount: "${amount}"
       asset: "EUR/2"

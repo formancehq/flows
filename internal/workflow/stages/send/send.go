@@ -32,7 +32,15 @@ type PaymentSource struct {
 }
 
 type PaymentDestination struct {
-	PSP               string  `json:"psp"`
+	// PSP is the payment service provider name (e.g., "stripe", "wise", "mangopay", "modulr", etc.)
+	PSP string `json:"psp"`
+	// Type is either "TRANSFER" (internal to internal) or "PAYOUT" (internal to external)
+	// Defaults to "TRANSFER" if not specified.
+	Type string `json:"type" spec:"default:TRANSFER"`
+	// SourceAccount is the Formance Payments account ID for the source (internal PSP account).
+	// If not specified, the Payments service may use a default account for the connector.
+	SourceAccount *string `json:"sourceAccount,omitempty"`
+	// Metadata is the key to look up in the source wallet/account metadata to get the destination account ID.
 	Metadata          string  `json:"metadata" spec:"default:formanceAccountID"`
 	WaitingValidation bool    `json:"waitingValidation" spec:"default:false"`
 	ConnectorID       *string `json:"connectorId,omitempty"`
