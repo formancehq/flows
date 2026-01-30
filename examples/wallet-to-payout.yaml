@@ -5,6 +5,8 @@
 # The 'type' field can be:
 #   - TRANSFER: Internal to internal account transfer (default)
 #   - PAYOUT: Internal to external account payout
+# The 'sourceAccount' field (optional) specifies the Formance Payments account ID
+# for the source PSP account.
 name: "Debit wallet to payment destination"
 stages:
 - send:
@@ -16,6 +18,7 @@ stages:
       payment:
         psp: "${psp}"           # Any installed connector (e.g., "stripe", "wise")
         type: "${type}"         # "PAYOUT" or "TRANSFER" (default)
+        # sourceAccount: "${sourceAccountID}"  # Optional: PSP source account
     amount:
       amount: "${amount}"
       asset: "EUR/2"

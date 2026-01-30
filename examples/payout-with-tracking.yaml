@@ -1,0 +1,33 @@
+---
+# Example: Payout from ledger account with custom tracking
+#
+# This example shows how to use 'throughAccount' to track payouts in a
+# liability account instead of using the default "world" account.
+#
+# When a payout is initiated, the ledger transaction will be:
+#   users:${userID} -> liabilities:payouts-pending
+# Instead of:
+#   users:${userID} -> world
+#
+# IMPORTANT: Since "world" has special unbounded overdraft semantics,
+# you need to set 'allowOverdraft: true' when using a custom throughAccount
+# that may need to go negative (like a liability account).
+#
+# This allows you to track pending payouts in your chart of accounts.
+name: "Payout with liability tracking"
+stages:
+- send:
+    source:
+      account:
+        id: "users:${userID}"
+        ledger: "main"
+        throughAccount: "liabilities:payouts-pending"  # Track payouts as pending liabilities
+        allowOverdraft: true  # Required: liability accounts need to go negative
+    destination:
+      payment:
+        psp: "${psp}"                # e.g., "stripe", "wise"
+        type: "PAYOUT"
+        sourceAccount: "${sourceAccountID}"  # Optional: PSP source account
+    amount:
+      amount: "${amount}"
+      asset: "${asset}"

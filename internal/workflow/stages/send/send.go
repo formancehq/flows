@@ -23,12 +23,37 @@ type WalletDestination = WalletSource
 type LedgerAccountSource struct {
 	ID     string `json:"id" validate:"required"`
 	Ledger string `json:"ledger" spec:"default:default" validate:"required"`
+	// ThroughAccount is used when this account interacts with external systems (payments, cross-ledger).
+	// - As SOURCE going to payment: funds are sent to this account (e.g., "liabilities:payouts-pending")
+	// - As DESTINATION from payment: funds come from this account (e.g., "assets:stripe:incoming")
+	// - For cross-ledger transfers: replaces "world" on both sides
+	// Defaults to "world"
+	ThroughAccount string `json:"throughAccount" spec:"default:world"`
+	// AllowOverdraft enables unbounded overdraft on the throughAccount when set to true.
+	// This is useful when the throughAccount represents a liability or bridge account that
+	// needs to go negative (e.g., "liabilities:payouts-pending").
+	// Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+	// Defaults to false.
+	AllowOverdraft bool `json:"allowOverdraft" spec:"default:false"`
 }
 
 type LedgerAccountDestination = LedgerAccountSource
 
 type PaymentSource struct {
 	ID string `json:"id" validate:"required"`
+	// Ledger specifies which ledger to use for payment ingestion.
+	// Defaults to the internal orchestration ledger ("orchestration-000-internal").
+	Ledger string `json:"ledger,omitempty"`
+	// HoldingAccount is the intermediate account where payment funds are held.
+	// Defaults to "payment:{paymentID}" format.
+	HoldingAccount string `json:"holdingAccount,omitempty"`
+	// ThroughAccount is the source account for the payment ingestion transaction.
+	// Defaults to "world".
+	ThroughAccount string `json:"throughAccount" spec:"default:world"`
+	// AllowOverdraft enables unbounded overdraft on the throughAccount when set to true.
+	// Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+	// Defaults to false.
+	AllowOverdraft bool `json:"allowOverdraft" spec:"default:false"`
 }
 
 type PaymentDestination struct {

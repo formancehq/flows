@@ -1,10 +1,23 @@
 ---
+# Example: Credit wallet from an incoming payment
+#
+# For payment sources, you can customize the ingestion:
+#   - ledger: Which ledger to use for payment tracking (default: internal orchestration ledger)
+#   - holdingAccount: Intermediate account for payment funds (default: "payment:{id}")
+#   - throughAccount: Source account for ingestion transaction (default: "world")
+#   - allowOverdraft: Enable unbounded overdraft on throughAccount (default: false)
+#
+# IMPORTANT: If using a custom throughAccount that may need overdraft, set allowOverdraft: true
 name: "Credit wallet from payment"
 stages:
 - send:
     source:
       payment:
         id: "${paymentID}"
+        # ledger: "main"                          # Optional: use specific ledger
+        # holdingAccount: "transit:payments"      # Optional: custom holding account
+        # throughAccount: "assets:stripe:incoming" # Optional: custom source (default: "world")
+        # allowOverdraft: true                    # Required if throughAccount needs overdraft
     destination:
       wallet:
         id: "${walletID}"
