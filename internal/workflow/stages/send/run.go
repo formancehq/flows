@@ -24,6 +24,16 @@ const (
 	moveFromLedgerMetadata = "orchestration/move-from-ledger"
 )
 
+// generateNumscriptWithSourceOverdraft creates a Numscript program with unbounded overdraft on the source.
+// This is used when the source account may not have sufficient funds (e.g., bridge accounts, asset tracking accounts).
+// Note: In Numscript, overdraft only applies to sources, not destinations.
+func generateNumscriptWithSourceOverdraft(source, destination, asset string, amount string) string {
+	return fmt.Sprintf(`send [%s %s] (
+  source = @%s allowing unbounded overdraft
+  destination = @%s
+)`, asset, amount, source, destination)
+}
+
 func extractFormanceAccountID[V any](metadataKey string, metadata map[string]V) (string, error) {
 	formanceAccountID, ok := metadata[metadataKey]
 	if !ok {
@@ -105,7 +115,7 @@ func RunSend(ctx workflow.Context, send Send) (err error) {
 }
 
 func runPaymentToWallet(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *WalletSource, amount *shared.Monetary, m metadata.Metadata) error {
-	payment, err := savePayment(ctx, timestamp, source.ID, m)
+	payment, err := savePayment(ctx, timestamp, source, m)
 	if err != nil {
 		return err
 	}
@@ -115,9 +125,19 @@ func runPaymentToWallet(ctx workflow.Context, timestamp *time.Time, source *Paym
 			Asset:  payment.Asset,
 		}
 	}
+	// Determine the ledger and holding account for the payment
+	ledger := source.Ledger
+	if ledger == "" {
+		ledger = internalLedger
+	}
+	holdingAccount := source.HoldingAccount
+	if holdingAccount == "" {
+		holdingAccount = paymentAccountName(source.ID)
+	}
 	return runAccountToWallet(ctx, timestamp, &LedgerAccountSource{
-		ID:     paymentAccountName(source.ID),
-		Ledger: internalLedger,
+		ID:             holdingAccount,
+		Ledger:         ledger,
+		ThroughAccount: "world", // The payment was already ingested, no need for custom throughAccount here
 	}, destination, amount, m)
 }
 
@@ -126,23 +146,59 @@ func paymentAccountName(paymentID string) string {
 	return fmt.Sprintf("payment:%s", paymentID)
 }
 
-func savePayment(ctx workflow.Context, timestamp *time.Time, paymentID string, m metadata.Metadata) (*shared.Payment, error) {
-	payment, err := activities.GetPayment(internal.InfiniteRetryContext(ctx), paymentID)
+func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, m metadata.Metadata) (*shared.Payment, error) {
+	payment, err := activities.GetPayment(internal.InfiniteRetryContext(ctx), source.ID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "retrieving payment: %s", paymentID)
+		return nil, errors.Wrapf(err, "retrieving payment: %s", source.ID)
 	}
-	reference := paymentAccountName(paymentID)
-	_, err = activities.CreateTransaction(internal.InfiniteRetryContext(ctx), internalLedger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      payment.InitialAmount,
-			Asset:       payment.Asset,
-			Destination: paymentAccountName(paymentID),
-			Source:      "world",
-		}},
-		Timestamp: timestamp,
-		Metadata:  m,
-		Reference: &reference,
-	})
+
+	// Determine ledger, holding account, and through account
+	ledger := source.Ledger
+	if ledger == "" {
+		ledger = internalLedger
+	}
+	holdingAccount := source.HoldingAccount
+	if holdingAccount == "" {
+		holdingAccount = paymentAccountName(source.ID)
+	}
+	throughAccount := source.ThroughAccount
+	if throughAccount == "" {
+		throughAccount = "world"
+	}
+
+	reference := holdingAccount
+
+	// Use Numscript with overdraft if allowOverdraft is true and throughAccount is not "world"
+	// Here throughAccount is the SOURCE, so overdraft makes sense
+	var txRequest activities.PostTransaction
+	if source.AllowOverdraft && throughAccount != "world" {
+		script := generateNumscriptWithSourceOverdraft(
+			throughAccount, holdingAccount,
+			payment.Asset, payment.InitialAmount.String(),
+		)
+		txRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
+			},
+			Timestamp: timestamp,
+			Metadata:  m,
+			Reference: &reference,
+		}
+	} else {
+		txRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      payment.InitialAmount,
+				Asset:       payment.Asset,
+				Destination: holdingAccount,
+				Source:      throughAccount,
+			}},
+			Timestamp: timestamp,
+			Metadata:  m,
+			Reference: &reference,
+		}
+	}
+
+	_, err = activities.CreateTransaction(internal.InfiniteRetryContext(ctx), ledger, txRequest)
 	if err != nil {
 		applicationError := &temporal.ApplicationError{}
 		if errors.As(err, &applicationError) {
@@ -157,7 +213,7 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, paymentID string, m
 }
 
 func runPaymentToAccount(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *LedgerAccountDestination, amount *shared.Monetary, m metadata.Metadata) error {
-	payment, err := savePayment(ctx, timestamp, source.ID, m)
+	payment, err := savePayment(ctx, timestamp, source, m)
 	if err != nil {
 		return err
 	}
@@ -167,9 +223,19 @@ func runPaymentToAccount(ctx workflow.Context, timestamp *time.Time, source *Pay
 			Asset:  payment.Asset,
 		}
 	}
+	// Determine the ledger and holding account for the payment
+	ledger := source.Ledger
+	if ledger == "" {
+		ledger = internalLedger
+	}
+	holdingAccount := source.HoldingAccount
+	if holdingAccount == "" {
+		holdingAccount = paymentAccountName(source.ID)
+	}
 	return runAccountToAccount(ctx, timestamp, &LedgerAccountSource{
-		ID:     paymentAccountName(source.ID),
-		Ledger: internalLedger,
+		ID:             holdingAccount,
+		Ledger:         ledger,
+		ThroughAccount: "world", // The payment was already ingested, no throughAccount needed for intermediate transfer
 	}, destination, amount, m)
 }
 
@@ -236,6 +302,16 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 		return err
 	}
 
+	// IMPORTANT: Debit wallet FIRST to validate balance before initiating external transfer
+	if err := justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
+		Amount:    *amount,
+		Balances:  []string{source.Balance},
+		Metadata:  m,
+		Timestamp: timestamp,
+	})); err != nil {
+		return err
+	}
+
 	// Version 1: Use generic CreateTransferInitiation (supports all PSPs)
 	// Version 0 (default): Use legacy StripeTransfer (Stripe only)
 	v := workflow.GetVersion(ctx, "generic-transfer-initiation", workflow.DefaultVersion, 1)
@@ -244,39 +320,28 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
 			WaitingValidation: &destination.WaitingValidation,
 			ConnectorID:       destination.ConnectorID,
 			Metadata:          m,
-		}); err != nil {
-			return err
-		}
-	} else {
-		// New behavior: Generic transfer initiation for all supported PSPs
-		if err := activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
-			Amount:            amount.Amount,
-			Asset:             &amount.Asset,
-			Provider:          &destination.PSP,
-			Type:              destination.Type,
-			Source:            destination.SourceAccount,
-			Destination:       &formanceAccountID,
-			WaitingValidation: &destination.WaitingValidation,
-			ConnectorID:       destination.ConnectorID,
-			Metadata:          m,
-		}); err != nil {
-			return err
-		}
+		})
 	}
 
-	return justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
-		Amount:    *amount,
-		Balances:  []string{source.Balance},
-		Metadata:  m,
-		Timestamp: timestamp,
-	}))
+	// New behavior: Generic transfer initiation for all supported PSPs
+	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+		Amount:            amount.Amount,
+		Asset:             &amount.Asset,
+		Provider:          &destination.PSP,
+		Type:              destination.Type,
+		Source:            destination.SourceAccount,
+		Destination:       &formanceAccountID,
+		WaitingValidation: &destination.WaitingValidation,
+		ConnectorID:       destination.ConnectorID,
+		Metadata:          m,
+	})
 }
 
 func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *LedgerAccountDestination, amount *shared.Monetary, m metadata.Metadata) error {
@@ -313,18 +378,45 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 		return err
 	}
 
-	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      amount.Amount,
-			Asset:       amount.Asset,
-			Destination: destination.ID,
-			Source:      "world",
-		}},
-		Timestamp: timestamp,
-		Metadata: collectionutils.MergeMaps(m, map[string]string{
-			moveFromLedgerMetadata: sourceWallet.Ledger,
-		}),
-	}))
+	// Use destination's throughAccount instead of hardcoded "world"
+	throughAccount := destination.ThroughAccount
+	if throughAccount == "" {
+		throughAccount = "world"
+	}
+
+	txMetadata := collectionutils.MergeMaps(m, map[string]string{
+		moveFromLedgerMetadata: sourceWallet.Ledger,
+	})
+
+	// Use Numscript with overdraft if allowOverdraft is true and throughAccount is not "world"
+	// Here throughAccount is the SOURCE, so overdraft makes sense
+	var txRequest activities.PostTransaction
+	if destination.AllowOverdraft && throughAccount != "world" {
+		script := generateNumscriptWithSourceOverdraft(
+			throughAccount, destination.ID,
+			amount.Asset, amount.Amount.String(),
+		)
+		txRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
+			},
+			Timestamp: timestamp,
+			Metadata:  txMetadata,
+		}
+	} else {
+		txRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      amount.Amount,
+				Asset:       amount.Asset,
+				Destination: destination.ID,
+				Source:      throughAccount,
+			}},
+			Timestamp: timestamp,
+			Metadata:  txMetadata,
+		}
+	}
+
+	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, txRequest))
 }
 
 func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *WalletDestination, amount *shared.Monetary, m metadata.Metadata) error {
@@ -350,21 +442,47 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 		})
 	}
 
-	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      amount.Amount,
-			Asset:       amount.Asset,
-			Destination: "world",
-			Source:      source.ID,
-		}},
-		Timestamp: timestamp,
-		Metadata: collectionutils.MergeMaps(
-			m,
-			map[string]string{
-				moveToLedgerMetadata: destinationWallet.Ledger,
+	// Use source's throughAccount instead of hardcoded "world"
+	throughAccount := source.ThroughAccount
+	if throughAccount == "" {
+		throughAccount = "world"
+	}
+
+	// If allowOverdraft is true, use Numscript with overdraft on source.ID
+	txMetadata := collectionutils.MergeMaps(
+		m,
+		map[string]string{
+			moveToLedgerMetadata: destinationWallet.Ledger,
+		},
+	)
+
+	var txRequest activities.PostTransaction
+	if source.AllowOverdraft {
+		script := generateNumscriptWithSourceOverdraft(
+			source.ID, throughAccount,
+			amount.Asset, amount.Amount.String(),
+		)
+		txRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
 			},
-		),
-	})); err != nil {
+			Timestamp: timestamp,
+			Metadata:  txMetadata,
+		}
+	} else {
+		txRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      amount.Amount,
+				Asset:       amount.Asset,
+				Destination: throughAccount,
+				Source:      source.ID,
+			}},
+			Timestamp: timestamp,
+			Metadata:  txMetadata,
+		}
+	}
+
+	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, txRequest)); err != nil {
 		return err
 	}
 
@@ -372,7 +490,7 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 		Amount: *amount,
 		Sources: []shared.Subject{{
 			LedgerAccountSubject: &shared.LedgerAccountSubject{
-				Identifier: "world",
+				Identifier: throughAccount,
 				Type:       "ACCOUNT",
 			},
 		}},
@@ -400,32 +518,88 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 			Metadata:  m,
 		}))
 	}
-	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      amount.Amount,
-			Asset:       amount.Asset,
-			Destination: "world",
-			Source:      source.ID,
-		}},
-		Timestamp: timestamp,
-		Metadata: collectionutils.MergeMaps(m, map[string]string{
-			moveToLedgerMetadata: destination.Ledger,
-		}),
-	})); err != nil {
+
+	// Use source's throughAccount for exit point
+	sourceThroughAccount := source.ThroughAccount
+	if sourceThroughAccount == "" {
+		sourceThroughAccount = "world"
+	}
+
+	// Use destination's throughAccount for entry point
+	destThroughAccount := destination.ThroughAccount
+	if destThroughAccount == "" {
+		destThroughAccount = "world"
+	}
+
+	// First transaction: source ledger (source.ID -> sourceThroughAccount)
+	// If source.AllowOverdraft is true, apply overdraft on source.ID
+	sourceTxMetadata := collectionutils.MergeMaps(m, map[string]string{
+		moveToLedgerMetadata: destination.Ledger,
+	})
+
+	var sourceTxRequest activities.PostTransaction
+	if source.AllowOverdraft {
+		script := generateNumscriptWithSourceOverdraft(
+			source.ID, sourceThroughAccount,
+			amount.Asset, amount.Amount.String(),
+		)
+		sourceTxRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
+			},
+			Timestamp: timestamp,
+			Metadata:  sourceTxMetadata,
+		}
+	} else {
+		sourceTxRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      amount.Amount,
+				Asset:       amount.Asset,
+				Destination: sourceThroughAccount,
+				Source:      source.ID,
+			}},
+			Timestamp: timestamp,
+			Metadata:  sourceTxMetadata,
+		}
+	}
+
+	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, sourceTxRequest)); err != nil {
 		return err
 	}
-	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      amount.Amount,
-			Asset:       amount.Asset,
-			Destination: destination.ID,
-			Source:      "world",
-		}},
-		Timestamp: timestamp,
-		Metadata: collectionutils.MergeMaps(m, map[string]string{
-			moveFromLedgerMetadata: source.Ledger,
-		}),
-	}))
+
+	// Second transaction: destination ledger (destThroughAccount -> destination.ID)
+	// destThroughAccount is the SOURCE here, so overdraft makes sense if needed
+	destTxMetadata := collectionutils.MergeMaps(m, map[string]string{
+		moveFromLedgerMetadata: source.Ledger,
+	})
+
+	var destTxRequest activities.PostTransaction
+	if destination.AllowOverdraft && destThroughAccount != "world" {
+		script := generateNumscriptWithSourceOverdraft(
+			destThroughAccount, destination.ID,
+			amount.Asset, amount.Amount.String(),
+		)
+		destTxRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
+			},
+			Timestamp: timestamp,
+			Metadata:  destTxMetadata,
+		}
+	} else {
+		destTxRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      amount.Amount,
+				Asset:       amount.Asset,
+				Destination: destination.ID,
+				Source:      destThroughAccount,
+			}},
+			Timestamp: timestamp,
+			Metadata:  destTxMetadata,
+		}
+	}
+
+	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, destTxRequest))
 }
 
 func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *PaymentDestination, amount *shared.Monetary, m metadata.Metadata) error {
@@ -441,6 +615,43 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		return err
 	}
 
+	// Use source's throughAccount instead of hardcoded "world"
+	throughAccount := source.ThroughAccount
+	if throughAccount == "" {
+		throughAccount = "world"
+	}
+
+	// IMPORTANT: Debit ledger FIRST to validate balance before initiating external transfer
+	var txRequest activities.PostTransaction
+	if source.AllowOverdraft {
+		script := generateNumscriptWithSourceOverdraft(
+			source.ID, throughAccount,
+			amount.Asset, amount.Amount.String(),
+		)
+		txRequest = activities.PostTransaction{
+			Script: &shared.V2PostTransactionScript{
+				Plain: script,
+			},
+			Timestamp: timestamp,
+			Metadata:  m,
+		}
+	} else {
+		txRequest = activities.PostTransaction{
+			Postings: []shared.V2Posting{{
+				Amount:      amount.Amount,
+				Asset:       amount.Asset,
+				Destination: throughAccount,
+				Source:      source.ID,
+			}},
+			Timestamp: timestamp,
+			Metadata:  m,
+		}
+	}
+
+	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, txRequest)); err != nil {
+		return err
+	}
+
 	// Version 1: Use generic CreateTransferInitiation (supports all PSPs)
 	// Version 0 (default): Use legacy StripeTransfer (Stripe only)
 	v := workflow.GetVersion(ctx, "generic-transfer-initiation", workflow.DefaultVersion, 1)
@@ -449,41 +660,26 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		if err := activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
 			WaitingValidation: &destination.WaitingValidation,
 			ConnectorID:       destination.ConnectorID,
 			Metadata:          m,
-		}); err != nil {
-			return err
-		}
-	} else {
-		// New behavior: Generic transfer initiation for all supported PSPs
-		if err := activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
-			Amount:            amount.Amount,
-			Asset:             &amount.Asset,
-			Provider:          &destination.PSP,
-			Type:              destination.Type,
-			Source:            destination.SourceAccount,
-			Destination:       &formanceAccountID,
-			WaitingValidation: &destination.WaitingValidation,
-			ConnectorID:       destination.ConnectorID,
-			Metadata:          m,
-		}); err != nil {
-			return err
-		}
+		})
 	}
 
-	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, activities.PostTransaction{
-		Postings: []shared.V2Posting{{
-			Amount:      amount.Amount,
-			Asset:       amount.Asset,
-			Destination: "world",
-			Source:      source.ID,
-		}},
-		Timestamp: timestamp,
-		Metadata:  m,
-	}))
+	// New behavior: Generic transfer initiation for all supported PSPs
+	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+		Amount:            amount.Amount,
+		Asset:             &amount.Asset,
+		Provider:          &destination.PSP,
+		Type:              destination.Type,
+		Source:            destination.SourceAccount,
+		Destination:       &formanceAccountID,
+		WaitingValidation: &destination.WaitingValidation,
+		ConnectorID:       destination.ConnectorID,
+		Metadata:          m,
+	})
 }
