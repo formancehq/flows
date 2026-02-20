@@ -162,7 +162,8 @@ func handleMessage(
 			Event: *event,
 		}, trigger)
 		if execErr != nil {
-			if _, ok := execErr.(*serviceerror.WorkflowExecutionAlreadyStarted); ok {
+			var alreadyStarted *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(execErr, &alreadyStarted) {
 				span.SetAttributes(attribute.Bool("duplicate-"+trigger.ID, true))
 				continue
 			}
