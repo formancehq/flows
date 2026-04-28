@@ -1,14 +1,28 @@
 ---
+# Example: Transfer between ledger accounts
+#
+# For cross-ledger transfers, you can customize the intermediate accounts
+# using 'throughAccount' (defaults to "world"):
+#   - On source: where funds go when leaving the ledger
+#   - On destination: where funds come from when entering the ledger
+#
+# IMPORTANT: If using custom throughAccounts that may need to go negative,
+# set 'allowOverdraft: true' to enable unbounded overdraft (like "world" has).
+name: "Ledger to ledger transfer"
 stages:
 - send:
     source:
       account:
         id: "${accountID1}"
-        ledger: "${ledger}"
+        ledger: "${ledger1}"
+        # throughAccount: "bridge:outbound"  # Optional: custom exit account (default: "world")
+        # allowOverdraft: true               # Required if throughAccount needs overdraft
     destination:
       account:
         id: "${accountID2}"
-        ledger: "${ledger}"
+        ledger: "${ledger2}"
+        # throughAccount: "bridge:inbound"   # Optional: custom entry account (default: "world")
+        # allowOverdraft: true               # Required if throughAccount needs overdraft
     amount:
       amount: "${amount}"
       asset: "EUR/2"

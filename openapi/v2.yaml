@@ -937,6 +937,24 @@ components:
           type: string
         ledger:
           type: string
+        throughAccount:
+          type: string
+          description: |
+            Account used when this ledger account interacts with external systems (payments, cross-ledger).
+            - As SOURCE going to payment: funds are sent to this account (e.g., "liabilities:payouts-pending")
+            - As DESTINATION from payment: funds come from this account (e.g., "assets:stripe:incoming")
+            - For cross-ledger transfers: replaces "world" on both sides
+          default: world
+          example: liabilities:payouts-pending
+        allowOverdraft:
+          type: boolean
+          description: |
+            Enables unbounded overdraft on the throughAccount when set to true.
+            This is useful when the throughAccount represents a liability or bridge account
+            that needs to go negative (e.g., "liabilities:payouts-pending").
+            Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+          default: false
+          example: true
     V2StageSendDestinationAccount:
       $ref: '#/components/schemas/V2StageSendSourceAccount'
     V2StageSendSourcePayment:
@@ -946,6 +964,28 @@ components:
       properties:
         id:
           type: string
+        ledger:
+          type: string
+          description: |
+            Ledger to use for payment ingestion.
+            Defaults to the internal orchestration ledger.
+        holdingAccount:
+          type: string
+          description: |
+            Intermediate account where payment funds are held.
+            Defaults to "payment:{paymentID}" format.
+        throughAccount:
+          type: string
+          description: |
+            Source account for the payment ingestion transaction.
+            Defaults to "world".
+          default: world
+        allowOverdraft:
+          type: boolean
+          description: |
+            Enables unbounded overdraft on the throughAccount when set to true.
+            Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+          default: false
     V2StageSendDestinationPayment:
       type: object
       required:
@@ -953,6 +993,26 @@ components:
       properties:
         psp:
           type: string
+          description: |
+            Payment service provider name (e.g., stripe, wise, mangopay).
+            Validated by the Payments service based on installed connectors.
+          example: stripe
+        type:
+          type: string
+          description: |
+            Type of transfer initiation:
+            - TRANSFER: Internal to internal account transfer
+            - PAYOUT: Internal to external account payout
+          enum:
+            - TRANSFER
+            - PAYOUT
+          default: TRANSFER
+          example: PAYOUT
+        sourceAccount:
+          type: string
+          description: |
+            Formance Payments account ID for the source (internal PSP account).
+            If not specified, the Payments service may use a default account for the connector.
     V2StageSendSource:
       type: object
       properties:
@@ -1058,6 +1118,58 @@ components:
             order_id: '6735'
     V2ActivityStripeTransfer:
       $ref: '#/components/schemas/V2StripeTransferRequest'
+    V2CreateTransferInitiationRequest:
+      type: object
+      properties:
+        connectorID:
+          type: string
+        provider:
+          type: string
+          description: |
+            Payment service provider name (e.g., stripe, wise, mangopay).
+            Validated by the Payments service based on installed connectors.
+          example: stripe
+        amount:
+          type: integer
+          format: bigint
+          minimum: 0
+          example: 100
+        asset:
+          type: string
+          example: USD
+        destination:
+          type: string
+          description: Destination account ID
+          example: acct_1Gqj58KZcSIg2N2q
+        source:
+          type: string
+          description: Source account ID (required for TRANSFER type)
+        type:
+          type: string
+          description: |
+            Type of transfer initiation:
+            - TRANSFER: Internal to internal account transfer
+            - PAYOUT: Internal to external account payout
+          enum:
+            - TRANSFER
+            - PAYOUT
+          default: TRANSFER
+        description:
+          type: string
+          description: Description for the transfer initiation
+        waitingValidation:
+          type: boolean
+          example: false
+          default: false
+        metadata:
+          type: object
+          description: >
+            A set of key/value pairs that you can attach to a transfer object.
+            It can be useful for storing additional information about the transfer in a structured format.
+          example:
+            order_id: '6735'
+    V2ActivityCreateTransferInitiation:
+      $ref: '#/components/schemas/V2CreateTransferInitiationRequest'
     V2ActivityListWallets:
       type: object
       properties:
@@ -1571,6 +1683,8 @@ components:
           $ref: '#/components/schemas/V2ActivityCreateTransaction'
         StripeTransfer:
           $ref: '#/components/schemas/V2ActivityStripeTransfer'
+        CreateTransferInitiation:
+          $ref: '#/components/schemas/V2ActivityCreateTransferInitiation'
         GetPayment:
           $ref: '#/components/schemas/V2ActivityGetPayment'
         ConfirmHold:

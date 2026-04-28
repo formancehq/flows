@@ -36,6 +36,10 @@ func (a Activities) DefinitionSet() temporalworker.DefinitionSet {
 			Func: a.StripeTransfer,
 		}).
 		Append(temporalworker.Definition{
+			Name: "CreateTransferInitiation",
+			Func: a.CreateTransferInitiation,
+		}).
+		Append(temporalworker.Definition{
 			Name: "GetPayment",
 			Func: a.GetPayment,
 		}).

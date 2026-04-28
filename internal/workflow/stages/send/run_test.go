@@ -41,8 +41,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -53,8 +55,10 @@ func TestSendSchemaValidation(t *testing.T) {
 						Balance: "main",
 					},
 					Account: &LedgerAccountSource{
-						ID:     "foo",
-						Ledger: "default",
+						ID:             "foo",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Amount: &shared.Monetary{
@@ -83,8 +87,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -129,13 +135,17 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Payment: &PaymentSource{
-						ID: "test",
+						ID:             "test",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
 					Account: &LedgerAccountDestination{
-						ID:     "test:001:test:003:test:f5649:test",
-						Ledger: "default",
+						ID:             "test:001:test:003:test:f5649:test",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Amount: &shared.Monetary{
@@ -165,8 +175,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -207,8 +219,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -250,8 +264,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -294,8 +310,10 @@ func TestSendSchemaValidation(t *testing.T) {
 			ExpectedResolved: Send{
 				Source: Source{
 					Account: &LedgerAccountSource{
-						ID:     "bar",
-						Ledger: "default",
+						ID:             "bar",
+						Ledger:         "default",
+						ThroughAccount: "world",
+						AllowOverdraft: false,
 					},
 				},
 				Destination: Destination{
@@ -1032,11 +1050,13 @@ var (
 				}, nil},
 			},
 			{
-				Activity: activities.StripeTransferActivity,
+				Activity: activities.CreateTransferInitiationActivity,
 				Args: []any{
-					mock.Anything, activities.StripeTransferRequest{
+					mock.Anything, activities.CreateTransferInitiationRequest{
 						Amount:            big.NewInt(100),
 						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "",
 						Destination:       pointer.For("abcd"),
 						ConnectorID:       nil,
 						WaitingValidation: pointer.For(false),
@@ -1391,11 +1411,13 @@ var (
 				}, nil},
 			},
 			{
-				Activity: activities.StripeTransferActivity,
+				Activity: activities.CreateTransferInitiationActivity,
 				Args: []any{
-					mock.Anything, activities.StripeTransferRequest{
+					mock.Anything, activities.CreateTransferInitiationRequest{
 						Amount:            big.NewInt(100),
 						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "",
 						Destination:       pointer.For("abcd"),
 						ConnectorID:       nil,
 						WaitingValidation: pointer.For(false),
@@ -1423,6 +1445,792 @@ var (
 			},
 		},
 	}
+	// Test with PAYOUT type
+	walletToPaymentWithPayout = stagestesting.WorkflowTestCase[Send]{
+		Name: "wallet to payment with payout type",
+		Stage: Send{
+			Source: NewSource().WithWallet(&WalletSource{
+				WalletReference: WalletReference{
+					ID: "foo",
+				},
+				Balance: "main",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:         "stripe",
+				Type:        "PAYOUT",
+				Metadata:    "stripeConnectID",
+				ConnectorID: nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetWalletActivity,
+				Args: []any{mock.Anything, activities.GetWalletRequest{
+					ID: "foo",
+				}},
+				Returns: []any{&shared.GetWalletResponse{
+					Data: shared.WalletWithBalances{
+						ID: "foo",
+						Metadata: map[string]string{
+							"stripeConnectID": "acct_xxx",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(100),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Destination:       pointer.For("acct_xxx"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.DebitWalletActivity,
+				Args: []any{
+					mock.Anything, activities.DebitWalletRequest{
+						ID: "foo",
+						Data: &activities.DebitWalletRequestPayload{
+							Amount: shared.Monetary{
+								Asset:  "USD",
+								Amount: big.NewInt(100),
+							},
+							Balances: []string{"main"},
+							Metadata: map[string]string{},
+						},
+					},
+				},
+				Returns: []any{nil, nil},
+			},
+		},
+	}
+	// Test with explicit source account
+	walletToPaymentWithSourceAccount = stagestesting.WorkflowTestCase[Send]{
+		Name: "wallet to payment with source account",
+		Stage: Send{
+			Source: NewSource().WithWallet(&WalletSource{
+				WalletReference: WalletReference{
+					ID: "foo",
+				},
+				Balance: "main",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:           "stripe",
+				Type:          "PAYOUT",
+				SourceAccount: pointer.For("internal-account-123"),
+				Metadata:      "stripeConnectID",
+				ConnectorID:   nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetWalletActivity,
+				Args: []any{mock.Anything, activities.GetWalletRequest{
+					ID: "foo",
+				}},
+				Returns: []any{&shared.GetWalletResponse{
+					Data: shared.WalletWithBalances{
+						ID: "foo",
+						Metadata: map[string]string{
+							"stripeConnectID": "acct_xxx",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(100),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Source:            pointer.For("internal-account-123"),
+						Destination:       pointer.For("acct_xxx"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.DebitWalletActivity,
+				Args: []any{
+					mock.Anything, activities.DebitWalletRequest{
+						ID: "foo",
+						Data: &activities.DebitWalletRequestPayload{
+							Amount: shared.Monetary{
+								Asset:  "USD",
+								Amount: big.NewInt(100),
+							},
+							Balances: []string{"main"},
+							Metadata: map[string]string{},
+						},
+					},
+				},
+				Returns: []any{nil, nil},
+			},
+		},
+	}
+	// Test with non-Stripe PSP (Wise)
+	accountToPaymentWithWise = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to payment with wise",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:     "foo",
+				Ledger: "default",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:           "wise",
+				Type:          "PAYOUT",
+				SourceAccount: pointer.For("wise-account-456"),
+				Metadata:      "wiseRecipientID",
+				ConnectorID:   nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(500),
+				Asset:  "EUR",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetAccountActivity,
+				Args: []any{mock.Anything, activities.GetAccountRequest{
+					Ledger: "default",
+					ID:     "foo",
+				}},
+				Returns: []any{&shared.AccountResponse{
+					Data: shared.AccountWithVolumesAndBalances{
+						Address: "foo",
+						Metadata: map[string]any{
+							"wiseRecipientID": "recipient-789",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(500),
+						Asset:             pointer.For("EUR"),
+						Provider:          pointer.For("wise"),
+						Type:              "PAYOUT",
+						Source:            pointer.For("wise-account-456"),
+						Destination:       pointer.For("recipient-789"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "default",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: "world",
+								Source:      "foo",
+							}},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test account to payment with custom throughAccount
+	accountToPaymentWithThroughAccount = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to payment with throughAccount",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:             "users:123",
+				Ledger:         "main",
+				ThroughAccount: "liabilities:payouts-pending",
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:         "stripe",
+				Type:        "PAYOUT",
+				Metadata:    "stripeConnectID",
+				ConnectorID: nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(1000),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetAccountActivity,
+				Args: []any{mock.Anything, activities.GetAccountRequest{
+					Ledger: "main",
+					ID:     "users:123",
+				}},
+				Returns: []any{&shared.AccountResponse{
+					Data: shared.AccountWithVolumesAndBalances{
+						Address: "users:123",
+						Metadata: map[string]any{
+							"stripeConnectID": "acct_payout_123",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(1000),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Destination:       pointer.For("acct_payout_123"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(1000),
+								Asset:       "USD",
+								Destination: "liabilities:payouts-pending", // Custom throughAccount instead of "world"
+								Source:      "users:123",
+							}},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test payment to account with custom throughAccount on destination
+	paymentToAccountWithThroughAccount = stagestesting.WorkflowTestCase[Send]{
+		Name: "payment to account with throughAccount",
+		Stage: Send{
+			Source: NewSource().WithPayment(&PaymentSource{
+				ID: "payment1",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:             "revenue:merchants:456",
+				Ledger:         "main",
+				ThroughAccount: "assets:stripe:incoming",
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(500),
+				Asset:  "EUR",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetPaymentActivity,
+				Args: []any{mock.Anything, activities.GetPaymentRequest{
+					ID: "payment1",
+				}},
+				Returns: []any{
+					&shared.PaymentResponse{
+						Data: shared.Payment{
+							InitialAmount: big.NewInt(500),
+							Asset:         "EUR",
+							Status:        shared.PaymentStatusSucceeded,
+							Scheme:        shared.PaymentSchemeUnknown,
+							Type:          shared.PaymentTypePayIn,
+						},
+					}, nil,
+				},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: internalLedger,
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: paymentAccountName("payment1"),
+								Source:      "world",
+							}},
+							Reference: pointer.For(paymentAccountName("payment1")),
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: internalLedger,
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: "world",
+								Source:      paymentAccountName("payment1"),
+							}},
+							Metadata: map[string]string{
+								moveToLedgerMetadata: "main",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: "revenue:merchants:456",
+								Source:      "assets:stripe:incoming", // Custom throughAccount instead of "world"
+							}},
+							Metadata: map[string]string{
+								moveFromLedgerMetadata: internalLedger,
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test cross-ledger account to account with custom throughAccounts
+	accountToAccountMixedLedgerWithThroughAccount = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to account mixed ledger with throughAccount",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:             "users:sender",
+				Ledger:         "ledger1",
+				ThroughAccount: "bridge:outbound",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:             "merchants:receiver",
+				Ledger:         "ledger2",
+				ThroughAccount: "bridge:inbound",
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(250),
+				Asset:  "GBP",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "ledger1",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(250),
+								Asset:       "GBP",
+								Destination: "bridge:outbound", // Custom throughAccount
+								Source:      "users:sender",
+							}},
+							Metadata: map[string]string{
+								moveToLedgerMetadata: "ledger2",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "ledger2",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(250),
+								Asset:       "GBP",
+								Destination: "merchants:receiver",
+								Source:      "bridge:inbound", // Custom throughAccount
+							}},
+							Metadata: map[string]string{
+								moveFromLedgerMetadata: "ledger1",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test payment source with custom ledger and throughAccount
+	paymentToAccountWithCustomIngestion = stagestesting.WorkflowTestCase[Send]{
+		Name: "payment to account with custom ingestion",
+		Stage: Send{
+			Source: NewSource().WithPayment(&PaymentSource{
+				ID:             "payment-custom",
+				Ledger:         "main",
+				HoldingAccount: "transit:payments:pending",
+				ThroughAccount: "assets:stripe",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:     "revenue:sales",
+				Ledger: "main",
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(1500),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetPaymentActivity,
+				Args: []any{mock.Anything, activities.GetPaymentRequest{
+					ID: "payment-custom",
+				}},
+				Returns: []any{
+					&shared.PaymentResponse{
+						Data: shared.Payment{
+							InitialAmount: big.NewInt(1500),
+							Asset:         "USD",
+							Status:        shared.PaymentStatusSucceeded,
+							Scheme:        shared.PaymentSchemeUnknown,
+							Type:          shared.PaymentTypePayIn,
+						},
+					}, nil,
+				},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main", // Custom ledger instead of internal
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(1500),
+								Asset:       "USD",
+								Destination: "transit:payments:pending", // Custom holdingAccount
+								Source:      "assets:stripe",            // Custom throughAccount
+							}},
+							Reference: pointer.For("transit:payments:pending"),
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main",
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(1500),
+								Asset:       "USD",
+								Destination: "revenue:sales",
+								Source:      "transit:payments:pending",
+							}},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test account to payment with allowOverdraft - overdraft applies to source.ID (not throughAccount)
+	accountToPaymentWithOverdraft = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to payment with allowOverdraft",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:             "users:123",
+				Ledger:         "main",
+				ThroughAccount: "liabilities:payouts-pending",
+				AllowOverdraft: true, // Applies overdraft to source.ID (users:123)
+			}),
+			Destination: NewDestination().WithPayment(&PaymentDestination{
+				PSP:         "stripe",
+				Type:        "PAYOUT",
+				Metadata:    "stripeConnectID",
+				ConnectorID: nil,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(1000),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetAccountActivity,
+				Args: []any{mock.Anything, activities.GetAccountRequest{
+					Ledger: "main",
+					ID:     "users:123",
+				}},
+				Returns: []any{&shared.AccountResponse{
+					Data: shared.AccountWithVolumesAndBalances{
+						Address: "users:123",
+						Metadata: map[string]any{
+							"stripeConnectID": "acct_payout_123",
+						},
+					},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransferInitiationActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransferInitiationRequest{
+						Amount:            big.NewInt(1000),
+						Asset:             pointer.For("USD"),
+						Provider:          pointer.For("stripe"),
+						Type:              "PAYOUT",
+						Destination:       pointer.For("acct_payout_123"),
+						ConnectorID:       nil,
+						WaitingValidation: pointer.For(false),
+						Metadata:          map[string]string{},
+					},
+				},
+				Returns: []any{nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main",
+						Data: activities.PostTransaction{
+							// Uses Numscript with overdraft on source.ID (users:123)
+							Script: &shared.V2PostTransactionScript{
+								Plain: `send [USD 1000] (
+  source = @users:123 allowing unbounded overdraft
+  destination = @liabilities:payouts-pending
+)`,
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test payment to account with allowOverdraft on destination (uses Numscript for final tx)
+	paymentToAccountWithOverdraft = stagestesting.WorkflowTestCase[Send]{
+		Name: "payment to account with allowOverdraft",
+		Stage: Send{
+			Source: NewSource().WithPayment(&PaymentSource{
+				ID: "payment1",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:             "revenue:merchants:456",
+				Ledger:         "main",
+				ThroughAccount: "assets:stripe:incoming",
+				AllowOverdraft: true,
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(500),
+				Asset:  "EUR",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.GetPaymentActivity,
+				Args: []any{mock.Anything, activities.GetPaymentRequest{
+					ID: "payment1",
+				}},
+				Returns: []any{
+					&shared.PaymentResponse{
+						Data: shared.Payment{
+							InitialAmount: big.NewInt(500),
+							Asset:         "EUR",
+							Status:        shared.PaymentStatusSucceeded,
+							Scheme:        shared.PaymentSchemeUnknown,
+							Type:          shared.PaymentTypePayIn,
+						},
+					}, nil,
+				},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: internalLedger,
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: paymentAccountName("payment1"),
+								Source:      "world",
+							}},
+							Reference: pointer.For(paymentAccountName("payment1")),
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: internalLedger,
+						Data: activities.PostTransaction{
+							Postings: []shared.V2Posting{{
+								Amount:      big.NewInt(500),
+								Asset:       "EUR",
+								Destination: "world",
+								Source:      paymentAccountName("payment1"),
+							}},
+							Metadata: map[string]string{
+								moveToLedgerMetadata: "main",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "main",
+						Data: activities.PostTransaction{
+							// Uses Numscript with overdraft for the throughAccount
+							Script: &shared.V2PostTransactionScript{
+								Plain: `send [EUR 500] (
+  source = @assets:stripe:incoming allowing unbounded overdraft
+  destination = @revenue:merchants:456
+)`,
+							},
+							Metadata: map[string]string{
+								moveFromLedgerMetadata: internalLedger,
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
+	// Test cross-ledger with allowOverdraft
+	// First tx: source.ID -> sourceThroughAccount (overdraft on source.ID if source.AllowOverdraft)
+	// Second tx: destThroughAccount -> destination.ID (overdraft on destThroughAccount if destination.AllowOverdraft)
+	accountToAccountMixedLedgerWithOverdraft = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to account mixed ledger with allowOverdraft",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:             "users:sender",
+				Ledger:         "ledger1",
+				ThroughAccount: "bridge:outbound",
+				AllowOverdraft: true, // Applies overdraft to source.ID (users:sender)
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:             "merchants:receiver",
+				Ledger:         "ledger2",
+				ThroughAccount: "bridge:inbound",
+				AllowOverdraft: true, // Applies overdraft to destThroughAccount (bridge:inbound)
+			}),
+			Amount: &shared.Monetary{
+				Amount: big.NewInt(250),
+				Asset:  "GBP",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "ledger1",
+						Data: activities.PostTransaction{
+							// Uses Numscript with overdraft on source.ID (users:sender)
+							Script: &shared.V2PostTransactionScript{
+								Plain: `send [GBP 250] (
+  source = @users:sender allowing unbounded overdraft
+  destination = @bridge:outbound
+)`,
+							},
+							Metadata: map[string]string{
+								moveToLedgerMetadata: "ledger2",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "ledger2",
+						Data: activities.PostTransaction{
+							// Uses Numscript with overdraft on destThroughAccount (bridge:inbound)
+							Script: &shared.V2PostTransactionScript{
+								Plain: `send [GBP 250] (
+  source = @bridge:inbound allowing unbounded overdraft
+  destination = @merchants:receiver
+)`,
+							},
+							Metadata: map[string]string{
+								moveFromLedgerMetadata: "ledger1",
+							},
+						},
+					},
+				},
+				Returns: []any{&shared.V2CreateTransactionResponse{
+					Data: shared.V2Transaction{},
+				}, nil},
+			},
+		},
+	}
 )
 
 var testCases = []stagestesting.WorkflowTestCase[Send]{
@@ -1440,6 +2248,18 @@ var testCases = []stagestesting.WorkflowTestCase[Send]{
 	walletToWallet,
 	walletToWalletMixedLedger,
 	walletToPayment,
+	walletToPaymentWithPayout,
+	walletToPaymentWithSourceAccount,
+	accountToPaymentWithWise,
+	// throughAccount tests
+	accountToPaymentWithThroughAccount,
+	paymentToAccountWithThroughAccount,
+	accountToAccountMixedLedgerWithThroughAccount,
+	paymentToAccountWithCustomIngestion,
+	// allowOverdraft tests
+	accountToPaymentWithOverdraft,
+	paymentToAccountWithOverdraft,
+	accountToAccountMixedLedgerWithOverdraft,
 }
 
 func TestSend(t *testing.T) {
