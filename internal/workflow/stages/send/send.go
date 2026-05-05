@@ -68,7 +68,7 @@ type PaymentDestination struct {
 	// Metadata is the key to look up in the source wallet/account metadata to get the destination account ID.
 	Metadata          string  `json:"metadata" spec:"default:formanceAccountID"`
 	WaitingValidation bool    `json:"waitingValidation" spec:"default:false"`
-	ConnectorID       *string `json:"connectorId,omitempty"`
+	ConnectorID       *string `json:"connectorID,omitempty" validate:"required"`
 }
 
 type Source struct {

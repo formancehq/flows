@@ -34,6 +34,9 @@ type CreateTransferInitiationRequest struct {
 
 func (a Activities) CreateTransferInitiation(ctx context.Context, request CreateTransferInitiationRequest) error {
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
+	if request.ConnectorID == nil || *request.ConnectorID == "" {
+		return fmt.Errorf("connectorID is required")
+	}
 
 	activityInfo := activity.GetInfo(ctx)
 
