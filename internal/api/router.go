@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/formancehq/go-libs/v3/auth"
 	"github.com/formancehq/go-libs/v3/health"
+	"github.com/formancehq/go-libs/v5/pkg/audit/httpaudit"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
@@ -36,10 +37,12 @@ func NewRouter(
 	info ServiceInfo,
 	healthController *health.HealthController,
 	authenticator auth.Authenticator,
+	publisher message.Publisher,
 	debug bool,
 	versions ...Version) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
+	r.Use(httpaudit.Middleware(publisher, "audit-events", "orchestration", nil))
 	r.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

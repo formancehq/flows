@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 
 	sharedapi "github.com/formancehq/go-libs/v3/bun/bunpaginate"
@@ -12,6 +13,7 @@ import (
 	"github.com/formancehq/go-libs/v3/auth"
 
 	"github.com/formancehq/go-libs/v3/health"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"
@@ -32,6 +34,7 @@ func TestModule(t *testing.T) {
 		auth.Module(auth.ModuleConfig{Enabled: false}),
 		fx.Supply(&health.HealthController{}),
 		fx.Supply(api.ServiceInfo{}),
+		fx.Provide(func() message.Publisher { return publish.InMemory() }),
 		fx.Replace(fx.Annotate(backend, fx.As(new(api.Backend)))),
 		fx.NopLogger,
 		api.NewModule(testing.Verbose()),
