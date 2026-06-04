@@ -1,12 +1,15 @@
 package triggers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"strings"
 
 	"go.temporal.io/api/enums/v1"
 
+	"github.com/formancehq/go-libs/v3/collectionutils"
 	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,6 +23,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/formancehq/go-libs/v3/publish"
 	"github.com/pkg/errors"
+	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/client"
 )
 
@@ -46,7 +50,53 @@ func getWorkflowIDFromEvent(event publish.EventMessage) *string {
 	}
 }
 
-func handleMessage(temporalClient client.Client, stack, taskIDPrefix, taskQueue string, msg *message.Message) error {
+func listMatchingTriggers(ctx context.Context, db *bun.DB, evaluator *expressionEvaluator, event publish.EventMessage) ([]Trigger, error) {
+	triggers := make([]Trigger, 0)
+	if err := db.NewSelect().
+		Model(&triggers).
+		Relation("Workflow").
+		Where("trigger.deleted_at is null").
+		Where("event = ?", event.Type).
+		Where("CASE WHEN trigger.version IS NULL THEN true ELSE trigger.version = ? END", event.Version).
+		Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Int("triggers-found", len(triggers)),
+		attribute.String("triggers-found-ids", strings.Join(collectionutils.Map(triggers, Trigger.GetID), ", ")),
+	)
+
+	matched := make([]Trigger, 0, len(triggers))
+	for _, trigger := range triggers {
+		if trigger.Filter != nil && *trigger.Filter != "" {
+			ok, err := evaluator.evalFilter(event.Payload, *trigger.Filter)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("Error evaluating filter for trigger %s: %s", trigger.ID, err)
+				span.SetAttributes(attribute.String("filter-error-"+trigger.ID, err.Error()))
+				continue
+			}
+			if !ok {
+				continue
+			}
+		}
+		matched = append(matched, trigger)
+	}
+
+	span.SetAttributes(attribute.Int("triggers-matched", len(matched)))
+
+	return matched, nil
+}
+
+func handleMessage(
+	temporalClient client.Client,
+	db *bun.DB,
+	evaluator *expressionEvaluator,
+	stack, taskIDPrefix, taskQueue string,
+	includeSearchAttributes bool,
+	msg *message.Message,
+) error {
 	defer func() {
 		if e := recover(); e != nil {
 			fmt.Println(e)
@@ -67,7 +117,6 @@ func handleMessage(temporalClient client.Client, stack, taskIDPrefix, taskQueue 
 		}),
 		trace.WithAttributes(
 			attribute.String("event-id", msg.UUID),
-			attribute.Bool("duplicate", false),
 			attribute.String("event-type", event.Type),
 			attribute.String("event-version", event.Version),
 			attribute.String("event-payload", string(msg.Payload)),
@@ -80,38 +129,66 @@ func handleMessage(temporalClient client.Client, stack, taskIDPrefix, taskQueue 
 		}
 	}()
 
-	options := client.StartWorkflowOptions{
-		TaskQueue: taskQueue,
-		SearchAttributes: map[string]interface{}{
-			workflow.SearchAttributeStack: stack,
-		},
-	}
-	if ik := getWorkflowIDFromEvent(*event); ik != nil {
-		options.ID = taskIDPrefix + "-" + *ik
-		options.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
-		options.WorkflowExecutionErrorWhenAlreadyStarted = true
+	matched, err := listMatchingTriggers(ctx, db, evaluator, *event)
+	if err != nil {
+		return errors.Wrap(err, "listing matching triggers")
 	}
 
-	_, err = temporalClient.ExecuteWorkflow(ctx, options, RunTrigger, ProcessEventRequest{
-		Event: *event,
-	})
-	if err != nil {
-		_, ok := err.(*serviceerror.WorkflowExecutionAlreadyStarted)
-		if ok {
-			span.SetAttributes(attribute.Bool("duplicate", true))
-			err = nil
-			return nil
+	if len(matched) == 0 {
+		return nil
+	}
+
+	objectID := getWorkflowIDFromEvent(*event)
+
+	for _, trigger := range matched {
+		searchAttributes := map[string]interface{}{
+			workflow.SearchAttributeStack: stack,
+		}
+		if includeSearchAttributes {
+			searchAttributes[workflow.SearchAttributeTriggerID] = trigger.ID
+		}
+
+		options := client.StartWorkflowOptions{
+			TaskQueue:        taskQueue,
+			SearchAttributes: searchAttributes,
+		}
+		if objectID != nil {
+			options.ID = taskIDPrefix + "-" + trigger.ID + "-" + *objectID
+			options.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
+			options.WorkflowExecutionErrorWhenAlreadyStarted = true
+		}
+
+		_, execErr := temporalClient.ExecuteWorkflow(ctx, options, ExecuteTrigger, ProcessEventRequest{
+			Event: *event,
+		}, trigger)
+		if execErr != nil {
+			var alreadyStarted *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(execErr, &alreadyStarted) {
+				span.SetAttributes(attribute.Bool("duplicate-"+trigger.ID, true))
+				continue
+			}
+			logging.FromContext(ctx).Errorf("Error executing workflow for trigger %s: %s", trigger.ID, execErr)
+			err = execErr
+			return errors.Wrap(err, "executing workflow")
 		}
 	}
 
-	return errors.Wrap(err, "executing workflow")
+	return nil
 }
 
-func registerListener(r *message.Router, s message.Subscriber, temporalClient client.Client,
-	stack, taskIDPrefix, taskQueue string, topics []string) {
+func registerListener(
+	r *message.Router,
+	s message.Subscriber,
+	temporalClient client.Client,
+	db *bun.DB,
+	evaluator *expressionEvaluator,
+	stack, taskIDPrefix, taskQueue string,
+	includeSearchAttributes bool,
+	topics []string,
+) {
 	for _, topic := range topics {
 		r.AddConsumerHandler(fmt.Sprintf("listen-%s-events", topic), topic, s, func(msg *message.Message) error {
-			if err := handleMessage(temporalClient, stack, taskIDPrefix, taskQueue, msg); err != nil {
+			if err := handleMessage(temporalClient, db, evaluator, stack, taskIDPrefix, taskQueue, includeSearchAttributes, msg); err != nil {
 				logging.Errorf("Error executing workflow: %s", err)
 				return err
 			}

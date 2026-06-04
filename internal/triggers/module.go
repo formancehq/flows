@@ -36,11 +36,12 @@ func NewModule(stack, taskQueue string) fx.Option {
 	)
 }
 
-func NewListenerModule(stack, taskIDPrefix, taskQueue string, topics []string) fx.Option {
+func NewListenerModule(stack, taskIDPrefix, taskQueue string, includeSearchAttributes bool, topics []string) fx.Option {
 	return fx.Options(
-		fx.Invoke(func(logger logging.Logger, r *message.Router, s message.Subscriber, temporalClient client.Client) {
+		fx.Invoke(func(logger logging.Logger, r *message.Router, s message.Subscriber,
+			temporalClient client.Client, db *bun.DB, evaluator *expressionEvaluator) {
 			logger.Infof("Listening events from topics: %s", strings.Join(topics, ","))
-			registerListener(r, s, temporalClient, stack, taskIDPrefix, taskQueue, topics)
+			registerListener(r, s, temporalClient, db, evaluator, stack, taskIDPrefix, taskQueue, includeSearchAttributes, topics)
 		}),
 	)
 }
