@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/formancehq/go-libs/v3/logging"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/v3/testing/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/testing/api"
 
 	"github.com/google/uuid"
 

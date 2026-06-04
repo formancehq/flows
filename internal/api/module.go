@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v3/auth"
-	"github.com/formancehq/go-libs/v3/health"
+	auth "github.com/formancehq/go-libs/v5/pkg/authn/jwt"
+	"github.com/formancehq/go-libs/v5/pkg/service/health"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
 )

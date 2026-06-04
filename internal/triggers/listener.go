@@ -9,19 +9,19 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 
-	"github.com/formancehq/go-libs/v3/collectionutils"
+	collectionutils "github.com/formancehq/go-libs/v5/pkg/types/collections"
 	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/formancehq/go-libs/v3/pointer"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 	"go.temporal.io/api/serviceerror"
 
-	"github.com/formancehq/go-libs/v3/logging"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/client"
