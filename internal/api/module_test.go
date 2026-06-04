@@ -8,12 +8,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/v3/bun/bunpaginate"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 
-	"github.com/formancehq/go-libs/v3/auth"
+	auth "github.com/formancehq/go-libs/v5/pkg/authn/jwt"
 
-	"github.com/formancehq/go-libs/v3/health"
+	"github.com/formancehq/go-libs/v5/pkg/fx/authnfx"
 	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	"github.com/formancehq/go-libs/v5/pkg/service/health"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"
@@ -31,7 +32,7 @@ func TestModule(t *testing.T) {
 
 	var mux *chi.Mux
 	app := fxtest.New(t,
-		auth.Module(auth.ModuleConfig{Enabled: false}),
+		authnfx.JWTModule(auth.Config{Enabled: false}),
 		fx.Supply(&health.HealthController{}),
 		fx.Supply(api.ServiceInfo{}),
 		fx.Provide(func() message.Publisher { return publish.InMemory() }),

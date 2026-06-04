@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	bunpaginate "github.com/formancehq/go-libs/v3/bun/bunpaginate"
+	paginate "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 	triggers "github.com/formancehq/orchestration/internal/triggers"
 	workflow "github.com/formancehq/orchestration/internal/workflow"
 	gomock "go.uber.org/mock/gomock"
@@ -146,10 +146,10 @@ func (mr *MockBackendMockRecorder) GetTrigger(ctx, triggerID any) *gomock.Call {
 }
 
 // ListInstances mocks base method.
-func (m *MockBackend) ListInstances(ctx context.Context, pagination workflow.ListInstancesQuery) (*bunpaginate.Cursor[workflow.Instance], error) {
+func (m *MockBackend) ListInstances(ctx context.Context, pagination workflow.ListInstancesQuery) (*paginate.Cursor[workflow.Instance], error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListInstances", ctx, pagination)
-	ret0, _ := ret[0].(*bunpaginate.Cursor[workflow.Instance])
+	ret0, _ := ret[0].(*paginate.Cursor[workflow.Instance])
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -161,10 +161,10 @@ func (mr *MockBackendMockRecorder) ListInstances(ctx, pagination any) *gomock.Ca
 }
 
 // ListTriggers mocks base method.
-func (m *MockBackend) ListTriggers(ctx context.Context, query triggers.ListTriggersQuery) (*bunpaginate.Cursor[triggers.Trigger], error) {
+func (m *MockBackend) ListTriggers(ctx context.Context, query triggers.ListTriggersQuery) (*paginate.Cursor[triggers.Trigger], error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTriggers", ctx, query)
-	ret0, _ := ret[0].(*bunpaginate.Cursor[triggers.Trigger])
+	ret0, _ := ret[0].(*paginate.Cursor[triggers.Trigger])
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -176,10 +176,10 @@ func (mr *MockBackendMockRecorder) ListTriggers(ctx, query any) *gomock.Call {
 }
 
 // ListTriggersOccurrences mocks base method.
-func (m *MockBackend) ListTriggersOccurrences(ctx context.Context, query triggers.ListTriggersOccurrencesQuery) (*bunpaginate.Cursor[triggers.Occurrence], error) {
+func (m *MockBackend) ListTriggersOccurrences(ctx context.Context, query triggers.ListTriggersOccurrencesQuery) (*paginate.Cursor[triggers.Occurrence], error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTriggersOccurrences", ctx, query)
-	ret0, _ := ret[0].(*bunpaginate.Cursor[triggers.Occurrence])
+	ret0, _ := ret[0].(*paginate.Cursor[triggers.Occurrence])
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -191,10 +191,10 @@ func (mr *MockBackendMockRecorder) ListTriggersOccurrences(ctx, query any) *gomo
 }
 
 // ListWorkflows mocks base method.
-func (m *MockBackend) ListWorkflows(ctx context.Context, query bunpaginate.OffsetPaginatedQuery[any]) (*bunpaginate.Cursor[workflow.Workflow], error) {
+func (m *MockBackend) ListWorkflows(ctx context.Context, query paginate.OffsetPaginatedQuery[any]) (*paginate.Cursor[workflow.Workflow], error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListWorkflows", ctx, query)
-	ret0, _ := ret[0].(*bunpaginate.Cursor[workflow.Workflow])
+	ret0, _ := ret[0].(*paginate.Cursor[workflow.Workflow])
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

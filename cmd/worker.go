@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	sdk "github.com/formancehq/formance-sdk-go/v3"
-	"github.com/formancehq/go-libs/v3/aws/iam"
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/licence"
-	"github.com/formancehq/go-libs/v3/otlp/otlpmetrics"
-	"github.com/formancehq/go-libs/v3/publish"
-	"github.com/formancehq/go-libs/v3/service"
-	"github.com/formancehq/go-libs/v3/temporal"
+	"github.com/formancehq/go-libs/v5/pkg/authn/licence"
+	"github.com/formancehq/go-libs/v5/pkg/cloud/aws/iam"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	otlpmetrics "github.com/formancehq/go-libs/v5/pkg/observe/metrics"
+	"github.com/formancehq/go-libs/v5/pkg/service"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
+	"github.com/formancehq/go-libs/v5/pkg/workflow/temporal"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/spf13/cobra"
@@ -35,13 +35,13 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
-	temporalMaxParallelActivities, _ := cmd.Flags().GetInt(temporal.TemporalMaxParallelActivitiesFlag)
+	temporalMaxParallelActivities, _ := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
 
 	return fx.Options(
 		stackClientModule(cmd),
 		temporalworker.NewWorkerModule(temporalTaskQueue, worker.Options{
-			TaskQueueActivitiesPerSecond: float64(temporalMaxParallelActivities),
+			TaskQueueActivitiesPerSecond: temporalMaxParallelActivities,
 		}),
 		triggers.NewListenerModule(
 			stack,

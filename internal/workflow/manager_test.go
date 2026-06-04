@@ -4,17 +4,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/formancehq/go-libs/v3/bun/bundebug"
+	bundebug "github.com/formancehq/go-libs/v5/pkg/storage/bun/debug"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/worker"
 
-	"github.com/formancehq/go-libs/v3/logging"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/workflow/stages"
 	"github.com/google/uuid"
 
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
 
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/stretchr/testify/require"
