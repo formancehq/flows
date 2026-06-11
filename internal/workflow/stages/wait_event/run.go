@@ -7,16 +7,18 @@ import (
 
 func RunWaitEvent(ctx workflow.Context, waitEvent WaitEvent) error {
 	channel := workflow.GetSignalChannel(ctx, internalWorkflow.EventSignalName)
-	return workflow.Await(ctx, func() bool {
+	// Drain the signal channel one signal at a time until the expected event
+	// arrives. Using a blocking Receive loop (rather than ReceiveAsync inside
+	// an Await predicate) guarantees no buffered signal is consumed and
+	// dropped: an Await predicate is only evaluated once per workflow-task
+	// wakeup, so two signals delivered in the same task would leave the second
+	// one buffered with nothing left to re-wake the coroutine, blocking forever.
+	for {
 		var signal internalWorkflow.Event
-		ok := channel.ReceiveAsync(&signal)
-		if !ok {
-			return false
+		channel.Receive(ctx, &signal)
+		if signal.Name == waitEvent.Event {
+			return nil
 		}
-		if signal.Name != waitEvent.Event {
-			workflow.GetLogger(ctx).Debug("receive unexpected event", "event", signal.Name)
-			return false
-		}
-		return true
-	})
+		workflow.GetLogger(ctx).Debug("received unexpected event, still waiting", "event", signal.Name)
+	}
 }
