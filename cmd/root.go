@@ -77,6 +77,7 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 	}
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
+	stackURL, _ := cmd.Flags().GetString(stackURLFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
 
 	return fx.Options(
@@ -98,7 +99,7 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 		authnfx.JWTModuleFromFlags(cmd),
 		authnfx.LicenceModuleFromFlags(cmd, ServiceName),
 		workflow.NewModule(stack, temporalTaskQueue),
-		triggers.NewModule(stack, temporalTaskQueue),
+		triggers.NewModule(stack, stackURL, temporalTaskQueue),
 		fx.Provide(func() *bunconnect.ConnectionOptions {
 			return connectionOptions
 		}),

@@ -14,11 +14,11 @@ import (
 	"go.uber.org/fx"
 )
 
-func NewModule(stack, taskQueue string) fx.Option {
+func NewModule(stack, stackURL, taskQueue string) fx.Option {
 	return fx.Options(
 		fx.Provide(NewManager),
 		fx.Provide(func(httpClient *http.Client) *expressionEvaluator {
-			return NewExpressionEvaluator(httpClient)
+			return NewExpressionEvaluator(httpClient, stackURL)
 		}),
 		fx.Provide(func() *triggerWorkflow {
 			return NewWorkflow(stack, taskQueue, true)
