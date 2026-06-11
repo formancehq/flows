@@ -90,3 +90,38 @@ func TestListInstances(t *testing.T) {
 		require.Len(t, instances, 0)
 	})
 }
+
+func TestListInstancesIsBounded(t *testing.T) {
+	ctx := logging.TestingContext()
+
+	test(t, func(router *chi.Mux, m api.Backend, db *bun.DB) {
+		w := workflow.New(workflow.Config{})
+		_, err := db.NewInsert().Model(&w).Exec(ctx)
+		require.NoError(t, err)
+
+		for i := 0; i < 20; i++ {
+			instance := workflow.NewInstance(uuid.NewString(), w.ID)
+			_, err := db.NewInsert().Model(&instance).Exec(ctx)
+			require.NoError(t, err)
+		}
+
+		// Without a page size the default (15) bounds the result instead of
+		// loading the whole table.
+		req := httptest.NewRequest(http.MethodGet, "/instances", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		instances := make([]workflow.Instance, 0)
+		sharedapi.ReadResponse(t, rec, &instances)
+		require.Len(t, instances, 15)
+
+		// An explicit page size is honoured.
+		req = httptest.NewRequest(http.MethodGet, "/instances?pageSize=5", nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		instances = make([]workflow.Instance, 0)
+		sharedapi.ReadResponse(t, rec, &instances)
+		require.Len(t, instances, 5)
+	})
+}
