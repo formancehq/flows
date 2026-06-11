@@ -18,7 +18,29 @@ import (
 
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/stretchr/testify/require"
+	common "go.temporal.io/api/common/v1"
 )
+
+func TestUnmarshalFirstPayload(t *testing.T) {
+	t.Parallel()
+
+	var v map[string]any
+	// nil and empty payload sets are tolerated (no panic, no error).
+	require.NoError(t, unmarshalFirstPayload(nil, &v))
+	require.NoError(t, unmarshalFirstPayload(&common.Payloads{}, &v))
+
+	// A malformed payload returns an error instead of panicking.
+	err := unmarshalFirstPayload(&common.Payloads{
+		Payloads: []*common.Payload{{Data: []byte("{not-json")}},
+	}, &v)
+	require.Error(t, err)
+
+	// A well-formed payload decodes.
+	require.NoError(t, unmarshalFirstPayload(&common.Payloads{
+		Payloads: []*common.Payload{{Data: []byte(`{"a":"b"}`)}},
+	}, &v))
+	require.Equal(t, map[string]any{"a": "b"}, v)
+}
 
 func TestConfig(t *testing.T) {
 	t.Parallel()
