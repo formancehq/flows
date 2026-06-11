@@ -35,13 +35,18 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
-	temporalMaxParallelActivities, _ := cmd.Flags().GetInt(temporal.TemporalMaxParallelActivitiesFlag)
+	// The flag is registered as a float64 in go-libs; reading it with GetInt
+	// silently fails and yields 0, so the configured limit was never applied.
+	temporalMaxParallelActivities, _ := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
 
 	return fx.Options(
 		stackClientModule(cmd),
 		temporalworker.NewWorkerModule(temporalTaskQueue, worker.Options{
-			TaskQueueActivitiesPerSecond: float64(temporalMaxParallelActivities),
+			// "max parallel activities" caps concurrency, which maps to
+			// MaxConcurrentActivityExecutionSize, not the queue-wide rate limit
+			// TaskQueueActivitiesPerSecond it was previously wired to.
+			MaxConcurrentActivityExecutionSize: int(temporalMaxParallelActivities),
 		}),
 		triggers.NewListenerModule(
 			stack,
