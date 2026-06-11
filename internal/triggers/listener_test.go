@@ -379,4 +379,24 @@ func TestHandleMessage(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
 	})
+
+	t.Run("malformed payment payload returns an error instead of being dropped", func(t *testing.T) {
+		t.Parallel()
+
+		db := setupTestDB(t)
+		taskQueue := setupWorker(t, db)
+
+		w := insertNoOpWorkflow(t, db)
+		insertTrigger(t, db, w.ID, "SAVED_PAYMENT", nil, nil)
+
+		// "id" is a number, so extracting the dedup id fails. This used to
+		// panic and be silently acked; it must now surface as an error so the
+		// message is NACKed.
+		event := makeMessage("SAVED_PAYMENT", "v1", map[string]any{"id": 123})
+		msg := publish.NewMessage(logging.TestingContext(), *event)
+
+		evaluator := NewDefaultExpressionEvaluator()
+		err := handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg)
+		require.Error(t, err)
+	})
 }
