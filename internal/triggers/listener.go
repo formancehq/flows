@@ -28,12 +28,12 @@ import (
 )
 
 // Quick hack to filter already processed events
-func getWorkflowIDFromEvent(event publish.EventMessage) *string {
+func getWorkflowIDFromEvent(event publish.EventMessage) (*string, error) {
 	switch event.Type {
 	case "SAVED_PAYMENT", "SAVED_ACCOUNT":
 		data, err := json.Marshal(event.Payload)
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "marshalling event payload")
 		}
 
 		type object struct {
@@ -41,12 +41,12 @@ func getWorkflowIDFromEvent(event publish.EventMessage) *string {
 		}
 		o := &object{}
 		if err := json.Unmarshal(data, o); err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "unmarshalling event payload")
 		}
 
-		return pointer.For(o.ID)
+		return pointer.For(o.ID), nil
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
@@ -96,11 +96,14 @@ func handleMessage(
 	stack, taskIDPrefix, taskQueue string,
 	includeSearchAttributes bool,
 	msg *message.Message,
-) error {
+) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println(e)
-			debug.PrintStack()
+			// Convert a panic into a returned error so the message is NACKed
+			// (and redelivered / dead-lettered) instead of being silently
+			// acked and lost.
+			err = fmt.Errorf("panic while handling event: %v", e)
+			logging.FromContext(msg.Context()).Errorf("%s\n%s", err, debug.Stack())
 		}
 	}()
 
@@ -138,7 +141,10 @@ func handleMessage(
 		return nil
 	}
 
-	objectID := getWorkflowIDFromEvent(*event)
+	objectID, err := getWorkflowIDFromEvent(*event)
+	if err != nil {
+		return errors.Wrap(err, "extracting workflow id from event")
+	}
 
 	for _, trigger := range matched {
 		searchAttributes := map[string]interface{}{
