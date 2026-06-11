@@ -379,4 +379,42 @@ func TestHandleMessage(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
 	})
+
+	t.Run("redelivery of a non-payment event is skipped", func(t *testing.T) {
+		t.Parallel()
+
+		db := setupTestDB(t)
+		taskQueue := setupWorker(t, db)
+
+		w := insertNoOpWorkflow(t, db)
+		insertTrigger(t, db, w.ID, "NEW_TRANSACTION", nil, nil)
+
+		event := makeMessage("NEW_TRANSACTION", "v1", map[string]any{})
+		evaluator := NewDefaultExpressionEvaluator()
+
+		// Simulate an at-least-once redelivery: the broker re-delivers the same
+		// message, preserving its UUID.
+		msg1 := publish.NewMessage(logging.TestingContext(), *event)
+		msg2 := publish.NewMessage(logging.TestingContext(), *event)
+		msg2.UUID = msg1.UUID
+
+		require.NoError(t, handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg1))
+		require.Eventually(t, func() bool {
+			count, err := db.NewSelect().
+				Model((*Occurrence)(nil)).
+				Count(logging.TestingContext())
+			return err == nil && count == 1
+		}, 10*time.Second, 200*time.Millisecond)
+
+		require.NoError(t, handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg2))
+
+		// The deterministic workflow id (keyed on the message UUID) must reject
+		// the duplicate, so no second trigger execution / occurrence is created.
+		time.Sleep(2 * time.Second)
+		count, err := db.NewSelect().
+			Model((*Occurrence)(nil)).
+			Count(logging.TestingContext())
+		require.NoError(t, err)
+		require.Equal(t, 1, count)
+	})
 }

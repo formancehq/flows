@@ -112,9 +112,13 @@ type Occurrence struct {
 	Error              *string              `json:"error,omitempty" bun:"error"`
 }
 
-func NewTriggerOccurrence(triggerID string, event publish.EventMessage, at time.Time) Occurrence {
+// NewTriggerOccurrence builds an occurrence with a caller-provided id. The id
+// must be deterministic when called from workflow code (e.g. the workflow
+// execution id) so that it stays stable across Temporal replays — generating a
+// random uuid here would yield a different occurrence id on every replay.
+func NewTriggerOccurrence(id, triggerID string, event publish.EventMessage, at time.Time) Occurrence {
 	return Occurrence{
-		ID:        uuid.NewString(),
+		ID:        id,
 		TriggerID: triggerID,
 		Date:      at,
 		Event:     event,
