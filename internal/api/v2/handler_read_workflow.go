@@ -12,7 +12,7 @@ func readWorkflow(backend api2.Backend) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		workflow, err := backend.ReadWorkflow(r.Context(), workflowID(r))
 		if err != nil {
-			api.InternalServerError(w, r, err)
+			api2.WriteError(w, r, err)
 			return
 		}
 

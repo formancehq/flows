@@ -52,3 +52,14 @@ func TestGetInstance(t *testing.T) {
 		require.Len(t, retrievedInstance.Statuses, 10)
 	})
 }
+
+func TestGetInstanceNotFound(t *testing.T) {
+	test(t, func(router *chi.Mux, m api.Backend, db *bun.DB) {
+		req := httptest.NewRequest(http.MethodGet, "/instances/does-not-exist", nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusNotFound, rec.Result().StatusCode)
+	})
+}

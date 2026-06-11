@@ -25,7 +25,8 @@ func createWorkflow(m api.Backend) http.HandlerFunc {
 
 			asJson, err := json.Marshal(payload)
 			if err != nil {
-				panic(err)
+				sharedapi.InternalServerError(w, r, err)
+				return
 			}
 
 			if err := json.Unmarshal(asJson, &config); err != nil {
@@ -41,7 +42,7 @@ func createWorkflow(m api.Backend) http.HandlerFunc {
 
 		workflow, err := m.Create(r.Context(), config)
 		if err != nil {
-			sharedapi.InternalServerError(w, r, errors.Wrap(err, "creating workflow"))
+			api.WriteError(w, r, errors.Wrap(err, "creating workflow"))
 			return
 		}
 
