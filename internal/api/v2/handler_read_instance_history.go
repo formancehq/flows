@@ -12,7 +12,7 @@ func readInstanceHistory(backend api2.Backend) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		workflows, err := backend.ReadInstanceHistory(r.Context(), instanceID(r))
 		if err != nil {
-			api.InternalServerError(w, r, err)
+			api2.WriteError(w, r, err)
 			return
 		}
 
