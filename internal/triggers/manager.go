@@ -41,7 +41,7 @@ func (m *TriggerManager) ListTriggers(ctx context.Context, paramsQuery ListTrigg
 		func(query *bun.SelectQuery) *bun.SelectQuery {
 
 			if paramsQuery.Options.Name != "" {
-				query = query.Where("Name ILIKE '%?%';", paramsQuery.Options.Name)
+				query = query.Where("name ILIKE ?", "%"+paramsQuery.Options.Name+"%")
 			}
 			return query.Where("deleted_at is null")
 		})
