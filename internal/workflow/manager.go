@@ -63,7 +63,7 @@ func (m *WorkflowManager) DeleteWorkflow(ctx context.Context, id string) error {
 
 	var workflow Workflow
 
-	res, err := m.db.NewUpdate().Model(&workflow).Where("id = ?", id).Set("deleted_at = ?", time.Now()).Exec(ctx)
+	res, err := m.db.NewUpdate().Model(&workflow).Where("id = ?", id).Where("deleted_at IS NULL").Set("deleted_at = ?", time.Now()).Exec(ctx)
 
 	if err != nil {
 		return err
@@ -85,6 +85,7 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 	workflow := Workflow{}
 	if err := m.db.NewSelect().
 		Where("id = ?", id).
+		Where("deleted_at IS NULL").
 		Model(&workflow).
 		Scan(ctx); err != nil {
 		return nil, err
@@ -142,6 +143,7 @@ func (m *WorkflowManager) ReadWorkflow(ctx context.Context, id string) (Workflow
 	if err := m.db.NewSelect().
 		Model(&workflow).
 		Where("id = ?", id).
+		Where("deleted_at IS NULL").
 		Scan(ctx); err != nil {
 		return Workflow{}, err
 	}
