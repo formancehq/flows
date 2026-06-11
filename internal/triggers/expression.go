@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"go.temporal.io/sdk/temporal"
 
@@ -16,6 +18,34 @@ import (
 
 type expressionEvaluator struct {
 	httpClient *http.Client
+	// allowedHosts is the set of hosts link() is permitted to call. It exists
+	// to prevent the (credential-bearing) HTTP client from being pointed at an
+	// arbitrary, attacker-controlled host via a user-defined trigger
+	// expression (SSRF + bearer-token exfiltration). An empty set denies every
+	// network call.
+	allowedHosts map[string]struct{}
+}
+
+// checkLinkURL enforces that a link() target uses an http(s) scheme and points
+// at an allow-listed host (typically the stack gateway the HTTP client is
+// scoped to).
+func (h *expressionEvaluator) checkLinkURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("invalid link url: %s", raw), "APPLICATION", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("link url scheme not allowed: %q", u.Scheme), "APPLICATION",
+			fmt.Errorf("scheme %q not allowed", u.Scheme))
+	}
+	if _, ok := h.allowedHosts[strings.ToLower(u.Host)]; !ok {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("link url host not allowed: %q", u.Host), "APPLICATION",
+			fmt.Errorf("host %q is not in the allowlist", u.Host))
+	}
+	return nil
 }
 
 func (h *expressionEvaluator) link(params ...any) (any, error) {
@@ -54,10 +84,16 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 			fmt.Errorf("link '%s' not defined for object", rel),
 		)
 	case 1:
+		if err := h.checkLinkURL(filteredLinks[0].URI); err != nil {
+			return nil, err
+		}
 		rsp, err := h.httpClient.Get(filteredLinks[0].URI)
 		if err != nil {
 			return nil, errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI)
 		}
+		defer func() {
+			_ = rsp.Body.Close()
+		}()
 		if rsp.StatusCode >= 400 {
 			return nil, fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode)
 		}
@@ -141,9 +177,25 @@ func (h *expressionEvaluator) evalVariables(rawObject any, vars map[string]strin
 	return results, nil
 }
 
-func NewExpressionEvaluator(httpClient *http.Client) *expressionEvaluator {
+// NewExpressionEvaluator builds an evaluator whose link() function may only
+// reach the provided hosts. Each entry may be a bare host ("example.com:8080")
+// or a full URL, in which case only its host is retained. With no allowed host,
+// link() network calls are denied.
+func NewExpressionEvaluator(httpClient *http.Client, allowedHosts ...string) *expressionEvaluator {
+	hosts := make(map[string]struct{}, len(allowedHosts))
+	for _, h := range allowedHosts {
+		if h == "" {
+			continue
+		}
+		if u, err := url.Parse(h); err == nil && u.Host != "" {
+			hosts[strings.ToLower(u.Host)] = struct{}{}
+			continue
+		}
+		hosts[strings.ToLower(h)] = struct{}{}
+	}
 	return &expressionEvaluator{
-		httpClient: httpClient,
+		httpClient:   httpClient,
+		allowedHosts: hosts,
 	}
 }
 
