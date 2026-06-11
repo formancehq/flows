@@ -56,6 +56,7 @@ func listMatchingTriggers(ctx context.Context, db *bun.DB, evaluator *expression
 		Model(&triggers).
 		Relation("Workflow").
 		Where("trigger.deleted_at is null").
+		Where("workflow_id IN (SELECT id FROM workflows WHERE deleted_at IS NULL)").
 		Where("event = ?", event.Type).
 		Where("CASE WHEN trigger.version IS NULL THEN true ELSE trigger.version = ? END", event.Version).
 		Scan(ctx); err != nil {

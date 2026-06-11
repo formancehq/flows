@@ -218,6 +218,23 @@ func TestListMatchingTriggers(t *testing.T) {
 			},
 			expectedMatched: 0,
 		},
+		{
+			name: "trigger of soft deleted workflow excluded",
+			triggers: func(t *testing.T, db *bun.DB, workflowID string) {
+				insertTrigger(t, db, workflowID, "NEW_TRANSACTION", nil, nil)
+				_, err := db.NewUpdate().
+					Model(&workflow.Workflow{}).
+					Where("id = ?", workflowID).
+					Set("deleted_at = ?", time.Now()).
+					Exec(logging.TestingContext())
+				require.NoError(t, err)
+			},
+			event: publish.EventMessage{
+				Type:    "NEW_TRANSACTION",
+				Version: "v1",
+			},
+			expectedMatched: 0,
+		},
 	}
 
 	for _, tc := range testCases {
