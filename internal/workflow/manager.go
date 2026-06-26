@@ -9,6 +9,7 @@ import (
 
 	"github.com/formancehq/go-libs/v3/pointer"
 
+	common "go.temporal.io/api/common/v1"
 	enums "go.temporal.io/api/enums/v1"
 	history "go.temporal.io/api/history/v1"
 
@@ -209,6 +210,16 @@ type StageHistory struct {
 	TerminatedAt *time.Time     `json:"terminatedAt,omitempty"`
 }
 
+// unmarshalFirstPayload decodes the first Temporal payload into v. It tolerates
+// a nil/empty payload set (leaving v untouched) instead of panicking on an
+// out-of-range index, and returns the decode error rather than panicking.
+func unmarshalFirstPayload(payloads *common.Payloads, v any) error {
+	if payloads == nil || len(payloads.Payloads) == 0 {
+		return nil
+	}
+	return json.Unmarshal(payloads.Payloads[0].Data, v)
+}
+
 func (m *WorkflowManager) ReadInstanceHistory(ctx context.Context, instanceID string) ([]StageHistory, error) {
 
 	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, instanceID+"-main", "",
@@ -223,8 +234,8 @@ func (m *WorkflowManager) ReadInstanceHistory(ctx context.Context, instanceID st
 		case enums.EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED:
 			attributes := event.Attributes.(*history.HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes)
 			input := make(map[string]any)
-			if err := json.Unmarshal(attributes.StartChildWorkflowExecutionInitiatedEventAttributes.Input.Payloads[0].Data, &input); err != nil {
-				panic(err)
+			if err := unmarshalFirstPayload(attributes.StartChildWorkflowExecutionInitiatedEventAttributes.Input, &input); err != nil {
+				return nil, errors.Wrap(err, "unmarshalling stage input")
 			}
 			stageHistory := StageHistory{
 				Name:      attributes.StartChildWorkflowExecutionInitiatedEventAttributes.WorkflowType.Name,
@@ -281,7 +292,7 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 		if _, ok := err.(*serviceerror.NotFound); ok {
 			return nil, ErrInstanceNotFound
 		}
-		panic(err)
+		return nil, errors.Wrap(err, "describing workflow execution")
 	}
 
 	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, stageID, "",
@@ -296,8 +307,8 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 		case enums.EVENT_TYPE_ACTIVITY_TASK_SCHEDULED:
 			activityTaskScheduledEventAttributes := event.Attributes.(*history.HistoryEvent_ActivityTaskScheduledEventAttributes).ActivityTaskScheduledEventAttributes
 			input := make(map[string]any)
-			if err := json.Unmarshal(activityTaskScheduledEventAttributes.Input.Payloads[0].Data, &input); err != nil {
-				panic(err)
+			if err := unmarshalFirstPayload(activityTaskScheduledEventAttributes.Input, &input); err != nil {
+				return nil, errors.Wrap(err, "unmarshalling activity input")
 			}
 
 			activityHistory := &ActivityHistory{
@@ -334,8 +345,8 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 					result := event.Attributes.(*history.HistoryEvent_ActivityTaskCompletedEventAttributes).ActivityTaskCompletedEventAttributes.Result
 					if result != nil && len(result.Payloads) > 0 {
 						output := make(map[string]any)
-						if err := json.Unmarshal(result.Payloads[0].Data, &output); err != nil {
-							panic(err)
+						if err := unmarshalFirstPayload(result, &output); err != nil {
+							return nil, errors.Wrap(err, "unmarshalling activity output")
 						}
 
 						// notes(gfyrag): keep compat with format from ledger v1 (since we have moved to ledger v2 api)
