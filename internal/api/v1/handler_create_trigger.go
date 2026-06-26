@@ -16,7 +16,7 @@ func createTrigger(backend api.Backend) func(writer http.ResponseWriter, request
 
 		data := triggers.TriggerData{}
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			sharedapi.InternalServerError(w, r, err)
+			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
 

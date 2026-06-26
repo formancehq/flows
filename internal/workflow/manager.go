@@ -23,6 +23,9 @@ import (
 var (
 	ErrInstanceNotFound = errors.New("Instance not found")
 	ErrWorkflowNotFound = errors.New("Workflow not found")
+	// ErrInvalidConfig wraps workflow configuration validation failures so the
+	// API can map them to 400 instead of 500.
+	ErrInvalidConfig = errors.New("invalid workflow configuration")
 )
 
 const (
@@ -44,7 +47,7 @@ type WorkflowManager struct {
 func (m *WorkflowManager) Create(ctx context.Context, config Config) (*Workflow, error) {
 
 	if err := config.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", ErrInvalidConfig, err)
 	}
 
 	workflow := New(config)
