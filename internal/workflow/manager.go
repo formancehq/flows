@@ -117,13 +117,18 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 }
 
 func (m *WorkflowManager) Wait(ctx context.Context, instanceID string) error {
+	// The actual work runs in the detached child workflow "<instanceID>-main";
+	// the Initiate workflow (id == instanceID) completes as soon as that child
+	// has started. Waiting on instanceID would therefore return immediately,
+	// before the run is terminated, so we wait on the running child.
 	if err := m.temporalClient.
-		GetWorkflow(ctx, instanceID, "").
+		GetWorkflow(ctx, instanceID+"-main", "").
 		Get(ctx, nil); err != nil {
-		if errors.Is(err, &serviceerror.NotFound{}) {
+		var notFound *serviceerror.NotFound
+		if errors.As(err, &notFound) {
 			return ErrInstanceNotFound
 		}
-		return errors.Unwrap(err)
+		return err
 	}
 	return nil
 }
@@ -176,7 +181,10 @@ func (m *WorkflowManager) AbortRun(ctx context.Context, instanceID string) error
 		return errors.Wrap(err, "retrieving workflow execution")
 	}
 
-	return m.temporalClient.CancelWorkflow(ctx, instanceID, "")
+	// Cancel the detached child workflow that carries the actual run; the
+	// Initiate workflow (id == instanceID) has already completed, so cancelling
+	// it would be a no-op and never reach the running stages.
+	return m.temporalClient.CancelWorkflow(ctx, instanceID+"-main", "")
 }
 
 func (m *WorkflowManager) ListInstances(ctx context.Context, pagination ListInstancesQuery) (*bunpaginate.Cursor[Instance], error) {
