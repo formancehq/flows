@@ -148,14 +148,24 @@ func handleMessage(
 			searchAttributes[workflow.SearchAttributeTriggerID] = trigger.ID
 		}
 
-		options := client.StartWorkflowOptions{
-			TaskQueue:        taskQueue,
-			SearchAttributes: searchAttributes,
-		}
+		// Derive a deterministic workflow ID so an at-least-once redelivery of
+		// the same event does not start a second trigger execution (which would
+		// replay side-effecting stages such as money movements). For
+		// SAVED_PAYMENT/SAVED_ACCOUNT we key on the object id (dedup across
+		// distinct deliveries of the same object); for every other event type
+		// we fall back to the message UUID, which is preserved across
+		// redeliveries.
+		dedupKey := msg.UUID
 		if objectID != nil {
-			options.ID = taskIDPrefix + "-" + trigger.ID + "-" + *objectID
-			options.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
-			options.WorkflowExecutionErrorWhenAlreadyStarted = true
+			dedupKey = *objectID
+		}
+
+		options := client.StartWorkflowOptions{
+			TaskQueue:                                taskQueue,
+			SearchAttributes:                         searchAttributes,
+			ID:                                       taskIDPrefix + "-" + trigger.ID + "-" + dedupKey,
+			WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+			WorkflowExecutionErrorWhenAlreadyStarted: true,
 		}
 
 		_, execErr := temporalClient.ExecuteWorkflow(ctx, options, ExecuteTrigger, ProcessEventRequest{

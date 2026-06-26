@@ -70,9 +70,14 @@ func (a Activities) SendWorkflowStageTerminationEvent(ctx context.Context, insta
 
 func (a Activities) InsertNewInstance(ctx context.Context, workflowID string) (*Instance, error) {
 	instance := NewInstance(activity.GetInfo(ctx).WorkflowExecution.ID, workflowID)
+	// Idempotent: the primary key is the (deterministic) workflow execution id,
+	// so a Temporal retry after a lost ack must not fail on the duplicate key.
+	// The returned instance is rebuilt deterministically, so it is correct even
+	// when the row already exists.
 	if _, err := a.db.
 		NewInsert().
 		Model(&instance).
+		On("CONFLICT DO NOTHING").
 		Exec(ctx); err != nil {
 		return nil, err
 	}
@@ -90,8 +95,12 @@ func (a Activities) UpdateInstance(ctx context.Context, instance *Instance) erro
 
 func (a Activities) InsertNewStage(ctx context.Context, instance Instance, ind int) (*Stage, error) {
 	stage := NewStage(instance.ID, activity.GetInfo(ctx).WorkflowExecution.RunID, ind)
+	// Idempotent: the primary key is deterministic (instance id + run id +
+	// index), so a Temporal retry after a lost ack must not fail on the
+	// duplicate key.
 	if _, err := a.db.NewInsert().
 		Model(&stage).
+		On("CONFLICT DO NOTHING").
 		Exec(ctx); err != nil {
 		return nil, err
 	}

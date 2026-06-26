@@ -81,8 +81,13 @@ func (a Activities) EvalTriggerVariables(ctx context.Context, trigger Trigger, r
 }
 
 func (a Activities) InsertTriggerOccurrence(ctx context.Context, occurrence Occurrence) error {
+	// Idempotent: a Temporal retry after a lost ack (row committed but the
+	// activity result never reached the server) must not fail on the duplicate
+	// primary key. The occurrence id is deterministic (see
+	// NewTriggerOccurrence), so DO NOTHING is safe.
 	_, err := a.db.NewInsert().
 		Model(pointer.For(occurrence)).
+		On("CONFLICT DO NOTHING").
 		Exec(ctx)
 	return err
 }
