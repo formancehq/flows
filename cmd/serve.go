@@ -3,16 +3,18 @@ package cmd
 import (
 	"context"
 
-	"github.com/formancehq/go-libs/v3/auth"
-	"github.com/formancehq/go-libs/v3/aws/iam"
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/health"
-	"github.com/formancehq/go-libs/v3/httpserver"
-	"github.com/formancehq/go-libs/v3/licence"
-	"github.com/formancehq/go-libs/v3/otlp/otlpmetrics"
-	"github.com/formancehq/go-libs/v3/publish"
-	"github.com/formancehq/go-libs/v3/service"
-	"github.com/formancehq/go-libs/v3/temporal"
+	auth "github.com/formancehq/go-libs/v5/pkg/authn/jwt"
+	"github.com/formancehq/go-libs/v5/pkg/authn/licence"
+	"github.com/formancehq/go-libs/v5/pkg/cloud/aws/iam"
+	"github.com/formancehq/go-libs/v5/pkg/fx/servicefx"
+	"github.com/formancehq/go-libs/v5/pkg/fx/transportfx"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	otlpmetrics "github.com/formancehq/go-libs/v5/pkg/observe/metrics"
+	"github.com/formancehq/go-libs/v5/pkg/service"
+	"github.com/formancehq/go-libs/v5/pkg/service/health"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
+	"github.com/formancehq/go-libs/v5/pkg/transport/httpserver"
+	"github.com/formancehq/go-libs/v5/pkg/workflow/temporal"
 	"github.com/formancehq/orchestration/internal/api"
 	v1 "github.com/formancehq/orchestration/internal/api/v1"
 	v2 "github.com/formancehq/orchestration/internal/api/v2"
@@ -25,8 +27,8 @@ import (
 
 func healthCheckModule() fx.Option {
 	return fx.Options(
-		health.Module(),
-		health.ProvideHealthCheck(func() health.NamedCheck {
+		servicefx.HealthModule(),
+		servicefx.ProvideHealthCheck(func() health.NamedCheck {
 			return health.NewNamedCheck("default", health.CheckFn(func(ctx context.Context) error {
 				return nil
 			}))
@@ -64,7 +66,7 @@ func newServeCommand() *cobra.Command {
 				}),
 				api.NewModule(service.IsDebug(cmd)),
 				fx.Invoke(func(lc fx.Lifecycle, router *chi.Mux) {
-					lc.Append(httpserver.NewHook(router, httpserver.WithAddress(listen)))
+					lc.Append(transportfx.FXHook(httpserver.NewHook(router, httpserver.WithAddress(listen))))
 				}),
 			}
 			worker, _ := cmd.Flags().GetBool(workerFlag)

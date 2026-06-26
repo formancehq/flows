@@ -3,12 +3,12 @@ package workflow
 import (
 	"testing"
 
-	"github.com/formancehq/go-libs/v3/bun/bundebug"
+	bundebug "github.com/formancehq/go-libs/v5/pkg/storage/bun/debug"
 	"github.com/uptrace/bun"
 
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/logging"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/testsuite"
 )
