@@ -9,6 +9,11 @@ runs:
   steps:
     - name: Install Nix
       uses: cachix/install-nix-action@v31
+    - name: Install Earthly
+      uses: earthly/actions-setup@v1
+      with:
+        github-token: ${{ inputs.token }}
+        version: "latest"
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v4
       with:
