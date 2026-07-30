@@ -25,9 +25,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   Dirty:
-    runs-on: "formance-runner"
+    runs-on: "namespace-profile-linux-amd64-4vcpu"
     steps:
-      - uses: 'actions/checkout@v7'
+      - uses: 'namespacelabs/nscloud-checkout-action@v9'
         with:
           fetch-depth: 0
       - name: Setup Env
@@ -35,8 +35,7 @@ jobs:
         with:
           token: ${{ secrets.NUMARY_GITHUB_TOKEN }}
       - run: >
-          /nix/var/nix/profiles/default/bin/nix --extra-experimental-features "nix-command" --extra-experimental-features "flakes"
-          develop --impure --command just pre-commit
+          nix develop --impure --command just pre-commit
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
       - name: Get changed files
@@ -51,11 +50,11 @@ jobs:
           fi
 
   Tests:
-    runs-on: "formance-runner"
+    runs-on: "namespace-profile-linux-amd64-4vcpu"
     needs:
       - Dirty
     steps:
-      - uses: 'actions/checkout@v7'
+      - uses: 'namespacelabs/nscloud-checkout-action@v9'
         with:
           fetch-depth: 0
       - name: Setup Env
@@ -63,18 +62,17 @@ jobs:
         with:
           token: ${{ secrets.NUMARY_GITHUB_TOKEN }}
       - run: >
-          /nix/var/nix/profiles/default/bin/nix --extra-experimental-features "nix-command" --extra-experimental-features "flakes"
-          develop --impure --command just tests
+          nix develop --impure --command just tests
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
 
   GoReleaser:
-    runs-on: "formance-runner"
+    runs-on: "namespace-profile-linux-amd64-4vcpu"
     if: contains(github.event.pull_request.labels.*.name, 'build-images') || github.ref == 'refs/heads/main' || github.event_name == 'merge_group'
     needs:
       - Dirty
     steps:
-      - uses: 'actions/checkout@v7'
+      - uses: 'namespacelabs/nscloud-checkout-action@v9'
         with:
           fetch-depth: 0
       - name: Setup Env
@@ -82,8 +80,7 @@ jobs:
         with:
           token: ${{ secrets.NUMARY_GITHUB_TOKEN }}
       - run: >
-          /nix/var/nix/profiles/default/bin/nix --extra-experimental-features "nix-command" --extra-experimental-features "flakes"
-          develop --impure --command just release-ci
+          nix develop --impure --command just release-ci
         env:
           GITHUB_TOKEN: ${{ secrets.NUMARY_GITHUB_TOKEN }}
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
@@ -98,7 +95,7 @@ jobs:
       - GoReleaser
       - Tests
     steps:
-      - uses: 'actions/checkout@v7'
+      - uses: 'namespacelabs/nscloud-checkout-action@v9'
         with:
           fetch-depth: 0
       - name: Setup Env
