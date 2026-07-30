@@ -121,8 +121,8 @@ github.com/formancehq/formance-sdk-go/v3 v3.2.0 h1:3zxYSu71jjCj5XMBvT6bTm2HlbZWv
 github.com/formancehq/formance-sdk-go/v3 v3.2.0/go.mod h1:XivkqQzjOtR3W7hqIFYcUN11UIf+X8/V1yoPPnGBQVU=
 github.com/formancehq/go-libs/v3 v3.3.0 h1:Qs6oPRNHJbR4xu3Lzl2zGAiQD94XLpabAFYPq3YBqK0=
 github.com/formancehq/go-libs/v3 v3.3.0/go.mod h1:kr5pgap99LPdSVcYWgI+mCN51wr5D+YxEnt9A6JUiFU=
-github.com/formancehq/go-libs/v5 v5.1.1-0.20260522083443-d2a60ed2e0dd h1:bXQ9pFcrDoaBFMzAyRNac5EWRuBn//wtQPzl5sXJcvU=
-github.com/formancehq/go-libs/v5 v5.1.1-0.20260522083443-d2a60ed2e0dd/go.mod h1:0zJ6yzF4/Pu9lmKpswaEdQChpnxuMFsTxmhTCE1raXk=
+github.com/formancehq/go-libs/v5 v5.7.0 h1:2Z2S3vtOJr45tKpofhPqd0qKrPr6KB/LZZ+EfL1PARw=
+github.com/formancehq/go-libs/v5 v5.7.0/go.mod h1:+jfCYWJ4Z10NGbhmbfon0hGoLe5pysbVQgePrg8M8W4=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/gabriel-vasile/mimetype v1.4.8 h1:FfZ3gj38NjllZIeJAmMhr+qKL8Wu+nOoI3GqacKw1NM=
@@ -349,8 +349,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
 github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
-github.com/opencontainers/runc v1.2.8 h1:RnEICeDReapbZ5lZEgHvj7E9Q3Eex9toYmaGBsbvU5Q=
-github.com/opencontainers/runc v1.2.8/go.mod h1:cC0YkmZcuvr+rtBZ6T7NBoVbMGNAdLa/21vIElJDOzI=
+github.com/opencontainers/runc v1.3.6 h1:SLGIymCtsk80iNPWgbc8dtjI30r+5mTVV+4dN8/17Sk=
+github.com/opencontainers/runc v1.3.6/go.mod h1:o1wyv76EDlTkcf0KTFgN8bMWLPvgF/HfX709lDv+rr4=
 github.com/ory/dockertest/v3 v3.12.0 h1:3oV9d0sDzlSQfHtIaB5k6ghUCVMVLpAY8hwrqoCyRCw=
 github.com/ory/dockertest/v3 v3.12.0/go.mod h1:aKNDTva3cp8dwOWwb9cWuX84aH5akkxXRvO7KCwWVjE=
 github.com/perimeterx/marshmallow v1.1.5 h1:a2LALqQ1BlHM8PZblsDdidgv1mWi1DgC2UmX50IvK2s=
