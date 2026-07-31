@@ -4,6 +4,10 @@ inputs:
   token:
     description: 'A Github PAT'
     required: true
+  nscloud-cache:
+    description: 'Enable Namespace.so Git caching (requires namespace-profile-* runner)'
+    required: false
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -25,6 +29,7 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
     - uses: namespacelabs/nscloud-cache-action@v1
+      if: inputs.nscloud-cache != 'false'
       with:
         path: |
           ~/.cache/go-build
