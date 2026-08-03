@@ -95,13 +95,14 @@ jobs:
       - GoReleaser
       - Tests
     steps:
-      - uses: 'namespacelabs/nscloud-checkout-action@v9'
+      - uses: 'actions/checkout@v7'
         with:
           fetch-depth: 0
-      - name: Setup Env
-        uses: ./.github/actions/env
+      - name: Install Earthly
+        uses: earthly/actions-setup@v1
         with:
-          token: ${{ secrets.NUMARY_GITHUB_TOKEN }}
+          github-token: ${{ secrets.NUMARY_GITHUB_TOKEN }}
+          version: "latest"
       - name: Tailscale
         uses: tailscale/github-action@v4
         with:
