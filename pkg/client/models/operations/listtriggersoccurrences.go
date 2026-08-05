@@ -3,12 +3,33 @@
 package operations
 
 import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 type ListTriggersOccurrencesRequest struct {
 	// The trigger id
 	TriggerID string `pathParam:"style=simple,explode=false,name=triggerID"`
+	// The maximum number of results to return per page.
+	//
+	PageSize *int64 `default:"15" queryParam:"style=form,explode=true,name=pageSize"`
+	// Parameter used in pagination requests.
+	// Set to the value of next for the next page of results.
+	// Set to the value of previous for the previous page of results.
+	// No other parameters can be set when this parameter is set.
+	//
+	Cursor *string `queryParam:"style=form,explode=true,name=cursor"`
+}
+
+func (l ListTriggersOccurrencesRequest) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(l, "", false)
+}
+
+func (l *ListTriggersOccurrencesRequest) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &l, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *ListTriggersOccurrencesRequest) GetTriggerID() string {
@@ -16,6 +37,20 @@ func (o *ListTriggersOccurrencesRequest) GetTriggerID() string {
 		return ""
 	}
 	return o.TriggerID
+}
+
+func (o *ListTriggersOccurrencesRequest) GetPageSize() *int64 {
+	if o == nil {
+		return nil
+	}
+	return o.PageSize
+}
+
+func (o *ListTriggersOccurrencesRequest) GetCursor() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Cursor
 }
 
 type ListTriggersOccurrencesResponse struct {

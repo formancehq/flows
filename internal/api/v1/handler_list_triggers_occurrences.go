@@ -13,23 +13,32 @@ import (
 
 func listTriggersOccurrences(backend api.Backend) func(writer http.ResponseWriter, request *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pageSize, err := bunpaginate.GetPageSize(r)
+		query, err := bunpaginate.Extract[triggers.ListTriggersOccurrencesQuery](r, func() (*triggers.ListTriggersOccurrencesQuery, error) {
+			pageSize, err := bunpaginate.GetPageSize(r)
+			if err != nil {
+				return nil, err
+			}
+			return &triggers.ListTriggersOccurrencesQuery{
+				PageSize: pageSize,
+				Options: triggers.ListTriggersOccurrencesOptions{
+					TriggerID: chi.URLParam(r, "triggerID"),
+				},
+			}, nil
+		})
 		if err != nil {
 			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
+		// The path parameter is authoritative even when the pagination cursor is
+		// supplied by the client.
+		query.Options.TriggerID = chi.URLParam(r, "triggerID")
 
-		triggersOccurrences, err := backend.ListTriggersOccurrences(r.Context(), triggers.ListTriggersOccurrencesQuery{
-			PageSize: pageSize,
-			Options: triggers.ListTriggersOccurrencesOptions{
-				TriggerID: chi.URLParam(r, "triggerID"),
-			},
-		})
+		triggersOccurrences, err := backend.ListTriggersOccurrences(r.Context(), *query)
 		if err != nil {
 			sharedapi.InternalServerError(w, r, err)
 			return
 		}
 
-		sharedapi.Ok(w, triggersOccurrences.Data)
+		renderCursor(w, *triggersOccurrences)
 	}
 }

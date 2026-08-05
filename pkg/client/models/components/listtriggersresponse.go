@@ -3,7 +3,11 @@
 package components
 
 type ListTriggersResponse struct {
-	Data []Trigger `json:"data"`
+	Data     []Trigger `json:"data"`
+	PageSize int64     `json:"pageSize"`
+	HasMore  bool      `json:"hasMore"`
+	Previous *string   `json:"previous,omitempty"`
+	Next     *string   `json:"next,omitempty"`
 }
 
 func (o *ListTriggersResponse) GetData() []Trigger {
@@ -11,4 +15,32 @@ func (o *ListTriggersResponse) GetData() []Trigger {
 		return []Trigger{}
 	}
 	return o.Data
+}
+
+func (o *ListTriggersResponse) GetPageSize() int64 {
+	if o == nil {
+		return 0
+	}
+	return o.PageSize
+}
+
+func (o *ListTriggersResponse) GetHasMore() bool {
+	if o == nil {
+		return false
+	}
+	return o.HasMore
+}
+
+func (o *ListTriggersResponse) GetPrevious() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Previous
+}
+
+func (o *ListTriggersResponse) GetNext() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Next
 }

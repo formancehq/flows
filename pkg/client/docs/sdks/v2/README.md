@@ -39,8 +39,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -91,15 +91,15 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.V2ListTriggersRequest{
-        Cursor: openapi.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
-        PageSize: openapi.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+        PageSize: client.Int64(100),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V2.ListTriggers(ctx, request)
@@ -146,8 +146,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -199,8 +199,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -254,8 +254,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -309,8 +309,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -364,16 +364,16 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.V2ListTriggersOccurrencesRequest{
         TriggerID: "<value>",
-        Cursor: openapi.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
-        PageSize: openapi.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+        PageSize: client.Int64(100),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V2.ListTriggersOccurrences(ctx, request)
@@ -421,15 +421,15 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.V2ListWorkflowsRequest{
-        Cursor: openapi.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
-        PageSize: openapi.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+        PageSize: client.Int64(100),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V2.ListWorkflows(ctx, request)
@@ -476,8 +476,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -529,8 +529,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -584,8 +584,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -639,8 +639,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -694,17 +694,17 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.V2ListInstancesRequest{
-        Cursor: openapi.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
-        PageSize: openapi.Int64(100),
-        WorkflowID: openapi.String("xxx"),
-        Running: openapi.Bool(true),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+        PageSize: client.Int64(100),
+        WorkflowID: client.String("xxx"),
+        Running: client.Bool(true),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V2.ListInstances(ctx, request)
@@ -752,8 +752,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -807,8 +807,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -862,8 +862,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -917,8 +917,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -972,8 +972,8 @@ import(
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),

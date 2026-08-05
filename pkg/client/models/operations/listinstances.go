@@ -3,6 +3,7 @@
 package operations
 
 import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
@@ -11,6 +12,26 @@ type ListInstancesRequest struct {
 	WorkflowID *string `queryParam:"style=form,explode=true,name=workflowID"`
 	// Filter running instances
 	Running *bool `queryParam:"style=form,explode=true,name=running"`
+	// The maximum number of results to return per page.
+	//
+	PageSize *int64 `default:"15" queryParam:"style=form,explode=true,name=pageSize"`
+	// Parameter used in pagination requests.
+	// Set to the value of next for the next page of results.
+	// Set to the value of previous for the previous page of results.
+	// No other parameters can be set when this parameter is set.
+	//
+	Cursor *string `queryParam:"style=form,explode=true,name=cursor"`
+}
+
+func (l ListInstancesRequest) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(l, "", false)
+}
+
+func (l *ListInstancesRequest) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &l, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *ListInstancesRequest) GetWorkflowID() *string {
@@ -25,6 +46,20 @@ func (o *ListInstancesRequest) GetRunning() *bool {
 		return nil
 	}
 	return o.Running
+}
+
+func (o *ListInstancesRequest) GetPageSize() *int64 {
+	if o == nil {
+		return nil
+	}
+	return o.PageSize
+}
+
+func (o *ListInstancesRequest) GetCursor() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Cursor
 }
 
 type ListInstancesResponse struct {

@@ -4,14 +4,14 @@ package main
 
 import (
 	"context"
-	"log"
 	"github.com/formancehq/flows/pkg/client"
 	"github.com/formancehq/flows/pkg/client/models/components"
+	"log"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),

@@ -3,17 +3,18 @@
 package components
 
 type V2WorkflowInstanceHistoryStageInput struct {
-	GetAccount         *V2ActivityGetAccount         `json:"GetAccount,omitempty"`
-	AddAccountMetadata *V2ActivityAddAccountMetadata `json:"AddAccountMetadata,omitempty"`
-	CreateTransaction  *V2ActivityCreateTransaction  `json:"CreateTransaction,omitempty"`
-	StripeTransfer     *V2ActivityStripeTransfer     `json:"StripeTransfer,omitempty"`
-	GetPayment         *V2ActivityGetPayment         `json:"GetPayment,omitempty"`
-	ConfirmHold        *V2ActivityConfirmHold        `json:"ConfirmHold,omitempty"`
-	CreditWallet       *V2ActivityCreditWallet       `json:"CreditWallet,omitempty"`
-	DebitWallet        *V2ActivityDebitWallet        `json:"DebitWallet,omitempty"`
-	GetWallet          *V2ActivityGetWallet          `json:"GetWallet,omitempty"`
-	VoidHold           *V2ActivityVoidHold           `json:"VoidHold,omitempty"`
-	ListWallets        *V2ActivityListWallets        `json:"ListWallets,omitempty"`
+	GetAccount               *V2ActivityGetAccount               `json:"GetAccount,omitempty"`
+	AddAccountMetadata       *V2ActivityAddAccountMetadata       `json:"AddAccountMetadata,omitempty"`
+	CreateTransaction        *V2ActivityCreateTransaction        `json:"CreateTransaction,omitempty"`
+	StripeTransfer           *V2ActivityStripeTransfer           `json:"StripeTransfer,omitempty"`
+	CreateTransferInitiation *V2ActivityCreateTransferInitiation `json:"CreateTransferInitiation,omitempty"`
+	GetPayment               *V2ActivityGetPayment               `json:"GetPayment,omitempty"`
+	ConfirmHold              *V2ActivityConfirmHold              `json:"ConfirmHold,omitempty"`
+	CreditWallet             *V2ActivityCreditWallet             `json:"CreditWallet,omitempty"`
+	DebitWallet              *V2ActivityDebitWallet              `json:"DebitWallet,omitempty"`
+	GetWallet                *V2ActivityGetWallet                `json:"GetWallet,omitempty"`
+	VoidHold                 *V2ActivityVoidHold                 `json:"VoidHold,omitempty"`
+	ListWallets              *V2ActivityListWallets              `json:"ListWallets,omitempty"`
 }
 
 func (o *V2WorkflowInstanceHistoryStageInput) GetGetAccount() *V2ActivityGetAccount {
@@ -42,6 +43,13 @@ func (o *V2WorkflowInstanceHistoryStageInput) GetStripeTransfer() *V2ActivityStr
 		return nil
 	}
 	return o.StripeTransfer
+}
+
+func (o *V2WorkflowInstanceHistoryStageInput) GetCreateTransferInitiation() *V2ActivityCreateTransferInitiation {
+	if o == nil {
+		return nil
+	}
+	return o.CreateTransferInitiation
 }
 
 func (o *V2WorkflowInstanceHistoryStageInput) GetGetPayment() *V2ActivityGetPayment {

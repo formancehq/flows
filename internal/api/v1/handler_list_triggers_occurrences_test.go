@@ -1,14 +1,15 @@
 package v1
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
 	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
 	"github.com/formancehq/go-libs/v5/pkg/observe/log"
-	sharedapi "github.com/formancehq/go-libs/v5/pkg/testing/api"
 	"github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/formancehq/orchestration/internal/workflow"
@@ -45,6 +46,22 @@ func TestListTriggersOccurrencesIsBounded(t *testing.T) {
 			require.NoError(t, err)
 		}
 
+		type occurrencePage struct {
+			Data     []triggers.Occurrence `json:"data"`
+			PageSize int                   `json:"pageSize"`
+			HasMore  bool                  `json:"hasMore"`
+			Next     string                `json:"next"`
+		}
+		requestPage := func(query string) occurrencePage {
+			req := httptest.NewRequest(http.MethodGet, "/triggers/"+trigger.ID+"/occurrences"+query, nil)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+			var page occurrencePage
+			require.NoError(t, json.NewDecoder(rec.Body).Decode(&page))
+			return page
+		}
+
 		for _, testCase := range []struct {
 			name     string
 			query    string
@@ -54,15 +71,16 @@ func TestListTriggersOccurrencesIsBounded(t *testing.T) {
 			{name: "explicit page size", query: "?pageSize=5", expected: 5},
 		} {
 			t.Run(testCase.name, func(t *testing.T) {
-				req := httptest.NewRequest(http.MethodGet, "/triggers/"+trigger.ID+"/occurrences"+testCase.query, nil)
-				rec := httptest.NewRecorder()
-				router.ServeHTTP(rec, req)
-				require.Equal(t, http.StatusOK, rec.Result().StatusCode)
-
-				occurrences := make([]triggers.Occurrence, 0)
-				sharedapi.ReadResponse(t, rec, &occurrences)
-				require.Len(t, occurrences, testCase.expected)
+				page := requestPage(testCase.query)
+				require.Len(t, page.Data, testCase.expected)
 			})
 		}
+
+		firstPage := requestPage("")
+		require.True(t, firstPage.HasMore)
+		require.NotEmpty(t, firstPage.Next)
+		secondPage := requestPage("?cursor=" + url.QueryEscape(firstPage.Next))
+		require.Len(t, secondPage.Data, 5)
+		require.False(t, secondPage.HasMore)
 	})
 }

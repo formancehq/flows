@@ -22,12 +22,12 @@ func stackClientModule(cmd *cobra.Command) fx.Option {
 	stackURL, _ := cmd.Flags().GetString(stackURLFlag)
 
 	return fx.Options(
-		fx.Provide(func(httpClient *http.Client) *sdk.Formance {
+		fx.Provide(fx.Annotate(func(httpClient *http.Client) *sdk.Formance {
 			return sdk.New(
 				sdk.WithClient(httpClient),
 				sdk.WithServerURL(stackURL),
 			)
-		}),
+		}, fx.ParamTags(`name:"stack"`))),
 	)
 }
 

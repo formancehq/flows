@@ -1,9 +1,11 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -111,16 +113,37 @@ func TestListInstancesIsBounded(t *testing.T) {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
-		instances := make([]workflow.Instance, 0)
-		sharedapi.ReadResponse(t, rec, &instances)
-		require.Len(t, instances, 15)
+		var firstPage struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+			HasMore  bool                `json:"hasMore"`
+			Next     string              `json:"next"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&firstPage))
+		require.Len(t, firstPage.Data, 15)
+		require.Equal(t, 15, firstPage.PageSize)
+		require.True(t, firstPage.HasMore)
+		require.NotEmpty(t, firstPage.Next)
+
+		// The continuation cursor makes the remaining records retrievable.
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(firstPage.Next), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		var secondPage struct {
+			Data    []workflow.Instance `json:"data"`
+			HasMore bool                `json:"hasMore"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&secondPage))
+		require.Len(t, secondPage.Data, 5)
+		require.False(t, secondPage.HasMore)
 
 		// An explicit page size is honoured.
 		req = httptest.NewRequest(http.MethodGet, "/instances?pageSize=5", nil)
 		rec = httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
-		instances = make([]workflow.Instance, 0)
+		instances := make([]workflow.Instance, 0)
 		sharedapi.ReadResponse(t, rec, &instances)
 		require.Len(t, instances, 5)
 	})

@@ -44,6 +44,7 @@ const (
 	topicsFlag            = "topics"
 	listenFlag            = "listen"
 	workerFlag            = "worker"
+	stackHTTPClientName   = "stack"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -68,6 +69,30 @@ func NewRootCommand() *cobra.Command {
 
 func Execute() {
 	service.Execute(NewRootCommand())
+}
+
+func stackHTTPClientModule(cmd *cobra.Command) fx.Option {
+	return fx.Provide(fx.Annotate(func() *http.Client {
+		httpClient := &http.Client{
+			Transport: otlp.NewRoundTripper(http.DefaultTransport, service.IsDebug(cmd)),
+		}
+
+		stackClientID, _ := cmd.Flags().GetString(stackClientIDFlag)
+		stackClientSecret, _ := cmd.Flags().GetString(stackClientSecretFlag)
+		stackURL, _ := cmd.Flags().GetString(stackURLFlag)
+
+		if stackClientID == "" {
+			return httpClient
+		}
+		oauthConfig := clientcredentials.Config{
+			ClientID:     stackClientID,
+			ClientSecret: stackClientSecret,
+			TokenURL:     fmt.Sprintf("%s/api/auth/oauth/token", stackURL),
+			Scopes:       []string{"openid", "ledger:read", "ledger:write", "wallets:read", "wallets:write", "payments:read", "payments:write"},
+		}
+		return oauthConfig.Client(context.WithValue(context.Background(),
+			oauth2.HTTPClient, httpClient))
+	}, fx.ResultTags(`name:"stack"`)))
 }
 
 func commonOptions(cmd *cobra.Command) (fx.Option, error) {
@@ -99,30 +124,10 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 		authnfx.JWTModuleFromFlags(cmd),
 		authnfx.LicenceModuleFromFlags(cmd, ServiceName),
 		workflow.NewModule(stack, temporalTaskQueue),
-		triggers.NewModule(stack, stackURL, temporalTaskQueue),
+		triggers.NewModule(stack, stackURL, temporalTaskQueue, stackHTTPClientName),
 		fx.Provide(func() *bunconnect.ConnectionOptions {
 			return connectionOptions
 		}),
-		fx.Provide(func() *http.Client {
-			httpClient := &http.Client{
-				Transport: otlp.NewRoundTripper(http.DefaultTransport, service.IsDebug(cmd)),
-			}
-
-			stackClientID, _ := cmd.Flags().GetString(stackClientIDFlag)
-			stackClientSecret, _ := cmd.Flags().GetString(stackClientSecretFlag)
-			stackURL, _ := cmd.Flags().GetString(stackURLFlag)
-
-			if stackClientID == "" {
-				return httpClient
-			}
-			oauthConfig := clientcredentials.Config{
-				ClientID:     stackClientID,
-				ClientSecret: stackClientSecret,
-				TokenURL:     fmt.Sprintf("%s/api/auth/oauth/token", stackURL),
-				Scopes:       []string{"openid", "ledger:read", "ledger:write", "wallets:read", "wallets:write", "payments:read", "payments:write"},
-			}
-			return oauthConfig.Client(context.WithValue(context.Background(),
-				oauth2.HTTPClient, httpClient))
-		}),
+		stackHTTPClientModule(cmd),
 	), nil
 }

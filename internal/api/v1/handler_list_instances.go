@@ -16,23 +16,29 @@ func listInstances(backend api.Backend) http.HandlerFunc {
 
 		// Bound the query: without a page size, bunpaginate applies no LIMIT,
 		// loading the entire workflow_instances table per request.
-		pageSize, err := bunpaginate.GetPageSize(r)
+		query, err := bunpaginate.Extract[workflow.ListInstancesQuery](r, func() (*workflow.ListInstancesQuery, error) {
+			pageSize, err := bunpaginate.GetPageSize(r)
+			if err != nil {
+				return nil, err
+			}
+			return &workflow.ListInstancesQuery{
+				PageSize: pageSize,
+				Options: workflow.ListInstancesOptions{
+					WorkflowID: r.URL.Query().Get("workflowID"),
+					Running:    sharedapi.QueryParamBool(r, "running"),
+				},
+			}, nil
+		})
 		if err != nil {
 			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
 
-		runs, err := backend.ListInstances(r.Context(), workflow.ListInstancesQuery{
-			PageSize: pageSize,
-			Options: workflow.ListInstancesOptions{
-				WorkflowID: r.URL.Query().Get("workflowID"),
-				Running:    sharedapi.QueryParamBool(r, "running"),
-			},
-		})
+		runs, err := backend.ListInstances(r.Context(), *query)
 		if err != nil {
 			sharedapi.InternalServerError(w, r, err)
 			return
 		}
-		sharedapi.Ok(w, runs.Data)
+		renderCursor(w, *runs)
 	}
 }

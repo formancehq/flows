@@ -3,18 +3,19 @@
 package components
 
 type WorkflowInstanceHistoryStageInput struct {
-	GetAccount         *ActivityGetAccount         `json:"GetAccount,omitempty"`
-	AddAccountMetadata *ActivityAddAccountMetadata `json:"AddAccountMetadata,omitempty"`
-	CreateTransaction  *ActivityCreateTransaction  `json:"CreateTransaction,omitempty"`
-	RevertTransaction  *ActivityRevertTransaction  `json:"RevertTransaction,omitempty"`
-	StripeTransfer     *ActivityStripeTransfer     `json:"StripeTransfer,omitempty"`
-	GetPayment         *ActivityGetPayment         `json:"GetPayment,omitempty"`
-	ConfirmHold        *ActivityConfirmHold        `json:"ConfirmHold,omitempty"`
-	CreditWallet       *ActivityCreditWallet       `json:"CreditWallet,omitempty"`
-	DebitWallet        *ActivityDebitWallet        `json:"DebitWallet,omitempty"`
-	GetWallet          *ActivityGetWallet          `json:"GetWallet,omitempty"`
-	VoidHold           *ActivityVoidHold           `json:"VoidHold,omitempty"`
-	ListWallets        *ActivityListWallets        `json:"ListWallets,omitempty"`
+	GetAccount               *ActivityGetAccount               `json:"GetAccount,omitempty"`
+	AddAccountMetadata       *ActivityAddAccountMetadata       `json:"AddAccountMetadata,omitempty"`
+	CreateTransaction        *ActivityCreateTransaction        `json:"CreateTransaction,omitempty"`
+	RevertTransaction        *ActivityRevertTransaction        `json:"RevertTransaction,omitempty"`
+	StripeTransfer           *ActivityStripeTransfer           `json:"StripeTransfer,omitempty"`
+	CreateTransferInitiation *ActivityCreateTransferInitiation `json:"CreateTransferInitiation,omitempty"`
+	GetPayment               *ActivityGetPayment               `json:"GetPayment,omitempty"`
+	ConfirmHold              *ActivityConfirmHold              `json:"ConfirmHold,omitempty"`
+	CreditWallet             *ActivityCreditWallet             `json:"CreditWallet,omitempty"`
+	DebitWallet              *ActivityDebitWallet              `json:"DebitWallet,omitempty"`
+	GetWallet                *ActivityGetWallet                `json:"GetWallet,omitempty"`
+	VoidHold                 *ActivityVoidHold                 `json:"VoidHold,omitempty"`
+	ListWallets              *ActivityListWallets              `json:"ListWallets,omitempty"`
 }
 
 func (o *WorkflowInstanceHistoryStageInput) GetGetAccount() *ActivityGetAccount {
@@ -50,6 +51,13 @@ func (o *WorkflowInstanceHistoryStageInput) GetStripeTransfer() *ActivityStripeT
 		return nil
 	}
 	return o.StripeTransfer
+}
+
+func (o *WorkflowInstanceHistoryStageInput) GetCreateTransferInitiation() *ActivityCreateTransferInitiation {
+	if o == nil {
+		return nil
+	}
+	return o.CreateTransferInitiation
 }
 
 func (o *WorkflowInstanceHistoryStageInput) GetGetPayment() *ActivityGetPayment {

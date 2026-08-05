@@ -38,6 +38,6 @@ func listTriggers(backend api.Backend) func(writer http.ResponseWriter, request 
 			return
 		}
 
-		sharedapi.Ok(w, triggers.Data)
+		renderCursor(w, *triggers)
 	}
 }

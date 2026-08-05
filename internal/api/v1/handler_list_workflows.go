@@ -15,20 +15,24 @@ func listWorkflows(backend api2.Backend) http.HandlerFunc {
 
 		// Bound the query: without a page size, bunpaginate applies no LIMIT,
 		// loading the entire workflows table per request.
-		pageSize, err := bunpaginate.GetPageSize(r)
+		query, err := bunpaginate.Extract[bunpaginate.OffsetPaginatedQuery[any]](r, func() (*bunpaginate.OffsetPaginatedQuery[any], error) {
+			pageSize, err := bunpaginate.GetPageSize(r)
+			if err != nil {
+				return nil, err
+			}
+			return &bunpaginate.OffsetPaginatedQuery[any]{PageSize: pageSize}, nil
+		})
 		if err != nil {
 			api.BadRequest(w, "VALIDATION", err)
 			return
 		}
 
-		workflows, err := backend.ListWorkflows(r.Context(), bunpaginate.OffsetPaginatedQuery[any]{
-			PageSize: pageSize,
-		})
+		workflows, err := backend.ListWorkflows(r.Context(), *query)
 		if err != nil {
 			api.InternalServerError(w, r, err)
 			return
 		}
 
-		api.Ok(w, workflows.Data)
+		renderCursor(w, *workflows)
 	}
 }

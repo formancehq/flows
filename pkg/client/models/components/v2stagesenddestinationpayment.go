@@ -2,8 +2,66 @@
 
 package components
 
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+)
+
+// V2StageSendDestinationPaymentType - Type of transfer initiation:
+// - TRANSFER: Internal to internal account transfer
+// - PAYOUT: Internal to external account payout
+type V2StageSendDestinationPaymentType string
+
+const (
+	V2StageSendDestinationPaymentTypeTransfer V2StageSendDestinationPaymentType = "TRANSFER"
+	V2StageSendDestinationPaymentTypePayout   V2StageSendDestinationPaymentType = "PAYOUT"
+)
+
+func (e V2StageSendDestinationPaymentType) ToPointer() *V2StageSendDestinationPaymentType {
+	return &e
+}
+func (e *V2StageSendDestinationPaymentType) UnmarshalJSON(data []byte) error {
+	var v string
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	switch v {
+	case "TRANSFER":
+		fallthrough
+	case "PAYOUT":
+		*e = V2StageSendDestinationPaymentType(v)
+		return nil
+	default:
+		return fmt.Errorf("invalid value for V2StageSendDestinationPaymentType: %v", v)
+	}
+}
+
 type V2StageSendDestinationPayment struct {
+	// Payment service provider name (e.g., stripe, wise, mangopay).
+	// Validated by the Payments service based on installed connectors.
+	//
 	Psp string `json:"psp"`
+	// Type of transfer initiation:
+	// - TRANSFER: Internal to internal account transfer
+	// - PAYOUT: Internal to external account payout
+	//
+	Type *V2StageSendDestinationPaymentType `default:"TRANSFER" json:"type"`
+	// Formance Payments account ID for the source (internal PSP account).
+	// If not specified, the Payments service may use a default account for the connector.
+	//
+	SourceAccount *string `json:"sourceAccount,omitempty"`
+}
+
+func (v V2StageSendDestinationPayment) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(v, "", false)
+}
+
+func (v *V2StageSendDestinationPayment) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &v, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *V2StageSendDestinationPayment) GetPsp() string {
@@ -11,4 +69,18 @@ func (o *V2StageSendDestinationPayment) GetPsp() string {
 		return ""
 	}
 	return o.Psp
+}
+
+func (o *V2StageSendDestinationPayment) GetType() *V2StageSendDestinationPaymentType {
+	if o == nil {
+		return nil
+	}
+	return o.Type
+}
+
+func (o *V2StageSendDestinationPayment) GetSourceAccount() *string {
+	if o == nil {
+		return nil
+	}
+	return o.SourceAccount
 }

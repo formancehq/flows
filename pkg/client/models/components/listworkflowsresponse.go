@@ -3,7 +3,11 @@
 package components
 
 type ListWorkflowsResponse struct {
-	Data []Workflow `json:"data"`
+	Data     []Workflow `json:"data"`
+	PageSize int64      `json:"pageSize"`
+	HasMore  bool       `json:"hasMore"`
+	Previous *string    `json:"previous,omitempty"`
+	Next     *string    `json:"next,omitempty"`
 }
 
 func (o *ListWorkflowsResponse) GetData() []Workflow {
@@ -11,4 +15,32 @@ func (o *ListWorkflowsResponse) GetData() []Workflow {
 		return []Workflow{}
 	}
 	return o.Data
+}
+
+func (o *ListWorkflowsResponse) GetPageSize() int64 {
+	if o == nil {
+		return 0
+	}
+	return o.PageSize
+}
+
+func (o *ListWorkflowsResponse) GetHasMore() bool {
+	if o == nil {
+		return false
+	}
+	return o.HasMore
+}
+
+func (o *ListWorkflowsResponse) GetPrevious() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Previous
+}
+
+func (o *ListWorkflowsResponse) GetNext() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Next
 }

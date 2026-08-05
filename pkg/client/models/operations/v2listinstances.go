@@ -3,6 +3,7 @@
 package operations
 
 import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
@@ -15,11 +16,22 @@ type V2ListInstancesRequest struct {
 	Cursor *string `queryParam:"style=form,explode=true,name=cursor"`
 	// The maximum number of results to return per page.
 	//
-	PageSize *int64 `queryParam:"style=form,explode=true,name=pageSize"`
+	PageSize *int64 `default:"15" queryParam:"style=form,explode=true,name=pageSize"`
 	// A workflow id
 	WorkflowID *string `queryParam:"style=form,explode=true,name=workflowID"`
 	// Filter running instances
 	Running *bool `queryParam:"style=form,explode=true,name=running"`
+}
+
+func (v V2ListInstancesRequest) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(v, "", false)
+}
+
+func (v *V2ListInstancesRequest) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &v, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *V2ListInstancesRequest) GetCursor() *string {

@@ -2,8 +2,39 @@
 
 package components
 
+import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+)
+
 type V2StageSendSourcePayment struct {
 	ID string `json:"id"`
+	// Ledger to use for payment ingestion.
+	// Defaults to the internal orchestration ledger.
+	//
+	Ledger *string `json:"ledger,omitempty"`
+	// Intermediate account where payment funds are held.
+	// Defaults to "payment:{paymentID}" format.
+	//
+	HoldingAccount *string `json:"holdingAccount,omitempty"`
+	// Source account for the payment ingestion transaction.
+	// Defaults to "world".
+	//
+	ThroughAccount *string `default:"world" json:"throughAccount"`
+	// Enables unbounded overdraft on the throughAccount when set to true.
+	// Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+	//
+	AllowOverdraft *bool `default:"false" json:"allowOverdraft"`
+}
+
+func (v V2StageSendSourcePayment) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(v, "", false)
+}
+
+func (v *V2StageSendSourcePayment) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &v, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *V2StageSendSourcePayment) GetID() string {
@@ -11,4 +42,32 @@ func (o *V2StageSendSourcePayment) GetID() string {
 		return ""
 	}
 	return o.ID
+}
+
+func (o *V2StageSendSourcePayment) GetLedger() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Ledger
+}
+
+func (o *V2StageSendSourcePayment) GetHoldingAccount() *string {
+	if o == nil {
+		return nil
+	}
+	return o.HoldingAccount
+}
+
+func (o *V2StageSendSourcePayment) GetThroughAccount() *string {
+	if o == nil {
+		return nil
+	}
+	return o.ThroughAccount
+}
+
+func (o *V2StageSendSourcePayment) GetAllowOverdraft() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.AllowOverdraft
 }
