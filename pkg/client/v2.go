@@ -7,14 +7,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/formancehq/flows/pkg/client/internal/hooks"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/sdkerrors"
 	"io"
 	"net/http"
 	"net/url"
-	"openapi/internal/hooks"
-	"openapi/internal/utils"
-	"openapi/models/components"
-	"openapi/models/operations"
-	"openapi/models/sdkerrors"
 )
 
 type V2 struct {

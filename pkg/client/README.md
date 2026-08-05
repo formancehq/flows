@@ -35,8 +35,8 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 func main() {
@@ -118,9 +118,9 @@ import (
 	"context"
 	"log"
 	"models/operations"
-	"openapi"
-	"openapi/models/components"
-	"openapi/retry"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/retry"
 )
 
 func main() {
@@ -160,9 +160,9 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
-	"openapi/retry"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/retry"
 )
 
 func main() {
@@ -216,9 +216,9 @@ import (
 	"context"
 	"errors"
 	"log"
-	"openapi"
-	"openapi/models/components"
-	"openapi/models/sdkerrors"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/models/sdkerrors"
 )
 
 func main() {
@@ -269,8 +269,8 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 func main() {
@@ -304,8 +304,8 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 func main() {
@@ -378,8 +378,8 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 func main() {

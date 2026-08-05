@@ -160,7 +160,7 @@ func TestSoftDeletedWorkflowIsNotUsable(t *testing.T) {
 	database := srv.NewDatabase(t)
 	db, err := bunconnect.OpenSQLDB(logging.TestingContext(), bunconnect.ConnectionOptions{
 		DatabaseSourceName: database.ConnString(),
-	}, []bun.QueryHook{})
+	})
 	require.NoError(t, err)
 	require.NoError(t, storage.Migrate(logging.TestingContext(), db))
 

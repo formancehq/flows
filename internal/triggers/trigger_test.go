@@ -215,4 +215,28 @@ func TestLinkHostAllowlist(t *testing.T) {
 		require.Equal(t, map[string]string{"role": "admin"}, result)
 		require.True(t, hit)
 	})
+
+	t.Run("denied when an allowed host redirects to a non-allowlisted host", func(t *testing.T) {
+		redirectTargetHit := false
+		redirectTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			redirectTargetHit = true
+			_, _ = w.Write([]byte(`{"data": {"role": "admin"}}`))
+		}))
+		t.Cleanup(redirectTarget.Close)
+
+		redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, redirectTarget.URL, http.StatusFound)
+		}))
+		t.Cleanup(redirector.Close)
+
+		redirectedObject := map[string]any{
+			"links": []map[string]any{
+				{"name": "source_account", "uri": redirector.URL},
+			},
+		}
+		e := NewExpressionEvaluator(http.DefaultClient, redirector.URL)
+		_, err := e.evalVariables(redirectedObject, variables)
+		require.Error(t, err)
+		require.False(t, redirectTargetHit, "a redirect target must be checked before it is contacted")
+	})
 }

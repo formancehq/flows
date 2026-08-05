@@ -5,7 +5,7 @@ package components
 import (
 	"errors"
 	"fmt"
-	"openapi/internal/utils"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 )
 
 type StageType string

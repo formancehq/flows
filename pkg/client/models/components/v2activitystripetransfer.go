@@ -3,8 +3,8 @@
 package components
 
 import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"math/big"
-	"openapi/internal/utils"
 )
 
 // V2ActivityStripeTransferMetadata - A set of key/value pairs that you can attach to a transfer object.

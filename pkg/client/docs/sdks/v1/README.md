@@ -31,8 +31,8 @@ Get server info
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
@@ -82,9 +82,9 @@ List triggers
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -135,8 +135,8 @@ Create trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
@@ -187,9 +187,9 @@ Read trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -242,9 +242,9 @@ Read trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -297,9 +297,9 @@ List triggers occurrences
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -352,8 +352,8 @@ List registered workflows
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
@@ -403,8 +403,8 @@ Create a workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
@@ -455,9 +455,9 @@ Get a flow by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -510,9 +510,9 @@ Delete a flow by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -565,9 +565,9 @@ Run workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -620,9 +620,9 @@ List instances of a workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -676,9 +676,9 @@ Get a workflow instance by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -731,9 +731,9 @@ Send an event to a running workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -786,9 +786,9 @@ Cancel a running workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -841,9 +841,9 @@ Get a workflow instance history by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
@@ -896,9 +896,9 @@ Get a workflow instance stage history
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )

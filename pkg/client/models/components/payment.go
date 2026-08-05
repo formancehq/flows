@@ -5,8 +5,8 @@ package components
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"math/big"
-	"openapi/internal/utils"
 	"time"
 )
 

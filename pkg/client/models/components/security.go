@@ -3,7 +3,7 @@
 package components
 
 import (
-	"openapi/internal/utils"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 )
 
 type Security struct {

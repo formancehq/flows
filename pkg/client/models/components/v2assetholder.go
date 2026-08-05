@@ -3,8 +3,8 @@
 package components
 
 import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 	"math/big"
-	"openapi/internal/utils"
 )
 
 type V2AssetHolder struct {

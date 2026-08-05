@@ -3,7 +3,7 @@
 package operations
 
 import (
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 type V2ListWorkflowsRequest struct {

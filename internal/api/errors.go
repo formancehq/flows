@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
-	sharedapi "github.com/formancehq/go-libs/v3/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/pkg/errors"
 	"go.temporal.io/api/serviceerror"

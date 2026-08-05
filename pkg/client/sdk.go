@@ -5,11 +5,11 @@ package openapi
 import (
 	"context"
 	"fmt"
+	"github.com/formancehq/flows/pkg/client/internal/hooks"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/retry"
 	"net/http"
-	"openapi/internal/hooks"
-	"openapi/internal/utils"
-	"openapi/models/components"
-	"openapi/retry"
 	"time"
 )
 

@@ -5,8 +5,8 @@ package main
 import (
 	"context"
 	"log"
-	"openapi"
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 func main() {

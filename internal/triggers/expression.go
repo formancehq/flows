@@ -182,6 +182,10 @@ func (h *expressionEvaluator) evalVariables(rawObject any, vars map[string]strin
 // or a full URL, in which case only its host is retained. With no allowed host,
 // link() network calls are denied.
 func NewExpressionEvaluator(httpClient *http.Client, allowedHosts ...string) *expressionEvaluator {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	hosts := make(map[string]struct{}, len(allowedHosts))
 	for _, h := range allowedHosts {
 		if h == "" {
@@ -193,10 +197,23 @@ func NewExpressionEvaluator(httpClient *http.Client, allowedHosts ...string) *ex
 		}
 		hosts[strings.ToLower(h)] = struct{}{}
 	}
-	return &expressionEvaluator{
-		httpClient:   httpClient,
+	client := *httpClient
+	evaluator := &expressionEvaluator{
+		httpClient:   &client,
 		allowedHosts: hosts,
 	}
+	previousCheckRedirect := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if err := evaluator.checkLinkURL(req.URL.String()); err != nil {
+			return err
+		}
+		if previousCheckRedirect != nil {
+			return previousCheckRedirect(req, via)
+		}
+		return nil
+	}
+
+	return evaluator
 }
 
 func NewDefaultExpressionEvaluator() *expressionEvaluator {

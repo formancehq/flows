@@ -72,14 +72,24 @@ func (a Activities) InsertNewInstance(ctx context.Context, workflowID string) (*
 	instance := NewInstance(activity.GetInfo(ctx).WorkflowExecution.ID, workflowID)
 	// Idempotent: the primary key is the (deterministic) workflow execution id,
 	// so a Temporal retry after a lost ack must not fail on the duplicate key.
-	// The returned instance is rebuilt deterministically, so it is correct even
-	// when the row already exists.
-	if _, err := a.db.
+	// On a duplicate, reload the persisted row so timestamps from the first
+	// attempt are preserved.
+	result, err := a.db.
 		NewInsert().
 		Model(&instance).
 		On("CONFLICT DO NOTHING").
-		Exec(ctx); err != nil {
+		Exec(ctx)
+	if err != nil {
 		return nil, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		if err := a.db.NewSelect().Model(&instance).WherePK().Scan(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return &instance, nil
@@ -97,12 +107,22 @@ func (a Activities) InsertNewStage(ctx context.Context, instance Instance, ind i
 	stage := NewStage(instance.ID, activity.GetInfo(ctx).WorkflowExecution.RunID, ind)
 	// Idempotent: the primary key is deterministic (instance id + run id +
 	// index), so a Temporal retry after a lost ack must not fail on the
-	// duplicate key.
-	if _, err := a.db.NewInsert().
+	// duplicate key. Reload duplicates to preserve the original StartedAt.
+	result, err := a.db.NewInsert().
 		Model(&stage).
 		On("CONFLICT DO NOTHING").
-		Exec(ctx); err != nil {
+		Exec(ctx)
+	if err != nil {
 		return nil, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		if err := a.db.NewSelect().Model(&stage).WherePK().Scan(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return &stage, nil

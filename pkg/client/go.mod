@@ -1,4 +1,4 @@
-module openapi
+module github.com/formancehq/flows/pkg/client
 
 go 1.20
 
