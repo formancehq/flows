@@ -51,25 +51,33 @@ func TestActivities(t *testing.T) {
 	require.NoError(t, err)
 	var firstInstance Instance
 	require.NoError(t, firstValue.Get(&firstInstance))
+	persistedInstance := Instance{ID: firstInstance.ID}
+	require.NoError(t, db.NewSelect().Model(&persistedInstance).WherePK().Scan(logging.TestingContext()))
 
 	time.Sleep(time.Millisecond)
 	secondValue, err := env.ExecuteActivity(InsertNewInstanceActivity, workflowModel.ID)
 	require.NoError(t, err)
 	var secondInstance Instance
 	require.NoError(t, secondValue.Get(&secondInstance))
-	require.True(t, firstInstance.CreatedAt.Equal(secondInstance.CreatedAt))
-	require.True(t, firstInstance.UpdatedAt.Equal(secondInstance.UpdatedAt))
+	require.True(t, persistedInstance.CreatedAt.Equal(secondInstance.CreatedAt))
+	require.True(t, persistedInstance.UpdatedAt.Equal(secondInstance.UpdatedAt))
 
 	env.RegisterActivity(activities.InsertNewStage)
 	firstStageValue, err := env.ExecuteActivity(InsertNewStageActivity, firstInstance, 0)
 	require.NoError(t, err)
 	var firstStage Stage
 	require.NoError(t, firstStageValue.Get(&firstStage))
+	persistedStage := Stage{
+		InstanceID:    firstStage.InstanceID,
+		TemporalRunID: firstStage.TemporalRunID,
+		Number:        firstStage.Number,
+	}
+	require.NoError(t, db.NewSelect().Model(&persistedStage).WherePK().Scan(logging.TestingContext()))
 
 	time.Sleep(time.Millisecond)
 	secondStageValue, err := env.ExecuteActivity(InsertNewStageActivity, firstInstance, 0)
 	require.NoError(t, err)
 	var secondStage Stage
 	require.NoError(t, secondStageValue.Get(&secondStage))
-	require.True(t, firstStage.StartedAt.Equal(secondStage.StartedAt))
+	require.True(t, persistedStage.StartedAt.Equal(secondStage.StartedAt))
 }
