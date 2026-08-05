@@ -17,6 +17,7 @@ func TestWorkerOptionsValidatesMaxParallelActivities(t *testing.T) {
 		{name: "zero", value: "0", wantErr: true},
 		{name: "negative", value: "-1", wantErr: true},
 		{name: "fractional", value: "0.5", wantErr: true},
+		{name: "int overflow", value: "9223372036854775808", wantErr: true},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			cmd := newWorkerCommand()

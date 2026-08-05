@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 
 	sdk "github.com/formancehq/formance-sdk-go/v3"
 	"github.com/formancehq/go-libs/v5/pkg/authn/licence"
@@ -43,9 +44,10 @@ func workerOptions(cmd *cobra.Command) (fx.Option, error) {
 	if err != nil {
 		return nil, err
 	}
+	maxIntExclusive := math.Exp2(float64(strconv.IntSize - 1))
 	if temporalMaxParallelActivities <= 0 ||
 		math.Trunc(temporalMaxParallelActivities) != temporalMaxParallelActivities ||
-		temporalMaxParallelActivities > float64(math.MaxInt) {
+		temporalMaxParallelActivities >= maxIntExclusive {
 		return nil, fmt.Errorf("%s must be a positive whole number", temporal.TemporalMaxParallelActivitiesFlag)
 	}
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
