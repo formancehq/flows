@@ -207,6 +207,11 @@ func TestLinkHostAllowlist(t *testing.T) {
 		require.False(t, hit)
 	})
 
+	t.Run("configured origin rejects a scheme downgrade", func(t *testing.T) {
+		e := NewExpressionEvaluator(http.DefaultClient, "https://allowed.example.com")
+		require.Error(t, e.checkLinkURL("http://allowed.example.com/resource"))
+	})
+
 	t.Run("allowed when host matches", func(t *testing.T) {
 		hit = false
 		e := NewExpressionEvaluator(http.DefaultClient, srv.URL)

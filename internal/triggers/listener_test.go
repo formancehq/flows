@@ -40,6 +40,32 @@ func setupTestDB(t *testing.T) *bun.DB {
 	return db
 }
 
+func TestGetWorkflowIDFromEvent(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		payload any
+	}{
+		{name: "missing id", payload: map[string]any{}},
+		{name: "null id", payload: map[string]any{"id": nil}},
+		{name: "empty id", payload: map[string]any{"id": ""}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := getWorkflowIDFromEvent(publish.EventMessage{
+				Type:    "SAVED_PAYMENT",
+				Payload: testCase.payload,
+			})
+			require.Error(t, err)
+		})
+	}
+
+	id, err := getWorkflowIDFromEvent(publish.EventMessage{
+		Type:    "SAVED_PAYMENT",
+		Payload: map[string]any{"id": "payment-id"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "payment-id", *id)
+}
+
 func insertNoOpWorkflow(t *testing.T, db *bun.DB) workflow.Workflow {
 	t.Helper()
 

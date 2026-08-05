@@ -43,6 +43,9 @@ func getWorkflowIDFromEvent(event publish.EventMessage) (*string, error) {
 		if err := json.Unmarshal(data, o); err != nil {
 			return nil, errors.Wrap(err, "unmarshalling event payload")
 		}
+		if o.ID == "" {
+			return nil, errors.New("event payload id is required")
+		}
 
 		return pointer.For(o.ID), nil
 	default:

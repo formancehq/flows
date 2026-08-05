@@ -162,6 +162,9 @@ func TestSoftDeletedWorkflowIsNotUsable(t *testing.T) {
 		DatabaseSourceName: database.ConnString(),
 	})
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = db.Close()
+	})
 	require.NoError(t, storage.Migrate(logging.TestingContext(), db))
 
 	manager := NewManager(db, devServer.Client(), "test", uuid.NewString(), false)

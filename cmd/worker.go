@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"math"
 	"net/http"
 
 	sdk "github.com/formancehq/formance-sdk-go/v3"
@@ -31,13 +33,21 @@ func stackClientModule(cmd *cobra.Command) fx.Option {
 	)
 }
 
-func workerOptions(cmd *cobra.Command) fx.Option {
+func workerOptions(cmd *cobra.Command) (fx.Option, error) {
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
 	// The flag is registered as a float64 in go-libs; reading it with GetInt
 	// silently fails and yields 0, so the configured limit was never applied.
-	temporalMaxParallelActivities, _ := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
+	temporalMaxParallelActivities, err := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
+	if err != nil {
+		return nil, err
+	}
+	if temporalMaxParallelActivities <= 0 ||
+		math.Trunc(temporalMaxParallelActivities) != temporalMaxParallelActivities ||
+		temporalMaxParallelActivities > float64(math.MaxInt) {
+		return nil, fmt.Errorf("%s must be a positive whole number", temporal.TemporalMaxParallelActivitiesFlag)
+	}
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
 
 	return fx.Options(
@@ -55,7 +65,7 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 			true,
 			topics,
 		),
-	)
+	), nil
 }
 
 func newWorkerCommand() *cobra.Command {
@@ -66,8 +76,12 @@ func newWorkerCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			workerOptions, err := workerOptions(cmd)
+			if err != nil {
+				return err
+			}
 
-			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions(cmd)).Run(cmd)
+			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions).Run(cmd)
 		},
 	}
 	ret.Flags().String(stackURLFlag, "", "Stack url")

@@ -18,7 +18,11 @@ import (
 
 type expressionEvaluator struct {
 	httpClient *http.Client
-	// allowedHosts is the set of hosts link() is permitted to call. It exists
+	// allowedHosts permits bare-host configuration for callers that do not have
+	// a canonical stack URL. allowedOrigins is preferred and pins both scheme
+	// and host, preventing redirects from downgrading an HTTPS stack to HTTP.
+	allowedOrigins map[string]struct{}
+	// The allowlist exists
 	// to prevent the (credential-bearing) HTTP client from being pointed at an
 	// arbitrary, attacker-controlled host via a user-defined trigger
 	// expression (SSRF + bearer-token exfiltration). An empty set denies every
@@ -40,7 +44,10 @@ func (h *expressionEvaluator) checkLinkURL(raw string) error {
 			fmt.Sprintf("link url scheme not allowed: %q", u.Scheme), "APPLICATION",
 			fmt.Errorf("scheme %q not allowed", u.Scheme))
 	}
-	if _, ok := h.allowedHosts[strings.ToLower(u.Host)]; !ok {
+	origin := strings.ToLower(u.Scheme + "://" + u.Host)
+	_, originAllowed := h.allowedOrigins[origin]
+	_, hostAllowed := h.allowedHosts[strings.ToLower(u.Host)]
+	if !originAllowed && !hostAllowed {
 		return temporal.NewNonRetryableApplicationError(
 			fmt.Sprintf("link url host not allowed: %q", u.Host), "APPLICATION",
 			fmt.Errorf("host %q is not in the allowlist", u.Host))
@@ -178,29 +185,31 @@ func (h *expressionEvaluator) evalVariables(rawObject any, vars map[string]strin
 }
 
 // NewExpressionEvaluator builds an evaluator whose link() function may only
-// reach the provided hosts. Each entry may be a bare host ("example.com:8080")
-// or a full URL, in which case only its host is retained. With no allowed host,
-// link() network calls are denied.
+// reach the provided targets. A full URL pins both scheme and host; a bare host
+// permits either HTTP scheme for callers without a canonical stack URL. With
+// no allowed target, link() network calls are denied.
 func NewExpressionEvaluator(httpClient *http.Client, allowedHosts ...string) *expressionEvaluator {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 
 	hosts := make(map[string]struct{}, len(allowedHosts))
+	origins := make(map[string]struct{}, len(allowedHosts))
 	for _, h := range allowedHosts {
 		if h == "" {
 			continue
 		}
-		if u, err := url.Parse(h); err == nil && u.Host != "" {
-			hosts[strings.ToLower(u.Host)] = struct{}{}
+		if u, err := url.Parse(h); err == nil && u.Scheme != "" && u.Host != "" {
+			origins[strings.ToLower(u.Scheme+"://"+u.Host)] = struct{}{}
 			continue
 		}
 		hosts[strings.ToLower(h)] = struct{}{}
 	}
 	client := *httpClient
 	evaluator := &expressionEvaluator{
-		httpClient:   &client,
-		allowedHosts: hosts,
+		httpClient:     &client,
+		allowedOrigins: origins,
+		allowedHosts:   hosts,
 	}
 	previousCheckRedirect := client.CheckRedirect
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
