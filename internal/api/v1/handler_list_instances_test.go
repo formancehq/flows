@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/formancehq/go-libs/v5/pkg/observe/log"
+	bunpaginate "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 
 	"github.com/go-chi/chi/v5"
 
@@ -137,6 +138,38 @@ func TestListInstancesIsBounded(t *testing.T) {
 		require.NoError(t, json.NewDecoder(rec.Body).Decode(&secondPage))
 		require.Len(t, secondPage.Data, 5)
 		require.False(t, secondPage.HasMore)
+
+		// Cursors are client-controlled base64 JSON. A forged zero page size must
+		// be normalized to the default instead of disabling LIMIT entirely.
+		forgedCursor := bunpaginate.EncodeCursor(workflow.ListInstancesQuery{})
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(forgedCursor), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		var forgedPage struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&forgedPage))
+		require.Len(t, forgedPage.Data, bunpaginate.QueryDefaultPageSize)
+		require.Equal(t, bunpaginate.QueryDefaultPageSize, forgedPage.PageSize)
+
+		// Oversized page sizes embedded in cursors are capped just like explicit
+		// pageSize query parameters.
+		forgedCursor = bunpaginate.EncodeCursor(workflow.ListInstancesQuery{
+			PageSize: bunpaginate.MaxPageSize + 1,
+		})
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(forgedCursor), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		forgedPage = struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+		}{}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&forgedPage))
+		require.Len(t, forgedPage.Data, 20)
+		require.Equal(t, bunpaginate.MaxPageSize, forgedPage.PageSize)
 
 		// An explicit page size is honoured.
 		req = httptest.NewRequest(http.MethodGet, "/instances?pageSize=5", nil)

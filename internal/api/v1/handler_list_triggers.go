@@ -31,6 +31,7 @@ func listTriggers(backend api.Backend) func(writer http.ResponseWriter, request 
 			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
+		query.PageSize = normalizePageSize(query.PageSize)
 
 		triggers, err := backend.ListTriggers(r.Context(), *query)
 		if err != nil {

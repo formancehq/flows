@@ -26,6 +26,7 @@ func listWorkflows(backend api2.Backend) http.HandlerFunc {
 			api.BadRequest(w, "VALIDATION", err)
 			return
 		}
+		query.PageSize = normalizePageSize(query.PageSize)
 
 		workflows, err := backend.ListWorkflows(r.Context(), *query)
 		if err != nil {

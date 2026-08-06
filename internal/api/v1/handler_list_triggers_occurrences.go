@@ -29,6 +29,7 @@ func listTriggersOccurrences(backend api.Backend) func(writer http.ResponseWrite
 			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
+		query.PageSize = normalizePageSize(query.PageSize)
 		// The path parameter is authoritative even when the pagination cursor is
 		// supplied by the client.
 		query.Options.TriggerID = chi.URLParam(r, "triggerID")

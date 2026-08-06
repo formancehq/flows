@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: e26e5b37-4391-4462-9a20-c517a83a166a
 management:
-  docChecksum: 2f9e40aaba40047b5af65e5371fea57c
+  docChecksum: aec6b9bcce4eb2538e129ed17e2a5589
   docVersion: 0.1.0
   speakeasyVersion: 1.351.0
   generationVersion: 2.384.1
-  releaseVersion: 0.1.6
-  configChecksum: 28d06aa57052e26c02ec2310398ec34d
+  releaseVersion: 0.1.7
+  configChecksum: ef44e4268063f8dbf9a2b5a9ec677b65
 features:
   go:
     additionalDependencies: 0.1.0

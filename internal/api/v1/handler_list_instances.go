@@ -33,6 +33,7 @@ func listInstances(backend api.Backend) http.HandlerFunc {
 			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
+		query.PageSize = normalizePageSize(query.PageSize)
 
 		runs, err := backend.ListInstances(r.Context(), *query)
 		if err != nil {

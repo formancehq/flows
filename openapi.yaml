@@ -3614,7 +3614,7 @@ components:
       schema:
         type: integer
         minimum: 1
-        maximum: 1000
+        maximum: 100
         default: 15
         format: int64
       example: 100
