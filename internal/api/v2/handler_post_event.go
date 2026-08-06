@@ -6,7 +6,7 @@ import (
 
 	api2 "github.com/formancehq/orchestration/internal/api"
 
-	"github.com/formancehq/go-libs/v3/api"
+	"github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 )
 
@@ -19,7 +19,7 @@ func postEventToWorkflowInstance(backend api2.Backend) http.HandlerFunc {
 		}
 
 		if err := backend.PostEvent(r.Context(), instanceID(r), event); err != nil {
-			api.InternalServerError(w, r, err)
+			api2.WriteError(w, r, err)
 			return
 		}
 

@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/bun/bundebug"
-	"github.com/formancehq/go-libs/v3/logging"
-	"github.com/formancehq/go-libs/v3/pointer"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
+	bundebug "github.com/formancehq/go-libs/v5/pkg/storage/bun/debug"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/workflow"
@@ -38,6 +38,32 @@ func setupTestDB(t *testing.T) *bun.DB {
 	require.NoError(t, storage.Migrate(logging.TestingContext(), db))
 
 	return db
+}
+
+func TestGetWorkflowIDFromEvent(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		payload any
+	}{
+		{name: "missing id", payload: map[string]any{}},
+		{name: "null id", payload: map[string]any{"id": nil}},
+		{name: "empty id", payload: map[string]any{"id": ""}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := getWorkflowIDFromEvent(publish.EventMessage{
+				Type:    "SAVED_PAYMENT",
+				Payload: testCase.payload,
+			})
+			require.Error(t, err)
+		})
+	}
+
+	id, err := getWorkflowIDFromEvent(publish.EventMessage{
+		Type:    "SAVED_PAYMENT",
+		Payload: map[string]any{"id": "payment-id"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "payment-id", *id)
 }
 
 func insertNoOpWorkflow(t *testing.T, db *bun.DB) workflow.Workflow {
@@ -218,6 +244,23 @@ func TestListMatchingTriggers(t *testing.T) {
 			},
 			expectedMatched: 0,
 		},
+		{
+			name: "trigger of soft deleted workflow excluded",
+			triggers: func(t *testing.T, db *bun.DB, workflowID string) {
+				insertTrigger(t, db, workflowID, "NEW_TRANSACTION", nil, nil)
+				_, err := db.NewUpdate().
+					Model(&workflow.Workflow{}).
+					Where("id = ?", workflowID).
+					Set("deleted_at = ?", time.Now()).
+					Exec(logging.TestingContext())
+				require.NoError(t, err)
+			},
+			event: publish.EventMessage{
+				Type:    "NEW_TRANSACTION",
+				Version: "v1",
+			},
+			expectedMatched: 0,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -378,5 +421,63 @@ func TestHandleMessage(t *testing.T) {
 			Count(logging.TestingContext())
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
+	})
+
+	t.Run("redelivery of a non-payment event is skipped", func(t *testing.T) {
+		t.Parallel()
+
+		db := setupTestDB(t)
+		taskQueue := setupWorker(t, db)
+
+		w := insertNoOpWorkflow(t, db)
+		insertTrigger(t, db, w.ID, "NEW_TRANSACTION", nil, nil)
+
+		event := makeMessage("NEW_TRANSACTION", "v1", map[string]any{})
+		evaluator := NewDefaultExpressionEvaluator()
+
+		// Simulate an at-least-once redelivery: the broker re-delivers the same
+		// message, preserving its UUID.
+		msg1 := publish.NewMessage(logging.TestingContext(), *event)
+		msg2 := publish.NewMessage(logging.TestingContext(), *event)
+		msg2.UUID = msg1.UUID
+
+		require.NoError(t, handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg1))
+		require.Eventually(t, func() bool {
+			count, err := db.NewSelect().
+				Model((*Occurrence)(nil)).
+				Count(logging.TestingContext())
+			return err == nil && count == 1
+		}, 10*time.Second, 200*time.Millisecond)
+
+		require.NoError(t, handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg2))
+
+		// The deterministic workflow id (keyed on the message UUID) must reject
+		// the duplicate, so no second trigger execution / occurrence is created.
+		time.Sleep(2 * time.Second)
+		count, err := db.NewSelect().
+			Model((*Occurrence)(nil)).
+			Count(logging.TestingContext())
+		require.NoError(t, err)
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("malformed payment payload returns an error instead of being dropped", func(t *testing.T) {
+		t.Parallel()
+
+		db := setupTestDB(t)
+		taskQueue := setupWorker(t, db)
+
+		w := insertNoOpWorkflow(t, db)
+		insertTrigger(t, db, w.ID, "SAVED_PAYMENT", nil, nil)
+
+		// "id" is a number, so extracting the dedup id fails. This used to
+		// panic and be silently acked; it must now surface as an error so the
+		// message is NACKed.
+		event := makeMessage("SAVED_PAYMENT", "v1", map[string]any{"id": 123})
+		msg := publish.NewMessage(logging.TestingContext(), *event)
+
+		evaluator := NewDefaultExpressionEvaluator()
+		err := handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg)
+		require.Error(t, err)
 	})
 }

@@ -20,7 +20,7 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 ## SDK Installation
 
 ```bash
-go get openapi
+go get github.com/formancehq/flows/pkg/client
 ```
 <!-- End SDK Installation [installation] -->
 
@@ -34,14 +34,14 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 	"log"
-	"openapi"
-	"openapi/models/components"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -116,16 +116,16 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/retry"
 	"log"
 	"models/operations"
-	"openapi"
-	"openapi/models/components"
-	"openapi/retry"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -159,15 +159,15 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/retry"
 	"log"
-	"openapi"
-	"openapi/models/components"
-	"openapi/retry"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithRetryConfig(
+	s := client.New(
+		client.WithRetryConfig(
 			retry.Config{
 				Strategy: "backoff",
 				Backoff: &retry.BackoffStrategy{
@@ -178,7 +178,7 @@ func main() {
 				},
 				RetryConnectionErrors: false,
 			}),
-		openapi.WithSecurity(components.Security{
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -215,15 +215,15 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client/models/sdkerrors"
 	"log"
-	"openapi"
-	"openapi/models/components"
-	"openapi/models/sdkerrors"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -268,15 +268,15 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 	"log"
-	"openapi"
-	"openapi/models/components"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithServerIndex(0),
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithServerIndex(0),
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -303,15 +303,15 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 	"log"
-	"openapi"
-	"openapi/models/components"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithServerURL("http://localhost:8080/"),
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithServerURL("http://localhost:8080/"),
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),
@@ -377,14 +377,14 @@ package main
 
 import (
 	"context"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/components"
 	"log"
-	"openapi"
-	"openapi/models/components"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity(components.Security{
+	s := client.New(
+		client.WithSecurity(components.Security{
 			ClientID:     "",
 			ClientSecret: "",
 		}),

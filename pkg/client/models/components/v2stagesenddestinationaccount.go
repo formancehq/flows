@@ -2,9 +2,36 @@
 
 package components
 
+import (
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+)
+
 type V2StageSendDestinationAccount struct {
 	ID     string  `json:"id"`
 	Ledger *string `json:"ledger,omitempty"`
+	// Account used when this ledger account interacts with external systems (payments, cross-ledger).
+	// - As SOURCE going to payment: funds are sent to this account (e.g., "liabilities:payouts-pending")
+	// - As DESTINATION from payment: funds come from this account (e.g., "assets:stripe:incoming")
+	// - For cross-ledger transfers: replaces "world" on both sides
+	//
+	ThroughAccount *string `default:"world" json:"throughAccount"`
+	// Enables unbounded overdraft on the throughAccount when set to true.
+	// This is useful when the throughAccount represents a liability or bridge account
+	// that needs to go negative (e.g., "liabilities:payouts-pending").
+	// Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+	//
+	AllowOverdraft *bool `default:"false" json:"allowOverdraft"`
+}
+
+func (v V2StageSendDestinationAccount) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(v, "", false)
+}
+
+func (v *V2StageSendDestinationAccount) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &v, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *V2StageSendDestinationAccount) GetID() string {
@@ -19,4 +46,18 @@ func (o *V2StageSendDestinationAccount) GetLedger() *string {
 		return nil
 	}
 	return o.Ledger
+}
+
+func (o *V2StageSendDestinationAccount) GetThroughAccount() *string {
+	if o == nil {
+		return nil
+	}
+	return o.ThroughAccount
+}
+
+func (o *V2StageSendDestinationAccount) GetAllowOverdraft() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.AllowOverdraft
 }

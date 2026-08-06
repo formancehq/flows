@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/formancehq/go-libs/v3/logging"
-	"github.com/formancehq/go-libs/v3/temporal"
-	"github.com/formancehq/go-libs/v3/testing/docker"
-	"github.com/formancehq/go-libs/v3/testing/platform/pgtesting"
-	"github.com/formancehq/go-libs/v3/testing/utils"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
+	"github.com/formancehq/go-libs/v5/pkg/testing/docker"
+	"github.com/formancehq/go-libs/v5/pkg/testing/platform/pgtesting"
+	"github.com/formancehq/go-libs/v5/pkg/testing/utils"
+	"github.com/formancehq/go-libs/v5/pkg/workflow/temporal"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/testsuite"
 )

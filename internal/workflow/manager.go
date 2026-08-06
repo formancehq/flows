@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/formancehq/go-libs/v3/pointer"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 
+	common "go.temporal.io/api/common/v1"
 	enums "go.temporal.io/api/enums/v1"
 	history "go.temporal.io/api/history/v1"
 
-	"github.com/formancehq/go-libs/v3/bun/bunpaginate"
+	bunpaginate "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
@@ -23,6 +24,9 @@ import (
 var (
 	ErrInstanceNotFound = errors.New("Instance not found")
 	ErrWorkflowNotFound = errors.New("Workflow not found")
+	// ErrInvalidConfig wraps workflow configuration validation failures so the
+	// API can map them to 400 instead of 500.
+	ErrInvalidConfig = errors.New("invalid workflow configuration")
 )
 
 const (
@@ -44,7 +48,7 @@ type WorkflowManager struct {
 func (m *WorkflowManager) Create(ctx context.Context, config Config) (*Workflow, error) {
 
 	if err := config.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", ErrInvalidConfig, err)
 	}
 
 	workflow := New(config)
@@ -63,7 +67,7 @@ func (m *WorkflowManager) DeleteWorkflow(ctx context.Context, id string) error {
 
 	var workflow Workflow
 
-	res, err := m.db.NewUpdate().Model(&workflow).Where("id = ?", id).Set("deleted_at = ?", time.Now()).Exec(ctx)
+	res, err := m.db.NewUpdate().Model(&workflow).Where("id = ?", id).Where("deleted_at IS NULL").Set("deleted_at = ?", time.Now()).Exec(ctx)
 
 	if err != nil {
 		return err
@@ -85,6 +89,7 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 	workflow := Workflow{}
 	if err := m.db.NewSelect().
 		Where("id = ?", id).
+		Where("deleted_at IS NULL").
 		Model(&workflow).
 		Scan(ctx); err != nil {
 		return nil, err
@@ -117,13 +122,18 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 }
 
 func (m *WorkflowManager) Wait(ctx context.Context, instanceID string) error {
+	// The actual work runs in the detached child workflow "<instanceID>-main";
+	// the Initiate workflow (id == instanceID) completes as soon as that child
+	// has started. Waiting on instanceID would therefore return immediately,
+	// before the run is terminated, so we wait on the running child.
 	if err := m.temporalClient.
-		GetWorkflow(ctx, instanceID, "").
+		GetWorkflow(ctx, instanceID+"-main", "").
 		Get(ctx, nil); err != nil {
-		if errors.Is(err, &serviceerror.NotFound{}) {
+		var notFound *serviceerror.NotFound
+		if errors.As(err, &notFound) {
 			return ErrInstanceNotFound
 		}
-		return errors.Unwrap(err)
+		return err
 	}
 	return nil
 }
@@ -142,6 +152,7 @@ func (m *WorkflowManager) ReadWorkflow(ctx context.Context, id string) (Workflow
 	if err := m.db.NewSelect().
 		Model(&workflow).
 		Where("id = ?", id).
+		Where("deleted_at IS NULL").
 		Scan(ctx); err != nil {
 		return Workflow{}, err
 	}
@@ -176,7 +187,10 @@ func (m *WorkflowManager) AbortRun(ctx context.Context, instanceID string) error
 		return errors.Wrap(err, "retrieving workflow execution")
 	}
 
-	return m.temporalClient.CancelWorkflow(ctx, instanceID, "")
+	// Cancel the detached child workflow that carries the actual run; the
+	// Initiate workflow (id == instanceID) has already completed, so cancelling
+	// it would be a no-op and never reach the running stages.
+	return m.temporalClient.CancelWorkflow(ctx, instanceID+"-main", "")
 }
 
 func (m *WorkflowManager) ListInstances(ctx context.Context, pagination ListInstancesQuery) (*bunpaginate.Cursor[Instance], error) {
@@ -209,6 +223,16 @@ type StageHistory struct {
 	TerminatedAt *time.Time     `json:"terminatedAt,omitempty"`
 }
 
+// unmarshalFirstPayload decodes the first Temporal payload into v. It tolerates
+// a nil/empty payload set (leaving v untouched) instead of panicking on an
+// out-of-range index, and returns the decode error rather than panicking.
+func unmarshalFirstPayload(payloads *common.Payloads, v any) error {
+	if payloads == nil || len(payloads.Payloads) == 0 {
+		return nil
+	}
+	return json.Unmarshal(payloads.Payloads[0].Data, v)
+}
+
 func (m *WorkflowManager) ReadInstanceHistory(ctx context.Context, instanceID string) ([]StageHistory, error) {
 
 	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, instanceID+"-main", "",
@@ -223,8 +247,8 @@ func (m *WorkflowManager) ReadInstanceHistory(ctx context.Context, instanceID st
 		case enums.EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED:
 			attributes := event.Attributes.(*history.HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes)
 			input := make(map[string]any)
-			if err := json.Unmarshal(attributes.StartChildWorkflowExecutionInitiatedEventAttributes.Input.Payloads[0].Data, &input); err != nil {
-				panic(err)
+			if err := unmarshalFirstPayload(attributes.StartChildWorkflowExecutionInitiatedEventAttributes.Input, &input); err != nil {
+				return nil, errors.Wrap(err, "unmarshalling stage input")
 			}
 			stageHistory := StageHistory{
 				Name:      attributes.StartChildWorkflowExecutionInitiatedEventAttributes.WorkflowType.Name,
@@ -281,7 +305,7 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 		if _, ok := err.(*serviceerror.NotFound); ok {
 			return nil, ErrInstanceNotFound
 		}
-		panic(err)
+		return nil, errors.Wrap(err, "describing workflow execution")
 	}
 
 	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, stageID, "",
@@ -296,8 +320,8 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 		case enums.EVENT_TYPE_ACTIVITY_TASK_SCHEDULED:
 			activityTaskScheduledEventAttributes := event.Attributes.(*history.HistoryEvent_ActivityTaskScheduledEventAttributes).ActivityTaskScheduledEventAttributes
 			input := make(map[string]any)
-			if err := json.Unmarshal(activityTaskScheduledEventAttributes.Input.Payloads[0].Data, &input); err != nil {
-				panic(err)
+			if err := unmarshalFirstPayload(activityTaskScheduledEventAttributes.Input, &input); err != nil {
+				return nil, errors.Wrap(err, "unmarshalling activity input")
 			}
 
 			activityHistory := &ActivityHistory{
@@ -334,8 +358,8 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 					result := event.Attributes.(*history.HistoryEvent_ActivityTaskCompletedEventAttributes).ActivityTaskCompletedEventAttributes.Result
 					if result != nil && len(result.Payloads) > 0 {
 						output := make(map[string]any)
-						if err := json.Unmarshal(result.Payloads[0].Data, &output); err != nil {
-							panic(err)
+						if err := unmarshalFirstPayload(result, &output); err != nil {
+							return nil, errors.Wrap(err, "unmarshalling activity output")
 						}
 
 						// notes(gfyrag): keep compat with format from ledger v1 (since we have moved to ledger v2 api)

@@ -7,19 +7,20 @@ import (
 	"github.com/formancehq/orchestration/internal/temporalworker"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v3/logging"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/fx"
 )
 
-func NewModule(stack, taskQueue string) fx.Option {
+func NewModule(stack, stackURL, taskQueue, httpClientName string) fx.Option {
+	httpClientTag := `name:"` + httpClientName + `"`
 	return fx.Options(
 		fx.Provide(NewManager),
-		fx.Provide(func(httpClient *http.Client) *expressionEvaluator {
-			return NewExpressionEvaluator(httpClient)
-		}),
+		fx.Provide(fx.Annotate(func(httpClient *http.Client) *expressionEvaluator {
+			return NewExpressionEvaluator(httpClient, stackURL)
+		}, fx.ParamTags(httpClientTag))),
 		fx.Provide(func() *triggerWorkflow {
 			return NewWorkflow(stack, taskQueue, true)
 		}),

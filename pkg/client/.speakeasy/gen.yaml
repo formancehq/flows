@@ -12,7 +12,7 @@ generation:
   auth:
     oAuth2ClientCredentialsEnabled: true
 go:
-  version: 0.1.4
+  version: 0.1.7
   additionalDependencies: {}
   allowUnknownFieldsInWeakUnions: false
   clientServerStatusCodesAsErrors: true
@@ -29,5 +29,5 @@ go:
   maxMethodParams: 0
   methodArguments: require-security-and-request
   outputModelSuffix: output
-  packageName: openapi
+  packageName: github.com/formancehq/flows/pkg/client
   responseFormat: envelope-http

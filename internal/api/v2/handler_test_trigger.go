@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/v3/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/formancehq/orchestration/internal/api"
 )
 
@@ -15,13 +15,13 @@ func testTrigger(backend api.Backend) http.HandlerFunc {
 
 		data := make(map[string]any)
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			sharedapi.InternalServerError(w, r, err)
+			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
 
 		o, err := backend.TestTrigger(r.Context(), chi.URLParam(r, "triggerID"), data)
 		if err != nil {
-			sharedapi.InternalServerError(w, r, err)
+			api.WriteError(w, r, err)
 			return
 		}
 

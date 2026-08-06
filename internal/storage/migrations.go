@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/formancehq/go-libs/v3/migrations"
+	"github.com/formancehq/go-libs/v5/pkg/storage/migrations"
 	"github.com/uptrace/bun"
 )
 
@@ -166,6 +166,22 @@ var _migrations = []migrations.Migration{
 			if _, err := tx.ExecContext(ctx, `
 				alter table "triggers"
 				add column version varchar default NULL;
+				`); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
+	{
+		// Migration 8 dropped the (trigger_id, event_id) primary key in favour
+		// of (id), leaving trigger_id unindexed. ListTriggersOccurrences filters
+		// WHERE trigger_id = ? and orders by date, so without this index every
+		// page is a sequential scan over an ever-growing table. Built
+		// CONCURRENTLY to avoid blocking writes during deploy.
+		Up: func(ctx context.Context, tx bun.IDB) error {
+			if _, err := tx.ExecContext(ctx, `
+				create index concurrently if not exists triggers_occurrences_trigger_id_date_idx
+				on triggers_occurrences (trigger_id, date);
 				`); err != nil {
 				return err
 			}

@@ -7,7 +7,7 @@ import (
 
 	api2 "github.com/formancehq/orchestration/internal/api"
 
-	"github.com/formancehq/go-libs/v3/api"
+	"github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 )
 
@@ -22,7 +22,7 @@ func runWorkflow(backend api2.Backend) http.HandlerFunc {
 		}
 		instance, err := backend.RunWorkflow(r.Context(), workflowID(r), input)
 		if err != nil {
-			api.InternalServerError(w, r, err)
+			api2.WriteError(w, r, err)
 			return
 		}
 
@@ -38,7 +38,8 @@ func runWorkflow(backend api2.Backend) http.HandlerFunc {
 			}
 			ret.Instance, err = backend.GetInstance(r.Context(), instance.ID)
 			if err != nil {
-				panic(err)
+				api2.WriteError(w, r, err)
+				return
 			}
 
 			api.Created(w, ret)

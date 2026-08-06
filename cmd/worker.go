@@ -1,16 +1,19 @@
 package cmd
 
 import (
+	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 
 	sdk "github.com/formancehq/formance-sdk-go/v3"
-	"github.com/formancehq/go-libs/v3/aws/iam"
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/licence"
-	"github.com/formancehq/go-libs/v3/otlp/otlpmetrics"
-	"github.com/formancehq/go-libs/v3/publish"
-	"github.com/formancehq/go-libs/v3/service"
-	"github.com/formancehq/go-libs/v3/temporal"
+	"github.com/formancehq/go-libs/v5/pkg/authn/licence"
+	"github.com/formancehq/go-libs/v5/pkg/cloud/aws/iam"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	otlpmetrics "github.com/formancehq/go-libs/v5/pkg/observe/metrics"
+	"github.com/formancehq/go-libs/v5/pkg/service"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
+	"github.com/formancehq/go-libs/v5/pkg/workflow/temporal"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/spf13/cobra"
@@ -22,26 +25,40 @@ func stackClientModule(cmd *cobra.Command) fx.Option {
 	stackURL, _ := cmd.Flags().GetString(stackURLFlag)
 
 	return fx.Options(
-		fx.Provide(func(httpClient *http.Client) *sdk.Formance {
+		fx.Provide(fx.Annotate(func(httpClient *http.Client) *sdk.Formance {
 			return sdk.New(
 				sdk.WithClient(httpClient),
 				sdk.WithServerURL(stackURL),
 			)
-		}),
+		}, fx.ParamTags(`name:"stack"`))),
 	)
 }
 
-func workerOptions(cmd *cobra.Command) fx.Option {
+func workerOptions(cmd *cobra.Command) (fx.Option, error) {
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
-	temporalMaxParallelActivities, _ := cmd.Flags().GetInt(temporal.TemporalMaxParallelActivitiesFlag)
+	// The flag is registered as a float64 in go-libs; reading it with GetInt
+	// silently fails and yields 0, so the configured limit was never applied.
+	temporalMaxParallelActivities, err := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
+	if err != nil {
+		return nil, err
+	}
+	maxIntExclusive := math.Exp2(float64(strconv.IntSize - 1))
+	if temporalMaxParallelActivities <= 0 ||
+		math.Trunc(temporalMaxParallelActivities) != temporalMaxParallelActivities ||
+		temporalMaxParallelActivities >= maxIntExclusive {
+		return nil, fmt.Errorf("%s must be a positive whole number", temporal.TemporalMaxParallelActivitiesFlag)
+	}
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
 
 	return fx.Options(
 		stackClientModule(cmd),
 		temporalworker.NewWorkerModule(temporalTaskQueue, worker.Options{
-			TaskQueueActivitiesPerSecond: float64(temporalMaxParallelActivities),
+			// "max parallel activities" caps concurrency, which maps to
+			// MaxConcurrentActivityExecutionSize, not the queue-wide rate limit
+			// TaskQueueActivitiesPerSecond it was previously wired to.
+			MaxConcurrentActivityExecutionSize: int(temporalMaxParallelActivities),
 		}),
 		triggers.NewListenerModule(
 			stack,
@@ -50,7 +67,7 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 			true,
 			topics,
 		),
-	)
+	), nil
 }
 
 func newWorkerCommand() *cobra.Command {
@@ -61,8 +78,12 @@ func newWorkerCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			workerOptions, err := workerOptions(cmd)
+			if err != nil {
+				return err
+			}
 
-			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions(cmd)).Run(cmd)
+			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions).Run(cmd)
 		},
 	}
 	ret.Flags().String(stackURLFlag, "", "Stack url")

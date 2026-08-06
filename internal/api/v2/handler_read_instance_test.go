@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/v3/testing/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/testing/api"
 
 	"github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/workflow"
@@ -50,5 +50,16 @@ func TestGetInstance(t *testing.T) {
 		var retrievedInstance workflow.Instance
 		sharedapi.ReadResponse(t, rec, &retrievedInstance)
 		require.Len(t, retrievedInstance.Statuses, 10)
+	})
+}
+
+func TestGetInstanceNotFound(t *testing.T) {
+	test(t, func(router *chi.Mux, m api.Backend, db *bun.DB) {
+		req := httptest.NewRequest(http.MethodGet, "/instances/does-not-exist", nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusNotFound, rec.Result().StatusCode)
 	})
 }

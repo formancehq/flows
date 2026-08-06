@@ -35,6 +35,8 @@ paths:
           required: false
           schema:
             type: string
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: List of triggers
@@ -118,6 +120,8 @@ paths:
         schema:
           type: string
         required: true
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/Cursor'
     get:
       summary: List triggers occurrences
       operationId: listTriggersOccurrences
@@ -143,6 +147,9 @@ paths:
       description: List registered workflows
       tags:
         - orchestration.v1
+      parameters:
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: List of workflows
@@ -278,6 +285,8 @@ paths:
             type: boolean
           example: true
           required: false
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
       tags:
         - orchestration.v1
       responses:
@@ -609,8 +618,18 @@ components:
           items:
             $ref: '#/components/schemas/Workflow'
           type: array
+        pageSize:
+          type: integer
+        hasMore:
+          type: boolean
+        previous:
+          type: string
+        next:
+          type: string
       required:
         - data
+        - pageSize
+        - hasMore
     TriggerData:
       type: object
       required:
@@ -671,8 +690,18 @@ components:
           items:
             $ref: '#/components/schemas/TriggerOccurrence'
           type: array
+        pageSize:
+          type: integer
+        hasMore:
+          type: boolean
+        previous:
+          type: string
+        next:
+          type: string
       required:
         - data
+        - pageSize
+        - hasMore
     ListTriggersResponse:
       type: object
       properties:
@@ -680,8 +709,18 @@ components:
           items:
             $ref: '#/components/schemas/Trigger'
           type: array
+        pageSize:
+          type: integer
+        hasMore:
+          type: boolean
+        previous:
+          type: string
+        next:
+          type: string
       required:
         - data
+        - pageSize
+        - hasMore
     CreateWorkflowRequest:
       $ref: '#/components/schemas/WorkflowConfig'
     CreateWorkflowResponse:
@@ -710,13 +749,24 @@ components:
         data:
           $ref: '#/components/schemas/WorkflowInstance'
     ListRunsResponse:
-      required:
-        - data
+      type: object
       properties:
         data:
           items:
             $ref: '#/components/schemas/WorkflowInstance'
           type: array
+        pageSize:
+          type: integer
+        hasMore:
+          type: boolean
+        previous:
+          type: string
+        next:
+          type: string
+      required:
+        - data
+        - pageSize
+        - hasMore
     GetWorkflowResponse:
       type: object
       required:
@@ -1701,6 +1751,24 @@ components:
           input: 100
           output: 10
           balance: 90
+  parameters:
+    PageSize:
+      name: pageSize
+      in: query
+      description: The maximum number of results to return per page.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+    Cursor:
+      name: cursor
+      in: query
+      description: The continuation cursor returned by the previous page.
+      required: false
+      schema:
+        type: string
   responses:
     ErrorResponse:
       description: General error

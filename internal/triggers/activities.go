@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v3/collectionutils"
-	"github.com/formancehq/go-libs/v3/pointer"
+	collectionutils "github.com/formancehq/go-libs/v5/pkg/types/collections"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
@@ -58,6 +58,7 @@ func (a Activities) ListTriggers(ctx context.Context, request ProcessEventReques
 		Model(&triggers).
 		Relation("Workflow").
 		Where("trigger.deleted_at is null").
+		Where("workflow_id IN (SELECT id FROM workflows WHERE deleted_at IS NULL)").
 		Where("event = ?", request.Event.Type).
 		Where("CASE WHEN trigger.version IS NULL THEN true ELSE trigger.version = ? END", request.Event.Version).
 		Scan(ctx); err != nil {
@@ -81,8 +82,13 @@ func (a Activities) EvalTriggerVariables(ctx context.Context, trigger Trigger, r
 }
 
 func (a Activities) InsertTriggerOccurrence(ctx context.Context, occurrence Occurrence) error {
+	// Idempotent: a Temporal retry after a lost ack (row committed but the
+	// activity result never reached the server) must not fail on the duplicate
+	// primary key. The occurrence id is deterministic (see
+	// NewTriggerOccurrence), so DO NOTHING is safe.
 	_, err := a.db.NewInsert().
 		Model(pointer.For(occurrence)).
+		On("CONFLICT DO NOTHING").
 		Exec(ctx)
 	return err
 }

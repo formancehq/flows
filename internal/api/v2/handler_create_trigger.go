@@ -6,7 +6,7 @@ import (
 
 	"github.com/formancehq/orchestration/internal/api"
 
-	sharedapi "github.com/formancehq/go-libs/v3/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/pkg/errors"
 )
@@ -16,7 +16,7 @@ func createTrigger(backend api.Backend) func(writer http.ResponseWriter, request
 
 		data := triggers.TriggerData{}
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			sharedapi.InternalServerError(w, r, err)
+			sharedapi.BadRequest(w, "VALIDATION", err)
 			return
 		}
 

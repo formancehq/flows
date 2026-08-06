@@ -23,3 +23,16 @@ func TestCreateWorkflow(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Result().StatusCode)
 	})
 }
+
+func TestCreateWorkflowValidationError(t *testing.T) {
+	test(t, func(router *chi.Mux, m api.Backend, db *bun.DB) {
+		// An empty stage specification fails config validation; the API must
+		// answer 400, not 500.
+		req := httptest.NewRequest(http.MethodPost, "/workflows", bytes.NewBufferString(`{"stages": [{}]}`))
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
+	})
+}

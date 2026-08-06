@@ -3,7 +3,11 @@
 package components
 
 type ListTriggersOccurrencesResponse struct {
-	Data []TriggerOccurrence `json:"data"`
+	Data     []TriggerOccurrence `json:"data"`
+	PageSize int64               `json:"pageSize"`
+	HasMore  bool                `json:"hasMore"`
+	Previous *string             `json:"previous,omitempty"`
+	Next     *string             `json:"next,omitempty"`
 }
 
 func (o *ListTriggersOccurrencesResponse) GetData() []TriggerOccurrence {
@@ -11,4 +15,32 @@ func (o *ListTriggersOccurrencesResponse) GetData() []TriggerOccurrence {
 		return []TriggerOccurrence{}
 	}
 	return o.Data
+}
+
+func (o *ListTriggersOccurrencesResponse) GetPageSize() int64 {
+	if o == nil {
+		return 0
+	}
+	return o.PageSize
+}
+
+func (o *ListTriggersOccurrencesResponse) GetHasMore() bool {
+	if o == nil {
+		return false
+	}
+	return o.HasMore
+}
+
+func (o *ListTriggersOccurrencesResponse) GetPrevious() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Previous
+}
+
+func (o *ListTriggersOccurrencesResponse) GetNext() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Next
 }

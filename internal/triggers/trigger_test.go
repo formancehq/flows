@@ -168,10 +168,80 @@ func TestEvalVariables(t *testing.T) {
 	} {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			e := NewExpressionEvaluator(http.DefaultClient)
+			e := NewExpressionEvaluator(http.DefaultClient, srv.URL)
 			evaluated, err := e.evalVariables(testCase.rawObject, testCase.variables)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedResult, evaluated)
 		})
 	}
+}
+
+func TestLinkHostAllowlist(t *testing.T) {
+	var hit bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hit = true
+		_, _ = w.Write([]byte(`{"data": {"role": "admin"}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	rawObject := map[string]any{
+		"links": []map[string]any{
+			{"name": "source_account", "uri": srv.URL},
+		},
+	}
+	variables := map[string]string{"role": `link(event, "source_account").role`}
+
+	t.Run("denied when host not allowlisted", func(t *testing.T) {
+		hit = false
+		e := NewExpressionEvaluator(http.DefaultClient, "allowed.example.com")
+		_, err := e.evalVariables(rawObject, variables)
+		require.Error(t, err)
+		require.False(t, hit, "a non-allowlisted host must never be contacted")
+	})
+
+	t.Run("denied with empty allowlist", func(t *testing.T) {
+		hit = false
+		e := NewDefaultExpressionEvaluator()
+		_, err := e.evalVariables(rawObject, variables)
+		require.Error(t, err)
+		require.False(t, hit)
+	})
+
+	t.Run("configured origin rejects a scheme downgrade", func(t *testing.T) {
+		e := NewExpressionEvaluator(http.DefaultClient, "https://allowed.example.com")
+		require.Error(t, e.checkLinkURL("http://allowed.example.com/resource"))
+	})
+
+	t.Run("allowed when host matches", func(t *testing.T) {
+		hit = false
+		e := NewExpressionEvaluator(http.DefaultClient, srv.URL)
+		result, err := e.evalVariables(rawObject, variables)
+		require.NoError(t, err)
+		require.Equal(t, map[string]string{"role": "admin"}, result)
+		require.True(t, hit)
+	})
+
+	t.Run("denied when an allowed host redirects to a non-allowlisted host", func(t *testing.T) {
+		redirectTargetHit := false
+		redirectTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			redirectTargetHit = true
+			_, _ = w.Write([]byte(`{"data": {"role": "admin"}}`))
+		}))
+		t.Cleanup(redirectTarget.Close)
+
+		redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, redirectTarget.URL, http.StatusFound)
+		}))
+		t.Cleanup(redirector.Close)
+
+		redirectedObject := map[string]any{
+			"links": []map[string]any{
+				{"name": "source_account", "uri": redirector.URL},
+			},
+		}
+		e := NewExpressionEvaluator(http.DefaultClient, redirector.URL)
+		_, err := e.evalVariables(redirectedObject, variables)
+		require.Error(t, err)
+		require.False(t, redirectTargetHit, "a redirect target must be checked before it is contacted")
+	})
 }

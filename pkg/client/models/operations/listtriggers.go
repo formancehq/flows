@@ -3,12 +3,33 @@
 package operations
 
 import (
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 type ListTriggersRequest struct {
 	// search by name
 	Name *string `queryParam:"style=form,explode=true,name=name"`
+	// The maximum number of results to return per page.
+	//
+	PageSize *int64 `default:"15" queryParam:"style=form,explode=true,name=pageSize"`
+	// Parameter used in pagination requests.
+	// Set to the value of next for the next page of results.
+	// Set to the value of previous for the previous page of results.
+	// No other parameters can be set when this parameter is set.
+	//
+	Cursor *string `queryParam:"style=form,explode=true,name=cursor"`
+}
+
+func (l ListTriggersRequest) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(l, "", false)
+}
+
+func (l *ListTriggersRequest) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &l, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *ListTriggersRequest) GetName() *string {
@@ -16,6 +37,20 @@ func (o *ListTriggersRequest) GetName() *string {
 		return nil
 	}
 	return o.Name
+}
+
+func (o *ListTriggersRequest) GetPageSize() *int64 {
+	if o == nil {
+		return nil
+	}
+	return o.PageSize
+}
+
+func (o *ListTriggersRequest) GetCursor() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Cursor
 }
 
 type ListTriggersResponse struct {

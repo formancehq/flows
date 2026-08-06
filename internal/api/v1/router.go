@@ -5,9 +5,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/formancehq/go-libs/v3/service"
+	"github.com/formancehq/go-libs/v5/pkg/transport/httpserver"
 
-	"github.com/formancehq/go-libs/v3/auth"
+	auth "github.com/formancehq/go-libs/v5/pkg/authn/jwt"
 	"github.com/formancehq/orchestration/internal/api"
 )
 
@@ -16,7 +16,7 @@ func newRouter(backend api.Backend, authenticator auth.Authenticator, debug bool
 	r.Group(func(r chi.Router) {
 		// Plug middleware to handle traces
 		r.Use(auth.Middleware(authenticator))
-		r.Use(service.OTLPMiddleware("orchestration", debug))
+		r.Use(httpserver.OTLPMiddleware("orchestration", debug))
 		r.Route("/triggers", func(r chi.Router) {
 			r.Get("/", listTriggers(backend))
 			r.Post("/", createTrigger(backend))

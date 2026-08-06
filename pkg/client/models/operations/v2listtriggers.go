@@ -3,7 +3,8 @@
 package operations
 
 import (
-	"openapi/models/components"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
+	"github.com/formancehq/flows/pkg/client/models/components"
 )
 
 type V2ListTriggersRequest struct {
@@ -15,9 +16,20 @@ type V2ListTriggersRequest struct {
 	Cursor *string `queryParam:"style=form,explode=true,name=cursor"`
 	// The maximum number of results to return per page.
 	//
-	PageSize *int64 `queryParam:"style=form,explode=true,name=pageSize"`
+	PageSize *int64 `default:"15" queryParam:"style=form,explode=true,name=pageSize"`
 	// search by name
 	Name *string `queryParam:"style=form,explode=true,name=name"`
+}
+
+func (v V2ListTriggersRequest) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(v, "", false)
+}
+
+func (v *V2ListTriggersRequest) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &v, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *V2ListTriggersRequest) GetCursor() *string {

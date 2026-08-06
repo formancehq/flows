@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/formancehq/go-libs/v3/auth"
-	"github.com/formancehq/go-libs/v3/bun/bunconnect"
-	"github.com/formancehq/go-libs/v3/bun/bunmigrate"
-	"github.com/formancehq/go-libs/v3/licence"
-	"github.com/formancehq/go-libs/v3/otlp"
-	"github.com/formancehq/go-libs/v3/otlp/otlpmetrics"
-	"github.com/formancehq/go-libs/v3/otlp/otlptraces"
-	"github.com/formancehq/go-libs/v3/publish"
-	"github.com/formancehq/go-libs/v3/service"
-	"github.com/formancehq/go-libs/v3/temporal"
+	"github.com/formancehq/go-libs/v5/pkg/fx/authnfx"
+	"github.com/formancehq/go-libs/v5/pkg/fx/messagingfx"
+	"github.com/formancehq/go-libs/v5/pkg/fx/observefx"
+	"github.com/formancehq/go-libs/v5/pkg/fx/storagefx"
+	"github.com/formancehq/go-libs/v5/pkg/fx/workflowfx"
+	otlp "github.com/formancehq/go-libs/v5/pkg/observe"
+	otlptraces "github.com/formancehq/go-libs/v5/pkg/observe/traces"
+	"github.com/formancehq/go-libs/v5/pkg/service"
+	bunconnect "github.com/formancehq/go-libs/v5/pkg/storage/bun/connect"
+	bunmigrate "github.com/formancehq/go-libs/v5/pkg/storage/bun/migrate"
+	"github.com/formancehq/go-libs/v5/pkg/workflow/temporal"
 	"github.com/formancehq/orchestration/internal/storage"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/tracer"
@@ -43,6 +44,7 @@ const (
 	topicsFlag            = "topics"
 	listenFlag            = "listen"
 	workerFlag            = "worker"
+	stackHTTPClientName   = "stack"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -69,19 +71,44 @@ func Execute() {
 	service.Execute(NewRootCommand())
 }
 
+func stackHTTPClientModule(cmd *cobra.Command) fx.Option {
+	return fx.Provide(fx.Annotate(func() *http.Client {
+		httpClient := &http.Client{
+			Transport: otlp.NewRoundTripper(http.DefaultTransport, service.IsDebug(cmd)),
+		}
+
+		stackClientID, _ := cmd.Flags().GetString(stackClientIDFlag)
+		stackClientSecret, _ := cmd.Flags().GetString(stackClientSecretFlag)
+		stackURL, _ := cmd.Flags().GetString(stackURLFlag)
+
+		if stackClientID == "" {
+			return httpClient
+		}
+		oauthConfig := clientcredentials.Config{
+			ClientID:     stackClientID,
+			ClientSecret: stackClientSecret,
+			TokenURL:     fmt.Sprintf("%s/api/auth/oauth/token", stackURL),
+			Scopes:       []string{"openid", "ledger:read", "ledger:write", "wallets:read", "wallets:write", "payments:read", "payments:write"},
+		}
+		return oauthConfig.Client(context.WithValue(context.Background(),
+			oauth2.HTTPClient, httpClient))
+	}, fx.ResultTags(`name:"stack"`)))
+}
+
 func commonOptions(cmd *cobra.Command) (fx.Option, error) {
-	connectionOptions, err := bunconnect.ConnectionOptionsFromFlags(cmd)
+	connectionOptions, err := bunconnect.ConnectionOptionsFromFlags(cmd.Flags(), cmd.Context())
 	if err != nil {
 		return nil, err
 	}
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
+	stackURL, _ := cmd.Flags().GetString(stackURLFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
 
 	return fx.Options(
-		otlp.FXModuleFromFlags(cmd),
-		otlptraces.FXModuleFromFlags(cmd),
-		temporal.FXModuleFromFlags(
+		observefx.ResourceModuleFromFlags(cmd),
+		observefx.TracesModuleFromFlags(cmd),
+		workflowfx.TemporalClientModuleFromFlags(
 			cmd,
 			tracer.Tracer,
 			temporal.SearchAttributes{
@@ -91,36 +118,16 @@ func commonOptions(cmd *cobra.Command) (fx.Option, error) {
 				),
 			},
 		),
-		otlpmetrics.FXModuleFromFlags(cmd),
-		bunconnect.Module(*connectionOptions, service.IsDebug(cmd)),
-		publish.FXModuleFromFlags(cmd, service.IsDebug(cmd)),
-		auth.FXModuleFromFlags(cmd),
-		licence.FXModuleFromFlags(cmd, ServiceName),
+		observefx.MetricsModuleFromFlags(cmd),
+		storagefx.BunConnectModule(*connectionOptions, service.IsDebug(cmd)),
+		messagingfx.PublishModuleFromFlags(cmd, service.IsDebug(cmd)),
+		authnfx.JWTModuleFromFlags(cmd),
+		authnfx.LicenceModuleFromFlags(cmd, ServiceName),
 		workflow.NewModule(stack, temporalTaskQueue),
-		triggers.NewModule(stack, temporalTaskQueue),
+		triggers.NewModule(stack, stackURL, temporalTaskQueue, stackHTTPClientName),
 		fx.Provide(func() *bunconnect.ConnectionOptions {
 			return connectionOptions
 		}),
-		fx.Provide(func() *http.Client {
-			httpClient := &http.Client{
-				Transport: otlp.NewRoundTripper(http.DefaultTransport, service.IsDebug(cmd)),
-			}
-
-			stackClientID, _ := cmd.Flags().GetString(stackClientIDFlag)
-			stackClientSecret, _ := cmd.Flags().GetString(stackClientSecretFlag)
-			stackURL, _ := cmd.Flags().GetString(stackURLFlag)
-
-			if stackClientID == "" {
-				return httpClient
-			}
-			oauthConfig := clientcredentials.Config{
-				ClientID:     stackClientID,
-				ClientSecret: stackClientSecret,
-				TokenURL:     fmt.Sprintf("%s/api/auth/oauth/token", stackURL),
-				Scopes:       []string{"openid", "ledger:read", "ledger:write", "wallets:read", "wallets:write", "payments:read", "payments:write"},
-			}
-			return oauthConfig.Client(context.WithValue(context.Background(),
-				oauth2.HTTPClient, httpClient))
-		}),
+		stackHTTPClientModule(cmd),
 	), nil
 }

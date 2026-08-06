@@ -74,16 +74,21 @@ func (w Workflows) Run(ctx workflow.Context, i Input, instance Instance) error {
 		instance.SetTerminated(workflow.Now(ctx))
 	}
 
-	err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+	// Record the instance termination on a context that survives cancellation,
+	// otherwise a cancelled run would never be marked terminated and no
+	// termination event would be published.
+	cleanupCtx := terminationContext(ctx)
+
+	err = workflow.ExecuteActivity(workflow.WithActivityOptions(cleanupCtx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
-	}), UpdateInstanceActivity, instance).Get(ctx, nil)
+	}), UpdateInstanceActivity, instance).Get(cleanupCtx, nil)
 	if err != nil {
 		return err
 	}
 
-	err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+	err = workflow.ExecuteActivity(workflow.WithActivityOptions(cleanupCtx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
-	}), SendWorkflowTerminationEventActivity, instance).Get(ctx, nil)
+	}), SendWorkflowTerminationEventActivity, instance).Get(cleanupCtx, nil)
 	if err != nil {
 		return err
 	}

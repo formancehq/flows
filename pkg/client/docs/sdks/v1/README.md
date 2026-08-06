@@ -31,15 +31,15 @@ Get server info
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -82,21 +82,24 @@ List triggers
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
-    request := operations.ListTriggersRequest{}
+    request := operations.ListTriggersRequest{
+        PageSize: client.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+    }
     ctx := context.Background()
     res, err := s.Orchestration.V1.ListTriggers(ctx, request)
     if err != nil {
@@ -135,15 +138,15 @@ Create trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -187,16 +190,16 @@ Read trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -242,16 +245,16 @@ Read trigger
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -297,22 +300,24 @@ List triggers occurrences
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.ListTriggersOccurrencesRequest{
         TriggerID: "<value>",
+        PageSize: client.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V1.ListTriggersOccurrences(ctx, request)
@@ -352,22 +357,26 @@ List registered workflows
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
-
+    request := operations.ListWorkflowsRequest{
+        PageSize: client.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
+    }
     ctx := context.Background()
-    res, err := s.Orchestration.V1.ListWorkflows(ctx)
+    res, err := s.Orchestration.V1.ListWorkflows(ctx, request)
     if err != nil {
         log.Fatal(err)
     }
@@ -379,10 +388,11 @@ func main() {
 
 ### Parameters
 
-| Parameter                                                | Type                                                     | Required                                                 | Description                                              |
-| -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
-| `ctx`                                                    | [context.Context](https://pkg.go.dev/context#Context)    | :heavy_check_mark:                                       | The context to use for the request.                      |
-| `opts`                                                   | [][operations.Option](../../models/operations/option.md) | :heavy_minus_sign:                                       | The options for this request.                            |
+| Parameter                                                                          | Type                                                                               | Required                                                                           | Description                                                                        |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `ctx`                                                                              | [context.Context](https://pkg.go.dev/context#Context)                              | :heavy_check_mark:                                                                 | The context to use for the request.                                                |
+| `request`                                                                          | [operations.ListWorkflowsRequest](../../models/operations/listworkflowsrequest.md) | :heavy_check_mark:                                                                 | The request object to use for the request.                                         |
+| `opts`                                                                             | [][operations.Option](../../models/operations/option.md)                           | :heavy_minus_sign:                                                                 | The options for this request.                                                      |
 
 
 ### Response
@@ -403,15 +413,15 @@ Create a workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -455,16 +465,16 @@ Get a flow by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -510,16 +520,16 @@ Delete a flow by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -565,16 +575,16 @@ Run workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -620,23 +630,25 @@ List instances of a workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
     )
     request := operations.ListInstancesRequest{
-        WorkflowID: openapi.String("xxx"),
-        Running: openapi.Bool(true),
+        WorkflowID: client.String("xxx"),
+        Running: client.Bool(true),
+        PageSize: client.Int64(100),
+        Cursor: client.String("aHR0cHM6Ly9nLnBhZ2UvTmVrby1SYW1lbj9zaGFyZQ=="),
     }
     ctx := context.Background()
     res, err := s.Orchestration.V1.ListInstances(ctx, request)
@@ -676,16 +688,16 @@ Get a workflow instance by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -731,16 +743,16 @@ Send an event to a running workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -786,16 +798,16 @@ Cancel a running workflow
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -841,16 +853,16 @@ Get a workflow instance history by id
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),
@@ -896,16 +908,16 @@ Get a workflow instance stage history
 package main
 
 import(
-	"openapi/models/components"
-	"openapi"
-	"openapi/models/operations"
+	"github.com/formancehq/flows/pkg/client/models/components"
+	"github.com/formancehq/flows/pkg/client"
+	"github.com/formancehq/flows/pkg/client/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity(components.Security{
+    s := client.New(
+        client.WithSecurity(components.Security{
             ClientID: "",
             ClientSecret: "",
         }),

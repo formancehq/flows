@@ -4,18 +4,55 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"go.temporal.io/sdk/temporal"
 
-	"github.com/formancehq/go-libs/v3/collectionutils"
+	collectionutils "github.com/formancehq/go-libs/v5/pkg/types/collections"
 
 	"github.com/expr-lang/expr"
-	"github.com/formancehq/go-libs/v3/api"
+	"github.com/formancehq/go-libs/v5/pkg/transport/api"
 	"github.com/pkg/errors"
 )
 
 type expressionEvaluator struct {
 	httpClient *http.Client
+	// allowedHosts permits bare-host configuration for callers that do not have
+	// a canonical stack URL. allowedOrigins is preferred and pins both scheme
+	// and host, preventing redirects from downgrading an HTTPS stack to HTTP.
+	allowedOrigins map[string]struct{}
+	// The allowlist exists
+	// to prevent the (credential-bearing) HTTP client from being pointed at an
+	// arbitrary, attacker-controlled host via a user-defined trigger
+	// expression (SSRF + bearer-token exfiltration). An empty set denies every
+	// network call.
+	allowedHosts map[string]struct{}
+}
+
+// checkLinkURL enforces that a link() target uses an http(s) scheme and points
+// at an allow-listed host (typically the stack gateway the HTTP client is
+// scoped to).
+func (h *expressionEvaluator) checkLinkURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("invalid link url: %s", raw), "APPLICATION", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("link url scheme not allowed: %q", u.Scheme), "APPLICATION",
+			fmt.Errorf("scheme %q not allowed", u.Scheme))
+	}
+	origin := strings.ToLower(u.Scheme + "://" + u.Host)
+	_, originAllowed := h.allowedOrigins[origin]
+	_, hostAllowed := h.allowedHosts[strings.ToLower(u.Host)]
+	if !originAllowed && !hostAllowed {
+		return temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("link url host not allowed: %q", u.Host), "APPLICATION",
+			fmt.Errorf("host %q is not in the allowlist", u.Host))
+	}
+	return nil
 }
 
 func (h *expressionEvaluator) link(params ...any) (any, error) {
@@ -54,10 +91,16 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 			fmt.Errorf("link '%s' not defined for object", rel),
 		)
 	case 1:
+		if err := h.checkLinkURL(filteredLinks[0].URI); err != nil {
+			return nil, err
+		}
 		rsp, err := h.httpClient.Get(filteredLinks[0].URI)
 		if err != nil {
 			return nil, errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI)
 		}
+		defer func() {
+			_ = rsp.Body.Close()
+		}()
 		if rsp.StatusCode >= 400 {
 			return nil, fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode)
 		}
@@ -141,10 +184,45 @@ func (h *expressionEvaluator) evalVariables(rawObject any, vars map[string]strin
 	return results, nil
 }
 
-func NewExpressionEvaluator(httpClient *http.Client) *expressionEvaluator {
-	return &expressionEvaluator{
-		httpClient: httpClient,
+// NewExpressionEvaluator builds an evaluator whose link() function may only
+// reach the provided targets. A full URL pins both scheme and host; a bare host
+// permits either HTTP scheme for callers without a canonical stack URL. With
+// no allowed target, link() network calls are denied.
+func NewExpressionEvaluator(httpClient *http.Client, allowedHosts ...string) *expressionEvaluator {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
+
+	hosts := make(map[string]struct{}, len(allowedHosts))
+	origins := make(map[string]struct{}, len(allowedHosts))
+	for _, h := range allowedHosts {
+		if h == "" {
+			continue
+		}
+		if u, err := url.Parse(h); err == nil && u.Scheme != "" && u.Host != "" {
+			origins[strings.ToLower(u.Scheme+"://"+u.Host)] = struct{}{}
+			continue
+		}
+		hosts[strings.ToLower(h)] = struct{}{}
+	}
+	client := *httpClient
+	evaluator := &expressionEvaluator{
+		httpClient:     &client,
+		allowedOrigins: origins,
+		allowedHosts:   hosts,
+	}
+	previousCheckRedirect := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if err := evaluator.checkLinkURL(req.URL.String()); err != nil {
+			return err
+		}
+		if previousCheckRedirect != nil {
+			return previousCheckRedirect(req, via)
+		}
+		return nil
+	}
+
+	return evaluator
 }
 
 func NewDefaultExpressionEvaluator() *expressionEvaluator {

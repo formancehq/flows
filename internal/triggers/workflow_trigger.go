@@ -3,8 +3,8 @@ package triggers
 import (
 	"time"
 
-	"github.com/formancehq/go-libs/v3/pointer"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.temporal.io/api/enums/v1"
@@ -68,7 +68,11 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req ProcessEventRequest, trigger Trigger) error {
 
 	vars := make(map[string]string)
-	occurrence := NewTriggerOccurrence(trigger.ID, req.Event, temporalworkflow.Now(ctx))
+	// Use the (deterministic, replay-stable) workflow execution id as the
+	// occurrence id rather than a random uuid generated in workflow code.
+	occurrence := NewTriggerOccurrence(
+		temporalworkflow.GetInfo(ctx).WorkflowExecution.ID,
+		trigger.ID, req.Event, temporalworkflow.Now(ctx))
 	err := temporalworkflow.ExecuteActivity(
 		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,

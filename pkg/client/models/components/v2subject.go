@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"openapi/internal/utils"
+	"github.com/formancehq/flows/pkg/client/internal/utils"
 )
 
 type V2SubjectType string

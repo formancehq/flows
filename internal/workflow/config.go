@@ -10,6 +10,20 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
+// terminationContext returns a context safe for running terminal bookkeeping
+// activities (status updates, termination events). When the workflow has been
+// cancelled, the supplied context is already cancelled and any activity started
+// on it fails immediately -- which would leave the instance/stage rows stuck
+// "running" and skip the termination event. In that case a disconnected context
+// is returned so the bookkeeping still runs.
+func terminationContext(ctx workflow.Context) workflow.Context {
+	if ctx.Err() == nil {
+		return ctx
+	}
+	disconnected, _ := workflow.NewDisconnectedContext(ctx)
+	return disconnected
+}
+
 type RawStage map[string]map[string]any
 
 type Config struct {
@@ -85,16 +99,20 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 		}
 		stage.SetTerminated(runError, workflow.Now(ctx).Round(time.Nanosecond))
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		// Record the stage termination on a context that survives cancellation,
+		// otherwise a cancelled stage would never be marked terminated.
+		cleanupCtx := terminationContext(ctx)
+
+		err = workflow.ExecuteActivity(workflow.WithActivityOptions(cleanupCtx, workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
-		}), UpdateStageActivity, stage).Get(ctx, nil)
+		}), UpdateStageActivity, stage).Get(cleanupCtx, nil)
 		if err != nil {
 			return err
 		}
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		err = workflow.ExecuteActivity(workflow.WithActivityOptions(cleanupCtx, workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
-		}), SendWorkflowStageTerminationEventActivity, instance, stage).Get(ctx, nil)
+		}), SendWorkflowStageTerminationEventActivity, instance, stage).Get(cleanupCtx, nil)
 		if err != nil {
 			return err
 		}

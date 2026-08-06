@@ -1,17 +1,20 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
-	"github.com/formancehq/go-libs/v3/logging"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
+	bunpaginate "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 
 	"github.com/go-chi/chi/v5"
 
-	sharedapi "github.com/formancehq/go-libs/v3/testing/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/testing/api"
 
 	"github.com/google/uuid"
 
@@ -88,5 +91,93 @@ func TestListInstances(t *testing.T) {
 		instances = make([]workflow.Instance, 0)
 		sharedapi.ReadResponse(t, rec, &instances)
 		require.Len(t, instances, 0)
+	})
+}
+
+func TestListInstancesIsBounded(t *testing.T) {
+	ctx := logging.TestingContext()
+
+	test(t, func(router *chi.Mux, m api.Backend, db *bun.DB) {
+		w := workflow.New(workflow.Config{})
+		_, err := db.NewInsert().Model(&w).Exec(ctx)
+		require.NoError(t, err)
+
+		for i := 0; i < 20; i++ {
+			instance := workflow.NewInstance(uuid.NewString(), w.ID)
+			_, err := db.NewInsert().Model(&instance).Exec(ctx)
+			require.NoError(t, err)
+		}
+
+		// Without a page size the default (15) bounds the result instead of
+		// loading the whole table.
+		req := httptest.NewRequest(http.MethodGet, "/instances", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		var firstPage struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+			HasMore  bool                `json:"hasMore"`
+			Next     string              `json:"next"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&firstPage))
+		require.Len(t, firstPage.Data, 15)
+		require.Equal(t, 15, firstPage.PageSize)
+		require.True(t, firstPage.HasMore)
+		require.NotEmpty(t, firstPage.Next)
+
+		// The continuation cursor makes the remaining records retrievable.
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(firstPage.Next), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		var secondPage struct {
+			Data    []workflow.Instance `json:"data"`
+			HasMore bool                `json:"hasMore"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&secondPage))
+		require.Len(t, secondPage.Data, 5)
+		require.False(t, secondPage.HasMore)
+
+		// Cursors are client-controlled base64 JSON. A forged zero page size must
+		// be normalized to the default instead of disabling LIMIT entirely.
+		forgedCursor := bunpaginate.EncodeCursor(workflow.ListInstancesQuery{})
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(forgedCursor), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		var forgedPage struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+		}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&forgedPage))
+		require.Len(t, forgedPage.Data, bunpaginate.QueryDefaultPageSize)
+		require.Equal(t, bunpaginate.QueryDefaultPageSize, forgedPage.PageSize)
+
+		// Oversized page sizes embedded in cursors are capped just like explicit
+		// pageSize query parameters.
+		forgedCursor = bunpaginate.EncodeCursor(workflow.ListInstancesQuery{
+			PageSize: bunpaginate.MaxPageSize + 1,
+		})
+		req = httptest.NewRequest(http.MethodGet, "/instances?cursor="+url.QueryEscape(forgedCursor), nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		forgedPage = struct {
+			Data     []workflow.Instance `json:"data"`
+			PageSize int                 `json:"pageSize"`
+		}{}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&forgedPage))
+		require.Len(t, forgedPage.Data, 20)
+		require.Equal(t, bunpaginate.MaxPageSize, forgedPage.PageSize)
+
+		// An explicit page size is honoured.
+		req = httptest.NewRequest(http.MethodGet, "/instances?pageSize=5", nil)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		instances := make([]workflow.Instance, 0)
+		sharedapi.ReadResponse(t, rec, &instances)
+		require.Len(t, instances, 5)
 	})
 }

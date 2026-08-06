@@ -6,6 +6,8 @@ import (
 
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/formancehq/orchestration/internal/workflow/stages/internal/stagestesting"
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 )
 
@@ -49,5 +51,41 @@ func TestWaitEvent(t *testing.T) {
 			}},
 			Name: "nominal",
 		},
+		{
+			Stage: WaitEvent{
+				Event: "test",
+			},
+			DelayedCallbacks: []stagestesting.DelayedCallback{{
+				Fn: func(environment *testsuite.TestWorkflowEnvironment) func() {
+					return func() {
+						// Two signals delivered in the same workflow task: a
+						// non-matching one followed by the matching one. The
+						// stage must consume the first, keep the second, and
+						// complete (the previous ReceiveAsync-in-Await
+						// implementation would drop the buffered match and hang).
+						environment.SignalWorkflow(workflow.EventSignalName, workflow.Event{
+							Name: "other",
+						})
+						environment.SignalWorkflow(workflow.EventSignalName, workflow.Event{
+							Name: "test",
+						})
+					}
+				},
+				Duration: 100 * time.Millisecond,
+			}},
+			Name: "ignores non-matching event delivered in the same task",
+		},
 	}...)
+}
+
+func TestWaitEventCancellation(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+	env.RegisterDelayedCallback(env.CancelWorkflow, 100*time.Millisecond)
+
+	env.ExecuteWorkflow(RunWaitEvent, WaitEvent{Event: "test"})
+
+	require.True(t, env.IsWorkflowCompleted())
+	require.Error(t, env.GetWorkflowError())
+	require.True(t, temporal.IsCanceledError(env.GetWorkflowError()))
 }

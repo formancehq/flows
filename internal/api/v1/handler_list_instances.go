@@ -3,26 +3,43 @@ package v1
 import (
 	"net/http"
 
+	bunpaginate "github.com/formancehq/go-libs/v5/pkg/storage/bun/paginate"
 	"github.com/formancehq/orchestration/internal/workflow"
 
 	api "github.com/formancehq/orchestration/internal/api"
 
-	sharedapi "github.com/formancehq/go-libs/v3/api"
+	sharedapi "github.com/formancehq/go-libs/v5/pkg/transport/api"
 )
 
 func listInstances(backend api.Backend) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		runs, err := backend.ListInstances(r.Context(), workflow.ListInstancesQuery{
-			Options: workflow.ListInstancesOptions{
-				WorkflowID: r.URL.Query().Get("workflowID"),
-				Running:    sharedapi.QueryParamBool(r, "running"),
-			},
+		// Bound the query: without a page size, bunpaginate applies no LIMIT,
+		// loading the entire workflow_instances table per request.
+		query, err := bunpaginate.Extract[workflow.ListInstancesQuery](r, func() (*workflow.ListInstancesQuery, error) {
+			pageSize, err := bunpaginate.GetPageSize(r)
+			if err != nil {
+				return nil, err
+			}
+			return &workflow.ListInstancesQuery{
+				PageSize: pageSize,
+				Options: workflow.ListInstancesOptions{
+					WorkflowID: r.URL.Query().Get("workflowID"),
+					Running:    sharedapi.QueryParamBool(r, "running"),
+				},
+			}, nil
 		})
+		if err != nil {
+			sharedapi.BadRequest(w, "VALIDATION", err)
+			return
+		}
+		query.PageSize = normalizePageSize(query.PageSize)
+
+		runs, err := backend.ListInstances(r.Context(), *query)
 		if err != nil {
 			sharedapi.InternalServerError(w, r, err)
 			return
 		}
-		sharedapi.Ok(w, runs.Data)
+		renderCursor(w, *runs)
 	}
 }

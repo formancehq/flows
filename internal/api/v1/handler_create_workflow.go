@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/formancehq/go-libs/v3/api"
+	"github.com/formancehq/go-libs/v5/pkg/transport/api"
 	api2 "github.com/formancehq/orchestration/internal/api"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/pkg/errors"
@@ -25,7 +25,8 @@ func createWorkflow(m api2.Backend) http.HandlerFunc {
 
 			asJson, err := json.Marshal(payload)
 			if err != nil {
-				panic(err)
+				api.InternalServerError(w, r, err)
+				return
 			}
 
 			if err := json.Unmarshal(asJson, &config); err != nil {
@@ -41,7 +42,7 @@ func createWorkflow(m api2.Backend) http.HandlerFunc {
 
 		workflow, err := m.Create(r.Context(), config)
 		if err != nil {
-			api.InternalServerError(w, r, errors.Wrap(err, "creating workflow"))
+			api2.WriteError(w, r, errors.Wrap(err, "creating workflow"))
 			return
 		}
 

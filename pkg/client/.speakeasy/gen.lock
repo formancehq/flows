@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: e26e5b37-4391-4462-9a20-c517a83a166a
 management:
-  docChecksum: dfc3ed9eb806fc9e8c6629a3d2a0a637
+  docChecksum: aec6b9bcce4eb2538e129ed17e2a5589
   docVersion: 0.1.0
   speakeasyVersion: 1.351.0
   generationVersion: 2.384.1
-  releaseVersion: 0.1.4
-  configChecksum: c78571211c83f4afeeaed43ac964a7c8
+  releaseVersion: 0.1.7
+  configChecksum: ef44e4268063f8dbf9a2b5a9ec677b65
 features:
   go:
     additionalDependencies: 0.1.0
@@ -157,6 +157,7 @@ generatedFiles:
   - /models/components/creditwalletrequest.go
   - /models/components/activityconfirmhold.go
   - /models/components/activitygetpayment.go
+  - /models/components/activitycreatetransferinitiation.go
   - /models/components/activitystripetransfer.go
   - /models/components/activityreverttransaction.go
   - /models/components/activitycreatetransaction.go
@@ -236,6 +237,7 @@ generatedFiles:
   - /models/components/v2creditwalletrequest.go
   - /models/components/v2activityconfirmhold.go
   - /models/components/v2activitygetpayment.go
+  - /models/components/v2activitycreatetransferinitiation.go
   - /models/components/v2activitystripetransfer.go
   - /models/components/v2activitycreatetransaction.go
   - /models/components/v2posttransaction.go
@@ -254,6 +256,7 @@ generatedFiles:
   - docs/models/operations/deletetriggerresponse.md
   - docs/models/operations/listtriggersoccurrencesrequest.md
   - docs/models/operations/listtriggersoccurrencesresponse.md
+  - docs/models/operations/listworkflowsrequest.md
   - docs/models/operations/listworkflowsresponse.md
   - docs/models/operations/createworkflowresponse.md
   - docs/models/operations/getworkflowrequest.md
@@ -338,6 +341,7 @@ generatedFiles:
   - docs/models/components/stagesendsourceaccount.md
   - docs/models/components/stagesendsourcewallet.md
   - docs/models/components/stagesenddestination.md
+  - docs/models/components/type.md
   - docs/models/components/stagesenddestinationpayment.md
   - docs/models/components/stagesenddestinationaccount.md
   - docs/models/components/stagesenddestinationwallet.md
@@ -362,7 +366,7 @@ generatedFiles:
   - docs/models/components/ledgeraccountsubject.md
   - docs/models/components/walletsubject.md
   - docs/models/components/activitygetpaymentoutput.md
-  - docs/models/components/type.md
+  - docs/models/components/paymenttype.md
   - docs/models/components/scheme.md
   - docs/models/components/raw.md
   - docs/models/components/payment.md
@@ -388,6 +392,9 @@ generatedFiles:
   - docs/models/components/creditwalletrequest.md
   - docs/models/components/activityconfirmhold.md
   - docs/models/components/activitygetpayment.md
+  - docs/models/components/activitycreatetransferinitiationtype.md
+  - docs/models/components/activitycreatetransferinitiationmetadata.md
+  - docs/models/components/activitycreatetransferinitiation.md
   - docs/models/components/metadata.md
   - docs/models/components/activitystripetransfer.md
   - docs/models/components/activityreverttransaction.md
@@ -432,6 +439,7 @@ generatedFiles:
   - docs/models/components/v2stagesendsourceaccount.md
   - docs/models/components/v2stagesendsourcewallet.md
   - docs/models/components/v2stagesenddestination.md
+  - docs/models/components/v2stagesenddestinationpaymenttype.md
   - docs/models/components/v2stagesenddestinationpayment.md
   - docs/models/components/v2stagesenddestinationaccount.md
   - docs/models/components/v2stagesenddestinationwallet.md
@@ -481,6 +489,9 @@ generatedFiles:
   - docs/models/components/v2creditwalletrequest.md
   - docs/models/components/v2activityconfirmhold.md
   - docs/models/components/v2activitygetpayment.md
+  - docs/models/components/v2activitycreatetransferinitiationtype.md
+  - docs/models/components/v2activitycreatetransferinitiationmetadata.md
+  - docs/models/components/v2activitycreatetransferinitiation.md
   - docs/models/components/v2activitystripetransfermetadata.md
   - docs/models/components/v2activitystripetransfer.md
   - docs/models/components/v2activitycreatetransaction.md

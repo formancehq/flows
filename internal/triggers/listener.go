@@ -9,31 +9,31 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 
-	"github.com/formancehq/go-libs/v3/collectionutils"
+	collectionutils "github.com/formancehq/go-libs/v5/pkg/types/collections"
 	"github.com/formancehq/orchestration/internal/tracer"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/formancehq/go-libs/v3/pointer"
+	"github.com/formancehq/go-libs/v5/pkg/types/pointer"
 	"go.temporal.io/api/serviceerror"
 
-	"github.com/formancehq/go-libs/v3/logging"
+	"github.com/formancehq/go-libs/v5/pkg/observe/log"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/go-libs/v5/pkg/messaging/publish"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/client"
 )
 
 // Quick hack to filter already processed events
-func getWorkflowIDFromEvent(event publish.EventMessage) *string {
+func getWorkflowIDFromEvent(event publish.EventMessage) (*string, error) {
 	switch event.Type {
 	case "SAVED_PAYMENT", "SAVED_ACCOUNT":
 		data, err := json.Marshal(event.Payload)
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "marshalling event payload")
 		}
 
 		type object struct {
@@ -41,12 +41,15 @@ func getWorkflowIDFromEvent(event publish.EventMessage) *string {
 		}
 		o := &object{}
 		if err := json.Unmarshal(data, o); err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "unmarshalling event payload")
+		}
+		if o.ID == "" {
+			return nil, errors.New("event payload id is required")
 		}
 
-		return pointer.For(o.ID)
+		return pointer.For(o.ID), nil
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
@@ -56,6 +59,7 @@ func listMatchingTriggers(ctx context.Context, db *bun.DB, evaluator *expression
 		Model(&triggers).
 		Relation("Workflow").
 		Where("trigger.deleted_at is null").
+		Where("workflow_id IN (SELECT id FROM workflows WHERE deleted_at IS NULL)").
 		Where("event = ?", event.Type).
 		Where("CASE WHEN trigger.version IS NULL THEN true ELSE trigger.version = ? END", event.Version).
 		Scan(ctx); err != nil {
@@ -96,11 +100,14 @@ func handleMessage(
 	stack, taskIDPrefix, taskQueue string,
 	includeSearchAttributes bool,
 	msg *message.Message,
-) error {
+) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println(e)
-			debug.PrintStack()
+			// Convert a panic into a returned error so the message is NACKed
+			// (and redelivered / dead-lettered) instead of being silently
+			// acked and lost.
+			err = fmt.Errorf("panic while handling event: %v", e)
+			logging.FromContext(msg.Context()).Errorf("%s\n%s", err, debug.Stack())
 		}
 	}()
 
@@ -138,7 +145,10 @@ func handleMessage(
 		return nil
 	}
 
-	objectID := getWorkflowIDFromEvent(*event)
+	objectID, err := getWorkflowIDFromEvent(*event)
+	if err != nil {
+		return errors.Wrap(err, "extracting workflow id from event")
+	}
 
 	for _, trigger := range matched {
 		searchAttributes := map[string]interface{}{
@@ -148,14 +158,24 @@ func handleMessage(
 			searchAttributes[workflow.SearchAttributeTriggerID] = trigger.ID
 		}
 
-		options := client.StartWorkflowOptions{
-			TaskQueue:        taskQueue,
-			SearchAttributes: searchAttributes,
-		}
+		// Derive a deterministic workflow ID so an at-least-once redelivery of
+		// the same event does not start a second trigger execution (which would
+		// replay side-effecting stages such as money movements). For
+		// SAVED_PAYMENT/SAVED_ACCOUNT we key on the object id (dedup across
+		// distinct deliveries of the same object); for every other event type
+		// we fall back to the message UUID, which is preserved across
+		// redeliveries.
+		dedupKey := msg.UUID
 		if objectID != nil {
-			options.ID = taskIDPrefix + "-" + trigger.ID + "-" + *objectID
-			options.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
-			options.WorkflowExecutionErrorWhenAlreadyStarted = true
+			dedupKey = *objectID
+		}
+
+		options := client.StartWorkflowOptions{
+			TaskQueue:                                taskQueue,
+			SearchAttributes:                         searchAttributes,
+			ID:                                       taskIDPrefix + "-" + trigger.ID + "-" + dedupKey,
+			WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+			WorkflowExecutionErrorWhenAlreadyStarted: true,
 		}
 
 		_, execErr := temporalClient.ExecuteWorkflow(ctx, options, ExecuteTrigger, ProcessEventRequest{
