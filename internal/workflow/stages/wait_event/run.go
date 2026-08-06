@@ -15,7 +15,18 @@ func RunWaitEvent(ctx workflow.Context, waitEvent WaitEvent) error {
 	// one buffered with nothing left to re-wake the coroutine, blocking forever.
 	for {
 		var signal internalWorkflow.Event
-		channel.Receive(ctx, &signal)
+		canceled := false
+		selector := workflow.NewSelector(ctx)
+		selector.AddReceive(channel, func(channel workflow.ReceiveChannel, _ bool) {
+			channel.Receive(ctx, &signal)
+		})
+		selector.AddReceive(ctx.Done(), func(workflow.ReceiveChannel, bool) {
+			canceled = true
+		})
+		selector.Select(ctx)
+		if canceled {
+			return ctx.Err()
+		}
 		if signal.Name == waitEvent.Event {
 			return nil
 		}

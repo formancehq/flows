@@ -6,6 +6,8 @@ import (
 
 	"github.com/formancehq/orchestration/internal/workflow"
 	"github.com/formancehq/orchestration/internal/workflow/stages/internal/stagestesting"
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 )
 
@@ -74,4 +76,16 @@ func TestWaitEvent(t *testing.T) {
 			Name: "ignores non-matching event delivered in the same task",
 		},
 	}...)
+}
+
+func TestWaitEventCancellation(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+	env.RegisterDelayedCallback(env.CancelWorkflow, 100*time.Millisecond)
+
+	env.ExecuteWorkflow(RunWaitEvent, WaitEvent{Event: "test"})
+
+	require.True(t, env.IsWorkflowCompleted())
+	require.Error(t, env.GetWorkflowError())
+	require.True(t, temporal.IsCanceledError(env.GetWorkflowError()))
 }
