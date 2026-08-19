@@ -941,6 +941,7 @@ components:
       properties:
         version:
           type: string
+          description: Version of the orchestration service
     Error:
       type: object
       required:
@@ -949,26 +950,32 @@ components:
       properties:
         errorCode:
           type: string
+          description: Machine-readable error code identifying the failure
           enum:
             - VALIDATION
             - NOT_FOUND
             - INTERNAL
         errorMessage:
           type: string
+          description: Human-readable description of the error
     WorkflowConfig:
       type: object
+      description: The stages a workflow runs, in order
       required:
         - stages
       properties:
         name:
           type: string
+          description: Human-readable name for the workflow
         stages:
           type: array
+          description: The stages executed in order when the workflow runs
           items:
             type: object
             additionalProperties: {}
     Workflow:
       type: object
+      description: A workflow definition and the stages it runs
       required:
         - config
         - createdAt
@@ -980,11 +987,14 @@ components:
         createdAt:
           type: string
           format: date-time
+          description: When the workflow was created
         updatedAt:
           type: string
           format: date-time
+          description: When the workflow was last modified
         id:
           type: string
+          description: Unique identifier of the workflow
     StageStatus:
       type: object
       required:
@@ -994,18 +1004,24 @@ components:
       properties:
         stage:
           type: number
+          description: Zero-based position of the stage within the workflow
         instanceID:
           type: string
+          description: Identifier of the workflow instance this stage belongs to
         startedAt:
           type: string
           format: date-time
+          description: When the stage started
         terminatedAt:
           type: string
           format: date-time
+          description: When the stage finished, absent while it is still running
         error:
           type: string
+          description: Why the stage failed, absent when it succeeded
     WorkflowInstance:
       type: object
+      description: One run of a workflow, tracking its per-stage progress
       required:
         - workflowID
         - id
@@ -1015,25 +1031,33 @@ components:
       properties:
         workflowID:
           type: string
+          description: Identifier of the workflow this run belongs to
         id:
           type: string
+          description: Unique identifier of the run
         createdAt:
           type: string
           format: date-time
+          description: When the run was started
         updatedAt:
           type: string
           format: date-time
+          description: When the run was last updated
         status:
           type: array
+          description: Per-stage progress of the run
           items:
             $ref: '#/components/schemas/StageStatus'
         terminated:
           type: boolean
+          description: Whether the run has finished, successfully or not
         terminatedAt:
           type: string
           format: date-time
+          description: When the run finished, absent while it is still running
         error:
           type: string
+          description: Why the run failed, absent when it succeeded
         workflow:
           $ref: '#/components/schemas/Workflow'
     WorkflowInstanceHistoryStage:
@@ -1047,27 +1071,36 @@ components:
       properties:
         name:
           type: string
+          description: Name of the activity this history entry records
         input:
           $ref: '#/components/schemas/WorkflowInstanceHistoryStageInput'
         output:
           $ref: '#/components/schemas/WorkflowInstanceHistoryStageOutput'
         error:
           type: string
+          description: Why the activity failed, absent when it succeeded
         terminated:
           type: boolean
+          description: Whether the activity has finished
         startedAt:
           type: string
           format: date-time
+          description: When the activity started
         terminatedAt:
           type: string
           format: date-time
+          description: When the activity finished, absent while it is still running
         lastFailure:
           type: string
+          description: Error reported by the most recent failed attempt
         attempt:
           type: integer
+          description: How many times the activity has been attempted
         nextExecution:
           type: string
           format: date-time
+          description: When the next retry is scheduled, absent once the activity
+            is settled
     WorkflowInstanceHistory:
       type: object
       required:
@@ -1078,24 +1111,31 @@ components:
       properties:
         name:
           type: string
+          description: Name of the stage this history entry records
         input:
           $ref: '#/components/schemas/Stage'
         error:
           type: string
+          description: Why the stage failed, absent when it succeeded
         terminated:
           type: boolean
+          description: Whether the stage has finished
         startedAt:
           type: string
           format: date-time
+          description: When the stage started
         terminatedAt:
           type: string
           format: date-time
+          description: When the stage finished, absent while it is still running
     WorkflowInstanceHistoryList:
       type: array
+      description: Per-stage history of a workflow run
       items:
         $ref: '#/components/schemas/WorkflowInstanceHistory'
     WorkflowInstanceHistoryStageList:
       type: array
+      description: Per-activity history of a workflow stage
       items:
         $ref: '#/components/schemas/WorkflowInstanceHistoryStage'
     ListWorkflowsResponse:
@@ -1105,6 +1145,7 @@ components:
           items:
             $ref: '#/components/schemas/Workflow'
           type: array
+          description: The workflows defined on this stack
       required:
         - data
     TriggerData:
@@ -1115,18 +1156,27 @@ components:
       properties:
         event:
           type: string
+          description: Type of event that fires this trigger
         workflowID:
           type: string
+          description: Identifier of the workflow to run when the trigger fires
         version:
           type: string
+          description: Version of the trigger definition
         filter:
           type: string
+          description: Expression evaluated against the event. The workflow runs only
+            when it matches
         vars:
           type: object
+          description: Expressions evaluated against the event to build the workflow's
+            input variables
           additionalProperties: true
         name:
           type: string
+          description: Human-readable name for the trigger
     Trigger:
+      description: A rule that starts a workflow when a matching event arrives
       allOf:
         - $ref: '#/components/schemas/TriggerData'
         - type: object
@@ -1149,17 +1199,23 @@ components:
         date:
           type: string
           format: date-time
+          description: When the trigger fired
         workflowInstanceID:
           type: string
+          description: Identifier of the run the trigger started, absent when it started
+            none
         workflowInstance:
           $ref: '#/components/schemas/WorkflowInstance'
         triggerID:
           type: string
+          description: Identifier of the trigger that fired
         event:
           type: object
+          description: The event that fired the trigger
           additionalProperties: true
         error:
           type: string
+          description: Why the trigger failed to start a run, absent when it succeeded
     ListTriggersOccurrencesResponse:
       type: object
       properties:
@@ -1167,6 +1223,7 @@ components:
           items:
             $ref: '#/components/schemas/TriggerOccurrence'
           type: array
+          description: The trigger's occurrences
       required:
         - data
     ListTriggersResponse:
@@ -1176,6 +1233,7 @@ components:
           items:
             $ref: '#/components/schemas/Trigger'
           type: array
+          description: The triggers defined on this stack
       required:
         - data
     CreateWorkflowRequest:
@@ -1213,6 +1271,7 @@ components:
           items:
             $ref: '#/components/schemas/WorkflowInstance'
           type: array
+          description: The runs of this workflow
     GetWorkflowResponse:
       type: object
       required:
@@ -1243,24 +1302,32 @@ components:
           $ref: '#/components/schemas/WorkflowInstanceHistoryStageList'
     StageSendSourceWallet:
       type: object
+      description: Take the funds from a wallet
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the wallet to take funds from
         balance:
           type: string
+          description: Name of the balance within the wallet. Defaults to the main
+            balance when omitted
     StageSendDestinationWallet:
+      description: Send the funds to a wallet
       $ref: '#/components/schemas/StageSendSourceWallet'
     StageSendSourceAccount:
       type: object
+      description: Take the funds from a ledger account
       required:
         - id
       properties:
         id:
           type: string
+          description: Address of the ledger account to take funds from
         ledger:
           type: string
+          description: Name of the ledger holding the account
         throughAccount:
           type: string
           description: |
@@ -1280,14 +1347,17 @@ components:
           default: false
           example: true
     StageSendDestinationAccount:
+      description: Send the funds to a ledger account
       $ref: '#/components/schemas/StageSendSourceAccount'
     StageSendSourcePayment:
       type: object
+      description: Take the funds from a payment
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the payment to take funds from
         ledger:
           type: string
           description: |
@@ -1312,6 +1382,7 @@ components:
           default: false
     StageSendDestinationPayment:
       type: object
+      description: Send the funds to a payment
       required:
         - psp
       properties:
@@ -1339,6 +1410,7 @@ components:
             If not specified, the Payments service may use a default account for the connector.
     StageSendSource:
       type: object
+      description: Where a send stage takes the funds from
       properties:
         wallet:
           $ref: '#/components/schemas/StageSendSourceWallet'
@@ -1348,6 +1420,7 @@ components:
           $ref: '#/components/schemas/StageSendSourcePayment'
     StageSendDestination:
       type: object
+      description: Where a send stage puts the funds
       properties:
         wallet:
           $ref: '#/components/schemas/StageSendDestinationWallet'
@@ -1366,19 +1439,27 @@ components:
           $ref: '#/components/schemas/StageSendSource'
         metadata:
           type: object
+          description: Metadata to attach to the resulting transaction
           additionalProperties:
             type: string
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record on the resulting transaction. See [bi-
+            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
     StageDelay:
       type: object
       properties:
         until:
           type: string
           format: date-time
+          description: Wait until this absolute point in time. Mutually exclusive
+            with duration
         duration:
           type: string
+          description: Wait for this long, expressed as a Go duration such as 10s.
+            Mutually exclusive with until
     StageWaitEvent:
       type: object
       required:
@@ -1386,17 +1467,22 @@ components:
       properties:
         event:
           type: string
+          description: Type of event the workflow waits for before continuing
     UpdateAccount:
       type: object
+      description: Metadata to set on a ledger account
       properties:
         id:
           type: string
+          description: Address of the ledger account to update
         metadata:
           type: object
+          description: Metadata to set on the account
           additionalProperties:
             type: string
         ledger:
           type: string
+          description: Name of the ledger holding the account
       required:
         - id
         - ledger
@@ -1407,6 +1493,7 @@ components:
         account:
           $ref: '#/components/schemas/UpdateAccount'
     Stage:
+      description: One step of a workflow, whose shape depends on the stage type
       anyOf:
         - $ref: '#/components/schemas/StageSend'
         - $ref: '#/components/schemas/StageDelay'
@@ -1417,21 +1504,26 @@ components:
       properties:
         connectorID:
           type: string
+          description: Identifier of the Stripe connector to transfer through
         amount:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to transfer, in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: Asset the transfer is denominated in
           example: USD
         destination:
           type: string
+          description: Stripe connected account receiving the transfer
           example: acct_1Gqj58KZcSIg2N2q
         waitingValidation:
           type: boolean
           example: false
           default: false
+          description: When true, the transfer is created but held until it is validated
         metadata:
           type: object
           description: >
@@ -1442,12 +1534,14 @@ components:
           example:
             order_id: '6735'
     ActivityStripeTransfer:
+      description: Arguments for the activity that transfers funds through Stripe
       $ref: '#/components/schemas/StripeTransferRequest'
     CreateTransferInitiationRequest:
       type: object
       properties:
         connectorID:
           type: string
+          description: Identifier of the connector to transfer through
         provider:
           type: string
           description: |
@@ -1458,9 +1552,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to transfer, in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: Asset the transfer is denominated in
           example: USD
         destination:
           type: string
@@ -1486,6 +1582,7 @@ components:
           type: boolean
           example: false
           default: false
+          description: When true, the transfer is created but held until it is validated
         metadata:
           type: object
           description: >
@@ -1494,18 +1591,24 @@ components:
           example:
             order_id: '6735'
     ActivityCreateTransferInitiation:
+      description: Arguments for the activity that initiates a transfer through a
+        connector
       $ref: '#/components/schemas/CreateTransferInitiationRequest'
     ActivityListWallets:
       type: object
+      description: Arguments for the activity that lists wallets
       properties:
         name:
           type: string
+          description: Restrict the listing to wallets with this name
     ListWalletsResponse:
       type: object
+      description: A page of wallets
       required:
         - cursor
       properties:
         cursor:
+          description: Paginated cursor wrapping the list of wallets
           allOf:
             - $ref: '#/components/schemas/Cursor'
             - properties:
@@ -1536,11 +1639,14 @@ components:
           description: Metadata associated with the wallet.
         name:
           type: string
+          description: Human-readable name of the wallet
         createdAt:
           type: string
           format: date-time
+          description: When the wallet was created
         ledger:
           type: string
+          description: Name of the ledger backing this wallet
     Cursor:
       type: object
       required:
@@ -1551,35 +1657,46 @@ components:
           format: int64
           minimum: 1
           maximum: 1000
+          description: Number of items requested per page
           example: 15
         hasMore:
           type: boolean
+          description: Whether further pages are available
           example: false
         previous:
           type: string
+          description: Cursor for the previous page, absent on the first page
           example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
         next:
           type: string
+          description: Cursor for the next page, absent on the last page
           example: ''
     ActivityGetAccount:
       type: object
+      description: Arguments for the activity that reads a ledger account
       required:
         - id
         - ledger
       properties:
         id:
           type: string
+          description: Address of the ledger account to read
         ledger:
           type: string
+          description: Name of the ledger holding the account
     ActivityAddAccountMetadata:
       type: object
+      description: Arguments for the activity that sets metadata on a ledger account
       properties:
         id:
           type: string
+          description: Address of the ledger account to update
         ledger:
           type: string
+          description: Name of the ledger holding the account
         metadata:
           type: object
+          description: Metadata to set on the account
           additionalProperties:
             type: string
       required:
@@ -1588,44 +1705,56 @@ components:
         - metadata
     ActivityCreateTransaction:
       type: object
+      description: Arguments for the activity that writes a transaction to a ledger
       properties:
         ledger:
           type: string
+          description: Name of the ledger to write the transaction to
         data:
           $ref: '#/components/schemas/PostTransaction'
     ActivityRevertTransaction:
       type: object
+      description: Arguments for the activity that reverts a ledger transaction
       required:
         - id
         - ledger
       properties:
         ledger:
           type: string
+          description: Name of the ledger holding the transaction
         id:
           type: string
+          description: Identifier of the transaction to revert
     ActivityGetPayment:
       type: object
+      description: Arguments for the activity that reads a payment
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the payment to read
     ActivityConfirmHold:
       type: object
+      description: Arguments for the activity that confirms a wallet hold
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the hold to confirm
     ActivityCreditWallet:
       type: object
+      description: Arguments for the activity that credits a wallet
       properties:
         id:
           type: string
+          description: Identifier of the wallet to credit
         data:
           $ref: '#/components/schemas/CreditWalletRequest'
     CreditWalletRequest:
       type: object
+      description: A credit to apply to a wallet
       required:
         - amount
         - sources
@@ -1640,8 +1769,11 @@ components:
           description: Metadata associated with the wallet.
         reference:
           type: string
+          description: Optional caller-supplied identifier used to deduplicate the
+            credit
         sources:
           type: array
+          description: Where the funds come from
           items:
             $ref: '#/components/schemas/Subject'
         balance:
@@ -1650,6 +1782,9 @@ components:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record on the resulting transaction. See [bi-
+            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
       example:
         amount:
           asset: USD/2
@@ -1665,8 +1800,10 @@ components:
       properties:
         type:
           type: string
+          description: Discriminator identifying this subject as a ledger account
         identifier:
           type: string
+          description: Address of the ledger account
     WalletSubject:
       type: object
       required:
@@ -1675,11 +1812,17 @@ components:
       properties:
         type:
           type: string
+          description: Discriminator identifying this subject as a wallet
         identifier:
           type: string
+          description: Identifier of the wallet
         balance:
           type: string
+          description: Name of the balance within the wallet. Defaults to the main
+            balance when omitted
     Subject:
+      description: The counterparty of a wallet movement, either a ledger account
+        or another wallet
       discriminator:
         propertyName: type
         mapping:
@@ -1690,13 +1833,16 @@ components:
         - $ref: '#/components/schemas/WalletSubject'
     ActivityDebitWallet:
       type: object
+      description: Arguments for the activity that debits a wallet
       properties:
         id:
           type: string
+          description: Identifier of the wallet to debit
         data:
           $ref: '#/components/schemas/DebitWalletRequest'
     DebitWalletRequest:
       type: object
+      description: A debit to apply to a wallet
       required:
         - amount
         - metadata
@@ -1714,10 +1860,13 @@ components:
           description: Metadata associated with the wallet.
         description:
           type: string
+          description: Human-readable reason for the debit
         destination:
           $ref: '#/components/schemas/Subject'
         balances:
           type: array
+          description: Names of the balances to debit from, in order. Defaults to
+            the main balance when omitted
           items:
             type: string
             description: A targeted balance (use '*' for all)
@@ -1734,21 +1883,27 @@ components:
         pending: true
     ActivityGetWallet:
       type: object
+      description: Arguments for the activity that reads a wallet
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the wallet to read
     ActivityVoidHold:
       type: object
+      description: Arguments for the activity that releases a wallet hold
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the hold to release
     ActivityGetAccountOutput:
+      description: Result of the activity that reads a ledger account
       $ref: '#/components/schemas/AccountResponse'
     ActivityCreateTransactionOutput:
+      description: Result of the activity that writes a transaction to a ledger
       $ref: '#/components/schemas/CreateTransactionResponse'
     CreateTransactionResponse:
       properties:
@@ -1759,16 +1914,24 @@ components:
         - data
     Transaction:
       type: object
+      description: A transaction recorded in the ledger, carrying its postings and
+        metadata
       properties:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time: when the transaction is considered to have occurred.
+            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
+          description: The fund movements making up the transaction
           items:
             $ref: '#/components/schemas/Posting'
         reference:
           type: string
+          description: Optional caller-supplied identifier, unique within the ledger,
+            used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/Metadata'
@@ -1776,8 +1939,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Unique sequential identifier for this transaction within the
+            ledger
         reverted:
           type: boolean
+          description: Indicates if the transaction has been reverted
       required:
         - postings
         - timestamp
@@ -1785,10 +1951,12 @@ components:
         - metadata
         - reverted
     ActivityRevertTransactionOutput:
+      description: Result of the activity that reverts a ledger transaction
       $ref: '#/components/schemas/RevertTransactionResponse'
     RevertTransactionResponse:
       $ref: '#/components/schemas/CreateTransactionResponse'
     ActivityGetPaymentOutput:
+      description: Result of the activity that reads a payment
       $ref: '#/components/schemas/PaymentResponse'
     PaymentResponse:
       type: object
@@ -1799,6 +1967,7 @@ components:
           $ref: '#/components/schemas/Payment'
     Payment:
       type: object
+      description: A payment observed or initiated through a connector
       required:
         - id
         - reference
@@ -1817,19 +1986,25 @@ components:
       properties:
         id:
           type: string
+          description: Unique identifier of the payment
           example: XXX
         reference:
           type: string
+          description: Identifier the payment carries at the provider
         sourceAccountID:
           type: string
+          description: Identifier of the account the funds left
         destinationAccountID:
           type: string
+          description: Identifier of the account the funds reached
         connectorID:
           type: string
+          description: Identifier of the connector that produced the payment
         provider:
           $ref: '#/components/schemas/Connector'
         type:
           type: string
+          description: Direction of the payment
           enum:
             - PAY-IN
             - PAYOUT
@@ -1841,9 +2016,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount the payment was created with, before any adjustment
           example: 100
         scheme:
           type: string
+          description: Payment scheme or rail the payment travelled over
           enum:
             - visa
             - mastercard
@@ -1865,21 +2042,26 @@ components:
             - other
         asset:
           type: string
+          description: Asset the payment is denominated in
           example: USD
         createdAt:
           type: string
           format: date-time
+          description: When the payment was created
         raw:
           type: object
           nullable: true
+          description: The provider's original payload, passed through untouched
         adjustments:
           type: array
+          description: Successive changes to the payment's amount and status
           items:
             $ref: '#/components/schemas/PaymentAdjustment'
         metadata:
           $ref: '#/components/schemas/PaymentMetadata'
     Connector:
       type: string
+      description: The payment provider behind a connector
       enum:
         - STRIPE
         - DUMMY-PAY
@@ -1904,16 +2086,22 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount carried by this adjustment
           example: 100
         date:
           type: string
           format: date-time
+          description: When the adjustment was recorded
         raw:
           type: object
+          description: The provider's original payload for this adjustment
         absolute:
           type: boolean
+          description: Whether amount replaces the payment's amount rather than adding
+            to it
     PaymentStatus:
       type: string
+      description: Where a payment stands in its lifecycle
       enum:
         - PENDING
         - ACTIVE
@@ -1926,8 +2114,11 @@ components:
       properties:
         key:
           type: string
+          description: Metadata value carried by the payment
       nullable: true
+      description: Arbitrary key/value pairs attached to a payment
     ActivityDebitWalletOutput:
+      description: Result of the activity that debits a wallet
       $ref: '#/components/schemas/DebitWalletResponse'
     DebitWalletResponse:
       type: object
@@ -1938,6 +2129,8 @@ components:
           $ref: '#/components/schemas/Hold'
     Hold:
       type: object
+      description: Funds locked by a pending wallet debit, later either confirmed
+        or voided
       required:
         - id
         - walletID
@@ -1958,9 +2151,11 @@ components:
             type: string
         description:
           type: string
+          description: Human-readable reason the funds were held
         destination:
           $ref: '#/components/schemas/Subject'
     ActivityGetWalletOutput:
+      description: Result of the activity that reads a wallet
       $ref: '#/components/schemas/GetWalletResponse'
     GetWalletResponse:
       type: object
@@ -1971,6 +2166,7 @@ components:
           $ref: '#/components/schemas/WalletWithBalances'
     WalletWithBalances:
       type: object
+      description: A wallet together with the funds it currently holds
       required:
         - name
         - id
@@ -1990,11 +2186,14 @@ components:
             type: string
         name:
           type: string
+          description: Human-readable name of the wallet
         createdAt:
           type: string
           format: date-time
+          description: When the wallet was created
         balances:
           type: object
+          description: Aggregated funds held by the wallet, keyed by asset
           required:
             - main
           properties:
@@ -2002,6 +2201,7 @@ components:
               $ref: '#/components/schemas/AssetHolder'
         ledger:
           type: string
+          description: Name of the ledger backing this wallet
     AssetHolder:
       type: object
       required:
@@ -2009,11 +2209,13 @@ components:
       properties:
         assets:
           type: object
+          description: Amounts held, keyed by asset
           additionalProperties:
             type: integer
             format: bigint
     WorkflowInstanceHistoryStageInput:
       type: object
+      description: Arguments an activity was called with, keyed by activity name
       properties:
         GetAccount:
           $ref: '#/components/schemas/ActivityGetAccount'
@@ -2043,6 +2245,7 @@ components:
           $ref: '#/components/schemas/ActivityListWallets'
     WorkflowInstanceHistoryStageOutput:
       type: object
+      description: Result an activity returned, keyed by activity name
       properties:
         GetAccount:
           $ref: '#/components/schemas/ActivityGetAccountOutput'
@@ -2060,6 +2263,7 @@ components:
           $ref: '#/components/schemas/ListWalletsResponse'
     Monetary:
       type: object
+      description: An amount together with the asset it is denominated in
       required:
         - asset
         - amount
@@ -2073,18 +2277,25 @@ components:
           description: The amount of the monetary value.
     PostTransaction:
       type: object
+      description: A transaction to write to a ledger
       required:
         - metadata
       properties:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record, letting you backdate or postdate the transaction.
+            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
+          description: Fund movements to apply. Mutually exclusive with script
           items:
             $ref: '#/components/schemas/Posting'
         script:
           type: object
+          description: A Numscript program executed to produce the postings. Mutually
+            exclusive with postings
           properties:
             plain:
               type: string
@@ -2099,11 +2310,14 @@ components:
             - plain
         reference:
           type: string
+          description: Optional caller-supplied identifier, unique within the ledger,
+            used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/Metadata'
     Metadata:
       type: object
+      description: Arbitrary key/value pairs attached to the resource
       additionalProperties:
         type: string
       example:
@@ -2115,15 +2329,21 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to move, as an arbitrary-precision integer expressed
+            in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: The asset being moved, optionally carrying a scale suffix such
+            as USD/2
           example: COIN
         destination:
           type: string
+          description: Address of the account credited by this posting
           example: users:002
         source:
           type: string
+          description: Address of the account debited by this posting
           example: users:001
       required:
         - amount
@@ -2146,15 +2366,19 @@ components:
           $ref: '#/components/schemas/Trigger'
     Account:
       type: object
+      description: An account in the ledger, identified by its address
       required:
         - address
         - metadata
       properties:
         address:
           type: string
+          description: The account address, a colon-separated segmented path such
+            as users:001
           example: users:001
         metadata:
           type: object
+          description: Arbitrary key/value pairs attached to the account
           properties: {}
           additionalProperties:
             type: string
@@ -2170,12 +2394,15 @@ components:
         input:
           type: integer
           format: bigint
+          description: Total amount credited for this asset
         output:
           type: integer
           format: bigint
+          description: Total amount debited for this asset
         balance:
           type: integer
           format: bigint
+          description: Net balance, equal to input minus output
       required:
         - input
         - output
@@ -2185,6 +2412,7 @@ components:
         balance: 80
     Volumes:
       type: object
+      description: Volumes per asset for a single account
       additionalProperties:
         $ref: '#/components/schemas/Volume'
       example:
@@ -2203,6 +2431,7 @@ components:
       properties:
         version:
           type: string
+          description: Version of the orchestration service
     V2Error:
       type: object
       required:
@@ -2211,26 +2440,32 @@ components:
       properties:
         errorCode:
           type: string
+          description: Machine-readable error code identifying the failure
           enum:
             - VALIDATION
             - NOT_FOUND
             - INTERNAL
         errorMessage:
           type: string
+          description: Human-readable description of the error
     V2WorkflowConfig:
       type: object
+      description: The stages a workflow runs, in order
       required:
         - stages
       properties:
         name:
           type: string
+          description: Human-readable name for the workflow
         stages:
           type: array
+          description: The stages executed in order when the workflow runs
           items:
             type: object
             additionalProperties: {}
     V2Workflow:
       type: object
+      description: A workflow definition and the stages it runs
       required:
         - config
         - createdAt
@@ -2242,11 +2477,14 @@ components:
         createdAt:
           type: string
           format: date-time
+          description: When the workflow was created
         updatedAt:
           type: string
           format: date-time
+          description: When the workflow was last modified
         id:
           type: string
+          description: Unique identifier of the workflow
     V2StageStatus:
       type: object
       required:
@@ -2256,18 +2494,24 @@ components:
       properties:
         stage:
           type: number
+          description: Zero-based position of the stage within the workflow
         instanceID:
           type: string
+          description: Identifier of the workflow instance this stage belongs to
         startedAt:
           type: string
           format: date-time
+          description: When the stage started
         terminatedAt:
           type: string
           format: date-time
+          description: When the stage finished, absent while it is still running
         error:
           type: string
+          description: Why the stage failed, absent when it succeeded
     V2WorkflowInstance:
       type: object
+      description: One run of a workflow, tracking its per-stage progress
       required:
         - workflowID
         - id
@@ -2277,25 +2521,33 @@ components:
       properties:
         workflowID:
           type: string
+          description: Identifier of the workflow this run belongs to
         id:
           type: string
+          description: Unique identifier of the run
         createdAt:
           type: string
           format: date-time
+          description: When the run was started
         updatedAt:
           type: string
           format: date-time
+          description: When the run was last updated
         status:
           type: array
+          description: Per-stage progress of the run
           items:
             $ref: '#/components/schemas/V2StageStatus'
         terminated:
           type: boolean
+          description: Whether the run has finished, successfully or not
         terminatedAt:
           type: string
           format: date-time
+          description: When the run finished, absent while it is still running
         error:
           type: string
+          description: Why the run failed, absent when it succeeded
         workflow:
           $ref: '#/components/schemas/V2Workflow'
     V2WorkflowInstanceHistoryStage:
@@ -2309,27 +2561,36 @@ components:
       properties:
         name:
           type: string
+          description: Name of the activity this history entry records
         input:
           $ref: '#/components/schemas/V2WorkflowInstanceHistoryStageInput'
         output:
           $ref: '#/components/schemas/V2WorkflowInstanceHistoryStageOutput'
         error:
           type: string
+          description: Why the activity failed, absent when it succeeded
         terminated:
           type: boolean
+          description: Whether the activity has finished
         startedAt:
           type: string
           format: date-time
+          description: When the activity started
         terminatedAt:
           type: string
           format: date-time
+          description: When the activity finished, absent while it is still running
         lastFailure:
           type: string
+          description: Error reported by the most recent failed attempt
         attempt:
           type: integer
+          description: How many times the activity has been attempted
         nextExecution:
           type: string
           format: date-time
+          description: When the next retry is scheduled, absent once the activity
+            is settled
     V2WorkflowInstanceHistory:
       type: object
       required:
@@ -2340,24 +2601,31 @@ components:
       properties:
         name:
           type: string
+          description: Name of the stage this history entry records
         input:
           $ref: '#/components/schemas/V2Stage'
         error:
           type: string
+          description: Why the stage failed, absent when it succeeded
         terminated:
           type: boolean
+          description: Whether the stage has finished
         startedAt:
           type: string
           format: date-time
+          description: When the stage started
         terminatedAt:
           type: string
           format: date-time
+          description: When the stage finished, absent while it is still running
     V2WorkflowInstanceHistoryList:
       type: array
+      description: Per-stage history of a workflow run
       items:
         $ref: '#/components/schemas/V2WorkflowInstanceHistory'
     V2WorkflowInstanceHistoryStageList:
       type: array
+      description: Per-activity history of a workflow stage
       items:
         $ref: '#/components/schemas/V2WorkflowInstanceHistoryStage'
     V2ListWorkflowsResponse:
@@ -2365,6 +2633,7 @@ components:
       properties:
         cursor:
           type: object
+          description: Paginated cursor wrapping the list of workflows
           required:
             - pageSize
             - hasMore
@@ -2399,18 +2668,27 @@ components:
       properties:
         event:
           type: string
+          description: Type of event that fires this trigger
         workflowID:
           type: string
+          description: Identifier of the workflow to run when the trigger fires
         version:
           type: string
+          description: Version of the trigger definition
         filter:
           type: string
+          description: Expression evaluated against the event. The workflow runs only
+            when it matches
         vars:
           type: object
           additionalProperties: true
+          description: Expressions evaluated against the event to build the workflow's
+            input variables
         name:
           type: string
+          description: Human-readable name for the trigger
     V2Trigger:
+      description: A rule that starts a workflow when a matching event arrives
       allOf:
         - $ref: '#/components/schemas/V2TriggerData'
         - type: object
@@ -2433,22 +2711,29 @@ components:
         date:
           type: string
           format: date-time
+          description: When the trigger fired
         workflowInstanceID:
           type: string
+          description: Identifier of the run the trigger started, absent when it started
+            none
         workflowInstance:
           $ref: '#/components/schemas/V2WorkflowInstance'
         triggerID:
           type: string
+          description: Identifier of the trigger that fired
         error:
           type: string
+          description: Why the trigger failed to start a run, absent when it succeeded
         event:
           type: object
           additionalProperties: true
+          description: The event that fired the trigger
     V2ListTriggersOccurrencesResponse:
       type: object
       properties:
         cursor:
           type: object
+          description: Paginated cursor wrapping the trigger's occurrences
           required:
             - pageSize
             - hasMore
@@ -2480,6 +2765,7 @@ components:
       properties:
         cursor:
           type: object
+          description: Paginated cursor wrapping the list of triggers
           required:
             - pageSize
             - hasMore
@@ -2538,6 +2824,7 @@ components:
       properties:
         cursor:
           type: object
+          description: Paginated cursor wrapping the list of runs
           required:
             - pageSize
             - hasMore
@@ -2594,24 +2881,32 @@ components:
           $ref: '#/components/schemas/V2WorkflowInstanceHistoryStageList'
     V2StageSendSourceWallet:
       type: object
+      description: Take the funds from a wallet
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the wallet to take funds from
         balance:
           type: string
+          description: Name of the balance within the wallet. Defaults to the main
+            balance when omitted
     V2StageSendDestinationWallet:
+      description: Send the funds to a wallet
       $ref: '#/components/schemas/V2StageSendSourceWallet'
     V2StageSendSourceAccount:
       type: object
+      description: Take the funds from a ledger account
       required:
         - id
       properties:
         id:
           type: string
+          description: Address of the ledger account to take funds from
         ledger:
           type: string
+          description: Name of the ledger holding the account
         throughAccount:
           type: string
           description: |
@@ -2631,14 +2926,17 @@ components:
           default: false
           example: true
     V2StageSendDestinationAccount:
+      description: Send the funds to a ledger account
       $ref: '#/components/schemas/V2StageSendSourceAccount'
     V2StageSendSourcePayment:
       type: object
+      description: Take the funds from a payment
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the payment to take funds from
         ledger:
           type: string
           description: |
@@ -2663,6 +2961,7 @@ components:
           default: false
     V2StageSendDestinationPayment:
       type: object
+      description: Send the funds to a payment
       required:
         - psp
       properties:
@@ -2690,6 +2989,7 @@ components:
             If not specified, the Payments service may use a default account for the connector.
     V2StageSendSource:
       type: object
+      description: Where a send stage takes the funds from
       properties:
         wallet:
           $ref: '#/components/schemas/V2StageSendSourceWallet'
@@ -2699,6 +2999,7 @@ components:
           $ref: '#/components/schemas/V2StageSendSourcePayment'
     V2StageSendDestination:
       type: object
+      description: Where a send stage puts the funds
       properties:
         wallet:
           $ref: '#/components/schemas/V2StageSendDestinationWallet'
@@ -2717,19 +3018,27 @@ components:
           $ref: '#/components/schemas/V2StageSendSource'
         metadata:
           type: object
+          description: Metadata to attach to the resulting transaction
           additionalProperties:
             type: string
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record on the resulting transaction. See [bi-
+            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
     V2StageDelay:
       type: object
       properties:
         until:
           type: string
           format: date-time
+          description: Wait until this absolute point in time. Mutually exclusive
+            with duration
         duration:
           type: string
+          description: Wait for this long, expressed as a Go duration such as 10s.
+            Mutually exclusive with until
     V2StageWaitEvent:
       type: object
       required:
@@ -2737,17 +3046,22 @@ components:
       properties:
         event:
           type: string
+          description: Type of event the workflow waits for before continuing
     V2UpdateAccount:
       type: object
+      description: Metadata to set on a ledger account
       properties:
         id:
           type: string
+          description: Address of the ledger account to update
         metadata:
           type: object
+          description: Metadata to set on the account
           additionalProperties:
             type: string
         ledger:
           type: string
+          description: Name of the ledger holding the account
       required:
         - id
         - ledger
@@ -2758,6 +3072,7 @@ components:
         account:
           $ref: '#/components/schemas/V2UpdateAccount'
     V2Stage:
+      description: One step of a workflow, whose shape depends on the stage type
       anyOf:
         - $ref: '#/components/schemas/V2StageSend'
         - $ref: '#/components/schemas/V2StageDelay'
@@ -2768,21 +3083,26 @@ components:
       properties:
         connectorID:
           type: string
+          description: Identifier of the Stripe connector to transfer through
         amount:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to transfer, in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: Asset the transfer is denominated in
           example: USD
         destination:
           type: string
+          description: Stripe connected account receiving the transfer
           example: acct_1Gqj58KZcSIg2N2q
         waitingValidation:
           type: boolean
           example: false
           default: false
+          description: When true, the transfer is created but held until it is validated
         metadata:
           type: object
           description: >
@@ -2793,12 +3113,14 @@ components:
           example:
             order_id: '6735'
     V2ActivityStripeTransfer:
+      description: Arguments for the activity that transfers funds through Stripe
       $ref: '#/components/schemas/V2StripeTransferRequest'
     V2CreateTransferInitiationRequest:
       type: object
       properties:
         connectorID:
           type: string
+          description: Identifier of the connector to transfer through
         provider:
           type: string
           description: |
@@ -2809,9 +3131,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to transfer, in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: Asset the transfer is denominated in
           example: USD
         destination:
           type: string
@@ -2837,6 +3161,7 @@ components:
           type: boolean
           example: false
           default: false
+          description: When true, the transfer is created but held until it is validated
         metadata:
           type: object
           description: >
@@ -2845,18 +3170,24 @@ components:
           example:
             order_id: '6735'
     V2ActivityCreateTransferInitiation:
+      description: Arguments for the activity that initiates a transfer through a
+        connector
       $ref: '#/components/schemas/V2CreateTransferInitiationRequest'
     V2ActivityListWallets:
       type: object
+      description: Arguments for the activity that lists wallets
       properties:
         name:
           type: string
+          description: Restrict the listing to wallets with this name
     V2ListWalletsResponse:
       type: object
+      description: A page of wallets
       required:
         - cursor
       properties:
         cursor:
+          description: Paginated cursor wrapping the list of wallets
           allOf:
             - $ref: '#/components/schemas/V2Cursor'
             - properties:
@@ -2887,11 +3218,14 @@ components:
           description: Metadata associated with the wallet.
         name:
           type: string
+          description: Human-readable name of the wallet
         createdAt:
           type: string
           format: date-time
+          description: When the wallet was created
         ledger:
           type: string
+          description: Name of the ledger backing this wallet
     V2Cursor:
       type: object
       required:
@@ -2902,35 +3236,46 @@ components:
           format: int64
           minimum: 1
           maximum: 1000
+          description: Number of items requested per page
           example: 15
         hasMore:
           type: boolean
+          description: Whether further pages are available
           example: false
         previous:
           type: string
+          description: Cursor for the previous page, absent on the first page
           example: YXVsdCBhbmQgYSBtYXhpbXVtIG1heF9yZXN1bHRzLol=
         next:
           type: string
+          description: Cursor for the next page, absent on the last page
           example: ''
     V2ActivityGetAccount:
       type: object
+      description: Arguments for the activity that reads a ledger account
       required:
         - id
         - ledger
       properties:
         id:
           type: string
+          description: Address of the ledger account to read
         ledger:
           type: string
+          description: Name of the ledger holding the account
     V2ActivityAddAccountMetadata:
       type: object
+      description: Arguments for the activity that sets metadata on a ledger account
       properties:
         id:
           type: string
+          description: Address of the ledger account to update
         ledger:
           type: string
+          description: Name of the ledger holding the account
         metadata:
           type: object
+          description: Metadata to set on the account
           additionalProperties:
             type: string
       required:
@@ -2939,34 +3284,43 @@ components:
         - metadata
     V2ActivityCreateTransaction:
       type: object
+      description: Arguments for the activity that writes a transaction to a ledger
       properties:
         ledger:
           type: string
+          description: Name of the ledger to write the transaction to
         data:
           $ref: '#/components/schemas/V2PostTransaction'
     V2ActivityGetPayment:
       type: object
+      description: Arguments for the activity that reads a payment
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the payment to read
     V2ActivityConfirmHold:
       type: object
+      description: Arguments for the activity that confirms a wallet hold
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the hold to confirm
     V2ActivityCreditWallet:
       type: object
+      description: Arguments for the activity that credits a wallet
       properties:
         id:
           type: string
+          description: Identifier of the wallet to credit
         data:
           $ref: '#/components/schemas/V2CreditWalletRequest'
     V2CreditWalletRequest:
       type: object
+      description: A credit to apply to a wallet
       required:
         - amount
         - sources
@@ -2981,8 +3335,11 @@ components:
           description: Metadata associated with the wallet.
         reference:
           type: string
+          description: Optional caller-supplied identifier used to deduplicate the
+            credit
         sources:
           type: array
+          description: Where the funds come from
           items:
             $ref: '#/components/schemas/V2Subject'
         balance:
@@ -2991,6 +3348,9 @@ components:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record on the resulting transaction. See [bi-
+            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
       example:
         amount:
           asset: USD/2
@@ -3006,8 +3366,10 @@ components:
       properties:
         type:
           type: string
+          description: Discriminator identifying this subject as a ledger account
         identifier:
           type: string
+          description: Address of the ledger account
     V2WalletSubject:
       type: object
       required:
@@ -3016,11 +3378,17 @@ components:
       properties:
         type:
           type: string
+          description: Discriminator identifying this subject as a wallet
         identifier:
           type: string
+          description: Identifier of the wallet
         balance:
           type: string
+          description: Name of the balance within the wallet. Defaults to the main
+            balance when omitted
     V2Subject:
+      description: The counterparty of a wallet movement, either a ledger account
+        or another wallet
       discriminator:
         propertyName: type
         mapping:
@@ -3031,13 +3399,16 @@ components:
         - $ref: '#/components/schemas/V2WalletSubject'
     V2ActivityDebitWallet:
       type: object
+      description: Arguments for the activity that debits a wallet
       properties:
         id:
           type: string
+          description: Identifier of the wallet to debit
         data:
           $ref: '#/components/schemas/V2DebitWalletRequest'
     V2DebitWalletRequest:
       type: object
+      description: A debit to apply to a wallet
       required:
         - amount
         - metadata
@@ -3055,10 +3426,13 @@ components:
           description: Metadata associated with the wallet.
         description:
           type: string
+          description: Human-readable reason for the debit
         destination:
           $ref: '#/components/schemas/V2Subject'
         balances:
           type: array
+          description: Names of the balances to debit from, in order. Defaults to
+            the main balance when omitted
           items:
             type: string
             description: A targeted balance (use '*' for all)
@@ -3075,26 +3449,33 @@ components:
         pending: true
     V2ActivityGetWallet:
       type: object
+      description: Arguments for the activity that reads a wallet
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the wallet to read
     V2ActivityVoidHold:
       type: object
+      description: Arguments for the activity that releases a wallet hold
       required:
         - id
       properties:
         id:
           type: string
+          description: Identifier of the hold to release
     V2ActivityGetAccountOutput:
+      description: Result of the activity that reads a ledger account
       $ref: '#/components/schemas/V2AccountResponse'
     V2ActivityCreateTransactionOutput:
+      description: Result of the activity that writes a transaction to a ledger
       $ref: '#/components/schemas/V2CreateTransactionResponse'
     V2CreateTransactionResponse:
       properties:
         data:
           type: array
+          description: The transactions that were created
           items:
             $ref: '#/components/schemas/V2Transaction'
       type: object
@@ -3106,12 +3487,18 @@ components:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time: when the transaction is considered to have occurred.
+            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
+          description: The fund movements making up the transaction
           items:
             $ref: '#/components/schemas/V2Posting'
         reference:
           type: string
+          description: Optional caller-supplied identifier, unique within the ledger,
+            used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/V2Metadata'
@@ -3119,12 +3506,15 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Unique sequential identifier for this transaction within the
+            ledger
       required:
         - postings
         - timestamp
         - txid
         - metadata
     V2ActivityGetPaymentOutput:
+      description: Result of the activity that reads a payment
       $ref: '#/components/schemas/V2PaymentResponse'
     V2PaymentResponse:
       type: object
@@ -3135,6 +3525,7 @@ components:
           $ref: '#/components/schemas/V2Payment'
     V2Payment:
       type: object
+      description: A payment observed or initiated through a connector
       required:
         - id
         - reference
@@ -3153,19 +3544,25 @@ components:
       properties:
         id:
           type: string
+          description: Unique identifier of the payment
           example: XXX
         reference:
           type: string
+          description: Identifier the payment carries at the provider
         sourceAccountID:
           type: string
+          description: Identifier of the account the funds left
         destinationAccountID:
           type: string
+          description: Identifier of the account the funds reached
         connectorID:
           type: string
+          description: Identifier of the connector that produced the payment
         provider:
           $ref: '#/components/schemas/V2Connector'
         type:
           type: string
+          description: Direction of the payment
           enum:
             - PAY-IN
             - PAYOUT
@@ -3177,9 +3574,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount the payment was created with, before any adjustment
           example: 100
         scheme:
           type: string
+          description: Payment scheme or rail the payment travelled over
           enum:
             - visa
             - mastercard
@@ -3201,21 +3600,26 @@ components:
             - other
         asset:
           type: string
+          description: Asset the payment is denominated in
           example: USD
         createdAt:
           type: string
           format: date-time
+          description: When the payment was created
         raw:
           type: object
           nullable: true
+          description: The provider's original payload, passed through untouched
         adjustments:
           type: array
+          description: Successive changes to the payment's amount and status
           items:
             $ref: '#/components/schemas/V2PaymentAdjustment'
         metadata:
           $ref: '#/components/schemas/V2PaymentMetadata'
     V2Connector:
       type: string
+      description: The payment provider behind a connector
       enum:
         - STRIPE
         - DUMMY-PAY
@@ -3240,16 +3644,22 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount carried by this adjustment
           example: 100
         date:
           type: string
           format: date-time
+          description: When the adjustment was recorded
         raw:
           type: object
+          description: The provider's original payload for this adjustment
         absolute:
           type: boolean
+          description: Whether amount replaces the payment's amount rather than adding
+            to it
     V2PaymentStatus:
       type: string
+      description: Where a payment stands in its lifecycle
       enum:
         - PENDING
         - ACTIVE
@@ -3262,8 +3672,11 @@ components:
       properties:
         key:
           type: string
+          description: Metadata value carried by the payment
       nullable: true
+      description: Arbitrary key/value pairs attached to a payment
     V2ActivityDebitWalletOutput:
+      description: Result of the activity that debits a wallet
       $ref: '#/components/schemas/V2DebitWalletResponse'
     V2DebitWalletResponse:
       type: object
@@ -3274,6 +3687,8 @@ components:
           $ref: '#/components/schemas/V2Hold'
     V2Hold:
       type: object
+      description: Funds locked by a pending wallet debit, later either confirmed
+        or voided
       required:
         - id
         - walletID
@@ -3294,9 +3709,11 @@ components:
             type: string
         description:
           type: string
+          description: Human-readable reason the funds were held
         destination:
           $ref: '#/components/schemas/V2Subject'
     V2ActivityGetWalletOutput:
+      description: Result of the activity that reads a wallet
       $ref: '#/components/schemas/V2GetWalletResponse'
     V2GetWalletResponse:
       type: object
@@ -3307,6 +3724,7 @@ components:
           $ref: '#/components/schemas/V2WalletWithBalances'
     V2WalletWithBalances:
       type: object
+      description: A wallet together with the funds it currently holds
       required:
         - name
         - id
@@ -3326,11 +3744,14 @@ components:
             type: string
         name:
           type: string
+          description: Human-readable name of the wallet
         createdAt:
           type: string
           format: date-time
+          description: When the wallet was created
         balances:
           type: object
+          description: Aggregated funds held by the wallet, keyed by asset
           required:
             - main
           properties:
@@ -3338,6 +3759,7 @@ components:
               $ref: '#/components/schemas/V2AssetHolder'
         ledger:
           type: string
+          description: Name of the ledger backing this wallet
     V2AssetHolder:
       type: object
       required:
@@ -3345,11 +3767,13 @@ components:
       properties:
         assets:
           type: object
+          description: Amounts held, keyed by asset
           additionalProperties:
             type: integer
             format: bigint
     V2WorkflowInstanceHistoryStageInput:
       type: object
+      description: Arguments an activity was called with, keyed by activity name
       properties:
         GetAccount:
           $ref: '#/components/schemas/V2ActivityGetAccount'
@@ -3377,6 +3801,7 @@ components:
           $ref: '#/components/schemas/V2ActivityListWallets'
     V2WorkflowInstanceHistoryStageOutput:
       type: object
+      description: Result an activity returned, keyed by activity name
       properties:
         GetAccount:
           $ref: '#/components/schemas/V2ActivityGetAccountOutput'
@@ -3392,6 +3817,7 @@ components:
           $ref: '#/components/schemas/V2ListWalletsResponse'
     V2Monetary:
       type: object
+      description: An amount together with the asset it is denominated in
       required:
         - asset
         - amount
@@ -3405,18 +3831,25 @@ components:
           description: The amount of the monetary value.
     V2PostTransaction:
       type: object
+      description: A transaction to write to a ledger
       required:
         - metadata
       properties:
         timestamp:
           type: string
           format: date-time
+          description: >-
+            The transaction time to record, letting you backdate or postdate the transaction.
+            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
+          description: Fund movements to apply. Mutually exclusive with script
           items:
             $ref: '#/components/schemas/V2Posting'
         script:
           type: object
+          description: A Numscript program executed to produce the postings. Mutually
+            exclusive with postings
           properties:
             plain:
               type: string
@@ -3431,11 +3864,14 @@ components:
             - plain
         reference:
           type: string
+          description: Optional caller-supplied identifier, unique within the ledger,
+            used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/V2Metadata'
     V2Metadata:
       type: object
+      description: Arbitrary key/value pairs attached to the resource
       additionalProperties:
         type: string
       example:
@@ -3447,15 +3883,21 @@ components:
           type: integer
           format: bigint
           minimum: 0
+          description: Amount to move, as an arbitrary-precision integer expressed
+            in the asset's smallest unit
           example: 100
         asset:
           type: string
+          description: The asset being moved, optionally carrying a scale suffix such
+            as USD/2
           example: COIN
         destination:
           type: string
+          description: Address of the account credited by this posting
           example: users:002
         source:
           type: string
+          description: Address of the account debited by this posting
           example: users:001
       required:
         - amount
@@ -3478,15 +3920,19 @@ components:
           $ref: '#/components/schemas/V2Trigger'
     V2Account:
       type: object
+      description: An account in the ledger, identified by its address
       required:
         - address
         - metadata
       properties:
         address:
           type: string
+          description: The account address, a colon-separated segmented path such
+            as users:001
           example: users:001
         metadata:
           type: object
+          description: Arbitrary key/value pairs attached to the account
           properties: {}
           additionalProperties:
             type: string
@@ -3502,12 +3948,15 @@ components:
         input:
           type: integer
           format: bigint
+          description: Total amount credited for this asset
         output:
           type: integer
           format: bigint
+          description: Total amount debited for this asset
         balance:
           type: integer
           format: bigint
+          description: Net balance, equal to input minus output
       required:
         - input
         - output
@@ -3517,6 +3966,7 @@ components:
         balance: 80
     V2Volumes:
       type: object
+      description: Volumes per asset for a single account
       additionalProperties:
         $ref: '#/components/schemas/V2Volume'
       example:
@@ -3537,9 +3987,12 @@ components:
           $ref: '#/components/schemas/V2TriggerTest'
     V2TriggerTest:
       type: object
+      description: Result of evaluating a trigger against a sample event, without
+        running the workflow
       properties:
         filter:
           type: object
+          description: How the trigger's filter evaluated against the sample event
           properties:
             match:
               type: boolean
@@ -3547,6 +4000,7 @@ components:
               type: string
         variables:
           type: object
+          description: The variables the trigger would build from the sample event
           additionalProperties:
             type: object
             properties:
