@@ -814,7 +814,8 @@ components:
           description: Name of the balance within the wallet. Defaults to the main balance when omitted
     StageSendDestinationWallet:
       description: Send the funds to a wallet
-      $ref: '#/components/schemas/StageSendSourceWallet'
+      allOf:
+        - $ref: '#/components/schemas/StageSendSourceWallet'
     StageSendSourceAccount:
       type: object
       description: Take the funds from a ledger account
@@ -847,7 +848,8 @@ components:
           example: true
     StageSendDestinationAccount:
       description: Send the funds to a ledger account
-      $ref: '#/components/schemas/StageSendSourceAccount'
+      allOf:
+        - $ref: '#/components/schemas/StageSendSourceAccount'
     StageSendSourcePayment:
       type: object
       description: Take the funds from a payment
@@ -1032,7 +1034,8 @@ components:
             order_id: '6735'
     ActivityStripeTransfer:
       description: Arguments for the activity that transfers funds through Stripe
-      $ref: '#/components/schemas/StripeTransferRequest'
+      allOf:
+        - $ref: '#/components/schemas/StripeTransferRequest'
     CreateTransferInitiationRequest:
       type: object
       properties:
@@ -1089,7 +1092,8 @@ components:
             order_id: '6735'
     ActivityCreateTransferInitiation:
       description: Arguments for the activity that initiates a transfer through a connector
-      $ref: '#/components/schemas/CreateTransferInitiationRequest'
+      allOf:
+        - $ref: '#/components/schemas/CreateTransferInitiationRequest'
     ActivityListWallets:
       type: object
       description: Arguments for the activity that lists wallets
@@ -1394,10 +1398,12 @@ components:
           description: Identifier of the hold to release
     ActivityGetAccountOutput:
       description: Result of the activity that reads a ledger account
-      $ref: '#/components/schemas/AccountResponse'
+      allOf:
+        - $ref: '#/components/schemas/AccountResponse'
     ActivityCreateTransactionOutput:
       description: Result of the activity that writes a transaction to a ledger
-      $ref: '#/components/schemas/CreateTransactionResponse'
+      allOf:
+        - $ref: '#/components/schemas/CreateTransactionResponse'
     CreateTransactionResponse:
       properties:
         data:
@@ -1442,12 +1448,14 @@ components:
         - reverted
     ActivityRevertTransactionOutput:
       description: Result of the activity that reverts a ledger transaction
-      $ref: '#/components/schemas/RevertTransactionResponse'
+      allOf:
+        - $ref: '#/components/schemas/RevertTransactionResponse'
     RevertTransactionResponse:
       $ref: '#/components/schemas/CreateTransactionResponse'
     ActivityGetPaymentOutput:
       description: Result of the activity that reads a payment
-      $ref: '#/components/schemas/PaymentResponse'
+      allOf:
+        - $ref: '#/components/schemas/PaymentResponse'
     PaymentResponse:
       type: object
       required:
@@ -1608,7 +1616,8 @@ components:
       description: Arbitrary key/value pairs attached to a payment
     ActivityDebitWalletOutput:
       description: Result of the activity that debits a wallet
-      $ref: '#/components/schemas/DebitWalletResponse'
+      allOf:
+        - $ref: '#/components/schemas/DebitWalletResponse'
     DebitWalletResponse:
       type: object
       required:
@@ -1644,7 +1653,8 @@ components:
           $ref: '#/components/schemas/Subject'
     ActivityGetWalletOutput:
       description: Result of the activity that reads a wallet
-      $ref: '#/components/schemas/GetWalletResponse'
+      allOf:
+        - $ref: '#/components/schemas/GetWalletResponse'
     GetWalletResponse:
       type: object
       required:

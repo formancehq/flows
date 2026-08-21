@@ -986,7 +986,8 @@ components:
           description: Name of the balance within the wallet. Defaults to the main balance when omitted
     V2StageSendDestinationWallet:
       description: Send the funds to a wallet
-      $ref: '#/components/schemas/V2StageSendSourceWallet'
+      allOf:
+        - $ref: '#/components/schemas/V2StageSendSourceWallet'
     V2StageSendSourceAccount:
       type: object
       description: Take the funds from a ledger account
@@ -1019,7 +1020,8 @@ components:
           example: true
     V2StageSendDestinationAccount:
       description: Send the funds to a ledger account
-      $ref: '#/components/schemas/V2StageSendSourceAccount'
+      allOf:
+        - $ref: '#/components/schemas/V2StageSendSourceAccount'
     V2StageSendSourcePayment:
       type: object
       description: Take the funds from a payment
@@ -1203,7 +1205,8 @@ components:
             order_id: '6735'
     V2ActivityStripeTransfer:
       description: Arguments for the activity that transfers funds through Stripe
-      $ref: '#/components/schemas/V2StripeTransferRequest'
+      allOf:
+        - $ref: '#/components/schemas/V2StripeTransferRequest'
     V2CreateTransferInitiationRequest:
       type: object
       properties:
@@ -1260,7 +1263,8 @@ components:
             order_id: '6735'
     V2ActivityCreateTransferInitiation:
       description: Arguments for the activity that initiates a transfer through a connector
-      $ref: '#/components/schemas/V2CreateTransferInitiationRequest'
+      allOf:
+        - $ref: '#/components/schemas/V2CreateTransferInitiationRequest'
     V2ActivityListWallets:
       type: object
       description: Arguments for the activity that lists wallets
@@ -1551,10 +1555,12 @@ components:
           description: Identifier of the hold to release
     V2ActivityGetAccountOutput:
       description: Result of the activity that reads a ledger account
-      $ref: '#/components/schemas/V2AccountResponse'
+      allOf:
+        - $ref: '#/components/schemas/V2AccountResponse'
     V2ActivityCreateTransactionOutput:
       description: Result of the activity that writes a transaction to a ledger
-      $ref: '#/components/schemas/V2CreateTransactionResponse'
+      allOf:
+        - $ref: '#/components/schemas/V2CreateTransactionResponse'
     V2CreateTransactionResponse:
       properties:
         data:
@@ -1597,7 +1603,8 @@ components:
       - metadata
     V2ActivityGetPaymentOutput:
       description: Result of the activity that reads a payment
-      $ref: '#/components/schemas/V2PaymentResponse'
+      allOf:
+        - $ref: '#/components/schemas/V2PaymentResponse'
     V2PaymentResponse:
       type: object
       required:
@@ -1758,7 +1765,8 @@ components:
       description: Arbitrary key/value pairs attached to a payment
     V2ActivityDebitWalletOutput:
       description: Result of the activity that debits a wallet
-      $ref: '#/components/schemas/V2DebitWalletResponse'
+      allOf:
+        - $ref: '#/components/schemas/V2DebitWalletResponse'
     V2DebitWalletResponse:
       type: object
       required:
@@ -1794,7 +1802,8 @@ components:
           $ref: '#/components/schemas/V2Subject'
     V2ActivityGetWalletOutput:
       description: Result of the activity that reads a wallet
-      $ref: '#/components/schemas/V2GetWalletResponse'
+      allOf:
+        - $ref: '#/components/schemas/V2GetWalletResponse'
     V2GetWalletResponse:
       type: object
       required:
