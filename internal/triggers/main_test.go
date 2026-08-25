@@ -23,7 +23,11 @@ func TestMain(m *testing.M) {
 		srv = pgtesting.CreatePostgresServer(t, docker.NewPool(t, logging.Testing()))
 
 		var err error
-		devServer, err = testsuite.StartDevServer(logging.TestingContext(), testsuite.DevServerOptions{})
+		devServer, err = testsuite.StartDevServer(logging.TestingContext(), testsuite.DevServerOptions{
+			ExtraArgs: []string{
+				"--search-attribute", "Stack=Text",
+			},
+		})
 		require.NoError(t, err)
 
 		t.Cleanup(func() {

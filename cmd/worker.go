@@ -47,6 +47,7 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 			stack,
 			stack,
 			temporalTaskQueue,
+			true,
 			topics,
 		),
 	)
