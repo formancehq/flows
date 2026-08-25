@@ -340,6 +340,41 @@ func TestHandleMessage(t *testing.T) {
 		}, 10*time.Second, 200*time.Millisecond)
 	})
 
+	t.Run("duplicate delivery is skipped", func(t *testing.T) {
+		t.Parallel()
+
+		db := setupTestDB(t)
+		taskQueue := setupWorker(t, db)
+
+		w := insertNoOpWorkflow(t, db)
+		insertTrigger(t, db, w.ID, "NEW_TRANSACTION", nil, nil)
+
+		event := makeMessage("NEW_TRANSACTION", "v1", map[string]any{})
+		msg := publish.NewMessage(logging.TestingContext(), *event)
+
+		evaluator := NewDefaultExpressionEvaluator()
+		err := handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg)
+		require.NoError(t, err)
+
+		require.Eventually(t, func() bool {
+			count, err := db.NewSelect().
+				Model((*Occurrence)(nil)).
+				Count(logging.TestingContext())
+			return err == nil && count == 1
+		}, 10*time.Second, 200*time.Millisecond)
+
+		// Retrying the same Watermill message must reuse the same workflow ID.
+		err = handleMessage(devServer.Client(), db, evaluator, "test", "test", taskQueue, false, msg)
+		require.NoError(t, err)
+
+		time.Sleep(2 * time.Second)
+		count, err := db.NewSelect().
+			Model((*Occurrence)(nil)).
+			Count(logging.TestingContext())
+		require.NoError(t, err)
+		require.Equal(t, 1, count)
+	})
+
 	t.Run("duplicate SAVED_PAYMENT is skipped", func(t *testing.T) {
 		t.Parallel()
 

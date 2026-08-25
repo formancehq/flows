@@ -139,6 +139,10 @@ func handleMessage(
 	}
 
 	objectID := getWorkflowIDFromEvent(*event)
+	workflowIDKey := msg.UUID
+	if objectID != nil {
+		workflowIDKey = *objectID
+	}
 
 	for _, trigger := range matched {
 		searchAttributes := map[string]interface{}{
@@ -149,13 +153,11 @@ func handleMessage(
 		}
 
 		options := client.StartWorkflowOptions{
-			TaskQueue:        taskQueue,
-			SearchAttributes: searchAttributes,
-		}
-		if objectID != nil {
-			options.ID = taskIDPrefix + "-" + trigger.ID + "-" + *objectID
-			options.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
-			options.WorkflowExecutionErrorWhenAlreadyStarted = true
+			ID:                                       taskIDPrefix + "-" + trigger.ID + "-" + workflowIDKey,
+			TaskQueue:                                taskQueue,
+			SearchAttributes:                         searchAttributes,
+			WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+			WorkflowExecutionErrorWhenAlreadyStarted: true,
 		}
 
 		_, execErr := temporalClient.ExecuteWorkflow(ctx, options, ExecuteTrigger, ProcessEventRequest{
