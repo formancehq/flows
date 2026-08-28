@@ -1099,8 +1099,7 @@ components:
         nextExecution:
           type: string
           format: date-time
-          description: When the next retry is scheduled, absent once the activity
-            is settled
+          description: When the next retry is scheduled, absent once the activity is settled
     WorkflowInstanceHistory:
       type: object
       required:
@@ -1165,12 +1164,10 @@ components:
           description: Version of the trigger definition
         filter:
           type: string
-          description: Expression evaluated against the event. The workflow runs only
-            when it matches
+          description: Expression evaluated against the event. The workflow runs only when it matches
         vars:
           type: object
-          description: Expressions evaluated against the event to build the workflow's
-            input variables
+          description: Expressions evaluated against the event to build the workflow's input variables
           additionalProperties: true
         name:
           type: string
@@ -1202,8 +1199,7 @@ components:
           description: When the trigger fired
         workflowInstanceID:
           type: string
-          description: Identifier of the run the trigger started, absent when it started
-            none
+          description: Identifier of the run the trigger started, absent when it started none
         workflowInstance:
           $ref: '#/components/schemas/WorkflowInstance'
         triggerID:
@@ -1311,8 +1307,7 @@ components:
           description: Identifier of the wallet to take funds from
         balance:
           type: string
-          description: Name of the balance within the wallet. Defaults to the main
-            balance when omitted
+          description: Name of the balance within the wallet. Defaults to the main balance when omitted
     StageSendDestinationWallet:
       description: Send the funds to a wallet
       allOf:
@@ -1448,20 +1443,17 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record on the resulting transaction. See [bi-
-            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record on the resulting transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
     StageDelay:
       type: object
       properties:
         until:
           type: string
           format: date-time
-          description: Wait until this absolute point in time. Mutually exclusive
-            with duration
+          description: Wait until this absolute point in time. Mutually exclusive with duration
         duration:
           type: string
-          description: Wait for this long, expressed as a Go duration such as 10s.
-            Mutually exclusive with until
+          description: Wait for this long, expressed as a Go duration such as 10s. Mutually exclusive with until
     StageWaitEvent:
       type: object
       required:
@@ -1594,8 +1586,7 @@ components:
           example:
             order_id: '6735'
     ActivityCreateTransferInitiation:
-      description: Arguments for the activity that initiates a transfer through a
-        connector
+      description: Arguments for the activity that initiates a transfer through a connector
       allOf:
         - $ref: '#/components/schemas/CreateTransferInitiationRequest'
     ActivityListWallets:
@@ -1773,8 +1764,7 @@ components:
           description: Metadata associated with the wallet.
         reference:
           type: string
-          description: Optional caller-supplied identifier used to deduplicate the
-            credit
+          description: Optional caller-supplied identifier used to deduplicate the credit
         sources:
           type: array
           description: Where the funds come from
@@ -1787,8 +1777,7 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record on the resulting transaction. See [bi-
-            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record on the resulting transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
       example:
         amount:
           asset: USD/2
@@ -1822,11 +1811,9 @@ components:
           description: Identifier of the wallet
         balance:
           type: string
-          description: Name of the balance within the wallet. Defaults to the main
-            balance when omitted
+          description: Name of the balance within the wallet. Defaults to the main balance when omitted
     Subject:
-      description: The counterparty of a wallet movement, either a ledger account
-        or another wallet
+      description: The counterparty of a wallet movement, either a ledger account or another wallet
       discriminator:
         propertyName: type
         mapping:
@@ -1869,8 +1856,7 @@ components:
           $ref: '#/components/schemas/Subject'
         balances:
           type: array
-          description: Names of the balances to debit from, in order. Defaults to
-            the main balance when omitted
+          description: Names of the balances to debit from, in order. Defaults to the main balance when omitted
           items:
             type: string
             description: A targeted balance (use '*' for all)
@@ -1920,15 +1906,13 @@ components:
         - data
     Transaction:
       type: object
-      description: A transaction recorded in the ledger, carrying its postings and
-        metadata
+      description: A transaction recorded in the ledger, carrying its postings and metadata
       properties:
         timestamp:
           type: string
           format: date-time
           description: >-
-            The transaction time: when the transaction is considered to have occurred.
-            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time: when the transaction is considered to have occurred. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
           description: The fund movements making up the transaction
@@ -1936,8 +1920,7 @@ components:
             $ref: '#/components/schemas/Posting'
         reference:
           type: string
-          description: Optional caller-supplied identifier, unique within the ledger,
-            used to deduplicate transactions
+          description: Optional caller-supplied identifier, unique within the ledger, used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/Metadata'
@@ -1945,8 +1928,7 @@ components:
           type: integer
           format: bigint
           minimum: 0
-          description: Unique sequential identifier for this transaction within the
-            ledger
+          description: Unique sequential identifier for this transaction within the ledger
         reverted:
           type: boolean
           description: Indicates if the transaction has been reverted
@@ -2105,8 +2087,7 @@ components:
           description: The provider's original payload for this adjustment
         absolute:
           type: boolean
-          description: Whether amount replaces the payment's amount rather than adding
-            to it
+          description: Whether amount replaces the payment's amount rather than adding to it
     PaymentStatus:
       type: string
       description: Where a payment stands in its lifecycle
@@ -2138,8 +2119,7 @@ components:
           $ref: '#/components/schemas/Hold'
     Hold:
       type: object
-      description: Funds locked by a pending wallet debit, later either confirmed
-        or voided
+      description: Funds locked by a pending wallet debit, later either confirmed or voided
       required:
         - id
         - walletID
@@ -2295,8 +2275,7 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record, letting you backdate or postdate the transaction.
-            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record, letting you backdate or postdate the transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
           description: Fund movements to apply. Mutually exclusive with script
@@ -2304,8 +2283,7 @@ components:
             $ref: '#/components/schemas/Posting'
         script:
           type: object
-          description: A Numscript program executed to produce the postings. Mutually
-            exclusive with postings
+          description: A Numscript program executed to produce the postings. Mutually exclusive with postings
           properties:
             plain:
               type: string
@@ -2320,8 +2298,7 @@ components:
             - plain
         reference:
           type: string
-          description: Optional caller-supplied identifier, unique within the ledger,
-            used to deduplicate transactions
+          description: Optional caller-supplied identifier, unique within the ledger, used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/Metadata'
@@ -2339,13 +2316,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
-          description: Amount to move, as an arbitrary-precision integer expressed
-            in the asset's smallest unit
+          description: Amount to move, as an arbitrary-precision integer expressed in the asset's smallest unit
           example: 100
         asset:
           type: string
-          description: The asset being moved, optionally carrying a scale suffix such
-            as USD/2
+          description: The asset being moved, optionally carrying a scale suffix such as USD/2
           example: COIN
         destination:
           type: string
@@ -2383,8 +2358,7 @@ components:
       properties:
         address:
           type: string
-          description: The account address, a colon-separated segmented path such
-            as users:001
+          description: The account address, a colon-separated segmented path such as users:001
           example: users:001
         metadata:
           type: object
@@ -2599,8 +2573,7 @@ components:
         nextExecution:
           type: string
           format: date-time
-          description: When the next retry is scheduled, absent once the activity
-            is settled
+          description: When the next retry is scheduled, absent once the activity is settled
     V2WorkflowInstanceHistory:
       type: object
       required:
@@ -2687,13 +2660,11 @@ components:
           description: Version of the trigger definition
         filter:
           type: string
-          description: Expression evaluated against the event. The workflow runs only
-            when it matches
+          description: Expression evaluated against the event. The workflow runs only when it matches
         vars:
           type: object
           additionalProperties: true
-          description: Expressions evaluated against the event to build the workflow's
-            input variables
+          description: Expressions evaluated against the event to build the workflow's input variables
         name:
           type: string
           description: Human-readable name for the trigger
@@ -2724,8 +2695,7 @@ components:
           description: When the trigger fired
         workflowInstanceID:
           type: string
-          description: Identifier of the run the trigger started, absent when it started
-            none
+          description: Identifier of the run the trigger started, absent when it started none
         workflowInstance:
           $ref: '#/components/schemas/V2WorkflowInstance'
         triggerID:
@@ -2900,8 +2870,7 @@ components:
           description: Identifier of the wallet to take funds from
         balance:
           type: string
-          description: Name of the balance within the wallet. Defaults to the main
-            balance when omitted
+          description: Name of the balance within the wallet. Defaults to the main balance when omitted
     V2StageSendDestinationWallet:
       description: Send the funds to a wallet
       allOf:
@@ -3037,20 +3006,17 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record on the resulting transaction. See [bi-
-            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record on the resulting transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
     V2StageDelay:
       type: object
       properties:
         until:
           type: string
           format: date-time
-          description: Wait until this absolute point in time. Mutually exclusive
-            with duration
+          description: Wait until this absolute point in time. Mutually exclusive with duration
         duration:
           type: string
-          description: Wait for this long, expressed as a Go duration such as 10s.
-            Mutually exclusive with until
+          description: Wait for this long, expressed as a Go duration such as 10s. Mutually exclusive with until
     V2StageWaitEvent:
       type: object
       required:
@@ -3183,8 +3149,7 @@ components:
           example:
             order_id: '6735'
     V2ActivityCreateTransferInitiation:
-      description: Arguments for the activity that initiates a transfer through a
-        connector
+      description: Arguments for the activity that initiates a transfer through a connector
       allOf:
         - $ref: '#/components/schemas/V2CreateTransferInitiationRequest'
     V2ActivityListWallets:
@@ -3349,8 +3314,7 @@ components:
           description: Metadata associated with the wallet.
         reference:
           type: string
-          description: Optional caller-supplied identifier used to deduplicate the
-            credit
+          description: Optional caller-supplied identifier used to deduplicate the credit
         sources:
           type: array
           description: Where the funds come from
@@ -3363,8 +3327,7 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record on the resulting transaction. See [bi-
-            temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record on the resulting transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
       example:
         amount:
           asset: USD/2
@@ -3398,11 +3361,9 @@ components:
           description: Identifier of the wallet
         balance:
           type: string
-          description: Name of the balance within the wallet. Defaults to the main
-            balance when omitted
+          description: Name of the balance within the wallet. Defaults to the main balance when omitted
     V2Subject:
-      description: The counterparty of a wallet movement, either a ledger account
-        or another wallet
+      description: The counterparty of a wallet movement, either a ledger account or another wallet
       discriminator:
         propertyName: type
         mapping:
@@ -3445,8 +3406,7 @@ components:
           $ref: '#/components/schemas/V2Subject'
         balances:
           type: array
-          description: Names of the balances to debit from, in order. Defaults to
-            the main balance when omitted
+          description: Names of the balances to debit from, in order. Defaults to the main balance when omitted
           items:
             type: string
             description: A targeted balance (use '*' for all)
@@ -3504,8 +3464,7 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time: when the transaction is considered to have occurred.
-            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time: when the transaction is considered to have occurred. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
           description: The fund movements making up the transaction
@@ -3513,8 +3472,7 @@ components:
             $ref: '#/components/schemas/V2Posting'
         reference:
           type: string
-          description: Optional caller-supplied identifier, unique within the ledger,
-            used to deduplicate transactions
+          description: Optional caller-supplied identifier, unique within the ledger, used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/V2Metadata'
@@ -3522,8 +3480,7 @@ components:
           type: integer
           format: bigint
           minimum: 0
-          description: Unique sequential identifier for this transaction within the
-            ledger
+          description: Unique sequential identifier for this transaction within the ledger
       required:
         - postings
         - timestamp
@@ -3672,8 +3629,7 @@ components:
           description: The provider's original payload for this adjustment
         absolute:
           type: boolean
-          description: Whether amount replaces the payment's amount rather than adding
-            to it
+          description: Whether amount replaces the payment's amount rather than adding to it
     V2PaymentStatus:
       type: string
       description: Where a payment stands in its lifecycle
@@ -3705,8 +3661,7 @@ components:
           $ref: '#/components/schemas/V2Hold'
     V2Hold:
       type: object
-      description: Funds locked by a pending wallet debit, later either confirmed
-        or voided
+      description: Funds locked by a pending wallet debit, later either confirmed or voided
       required:
         - id
         - walletID
@@ -3858,8 +3813,7 @@ components:
           type: string
           format: date-time
           description: >-
-            The transaction time to record, letting you backdate or postdate the transaction.
-            See [bi- temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+            The transaction time to record, letting you backdate or postdate the transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
         postings:
           type: array
           description: Fund movements to apply. Mutually exclusive with script
@@ -3867,8 +3821,7 @@ components:
             $ref: '#/components/schemas/V2Posting'
         script:
           type: object
-          description: A Numscript program executed to produce the postings. Mutually
-            exclusive with postings
+          description: A Numscript program executed to produce the postings. Mutually exclusive with postings
           properties:
             plain:
               type: string
@@ -3883,8 +3836,7 @@ components:
             - plain
         reference:
           type: string
-          description: Optional caller-supplied identifier, unique within the ledger,
-            used to deduplicate transactions
+          description: Optional caller-supplied identifier, unique within the ledger, used to deduplicate transactions
           example: ref:001
         metadata:
           $ref: '#/components/schemas/V2Metadata'
@@ -3902,13 +3854,11 @@ components:
           type: integer
           format: bigint
           minimum: 0
-          description: Amount to move, as an arbitrary-precision integer expressed
-            in the asset's smallest unit
+          description: Amount to move, as an arbitrary-precision integer expressed in the asset's smallest unit
           example: 100
         asset:
           type: string
-          description: The asset being moved, optionally carrying a scale suffix such
-            as USD/2
+          description: The asset being moved, optionally carrying a scale suffix such as USD/2
           example: COIN
         destination:
           type: string
@@ -3946,8 +3896,7 @@ components:
       properties:
         address:
           type: string
-          description: The account address, a colon-separated segmented path such
-            as users:001
+          description: The account address, a colon-separated segmented path such as users:001
           example: users:001
         metadata:
           type: object
@@ -4006,8 +3955,7 @@ components:
           $ref: '#/components/schemas/V2TriggerTest'
     V2TriggerTest:
       type: object
-      description: Result of evaluating a trigger against a sample event, without
-        running the workflow
+      description: Result of evaluating a trigger against a sample event, without running the workflow
       properties:
         filter:
           type: object
