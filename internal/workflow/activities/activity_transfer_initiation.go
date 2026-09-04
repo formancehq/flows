@@ -112,9 +112,14 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 		}
 	}
 
-	// Reference is the idempotency key: stable across retries of this same activity invocation,
-	// so a create that conflicts means a previous attempt already reached the payments service.
-	reference := activityInfo.WorkflowExecution.ID + activityInfo.ActivityID
+	// Reference is the idempotency key: stable across retries of this same activity invocation
+	// (RunID doesn't change across activity retries within one workflow execution), so a create
+	// that conflicts means a previous attempt already reached the payments service. RunID is
+	// required, not just WorkflowID: a Temporal reset restarts the same WorkflowID under a new
+	// RunID, and WorkflowID alone would then collide with the payment initiation the pre-reset
+	// run already created, silently skipping what should be a fresh attempt. Matches the RunID +
+	// ActivityID scheme getIK already uses for the same reason (see activity.go).
+	reference := activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID
 
 	_, err = a.client.Payments.V3.InitiatePayment(ctx, operations.V3InitiatePaymentRequest{
 		V3InitiatePaymentRequest: &shared.V3InitiatePaymentRequest{
