@@ -9,6 +9,10 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
+// stripeProvider is passed to resolveConnectorIDV1 in place of the old Provider request
+// field - see the comment on StripeTransfer below.
+var stripeProvider = string(shared.ConnectorStripe)
+
 type StripeTransferRequest struct {
 	Amount      *big.Int `json:"amount,omitempty"`
 	Asset       *string  `json:"asset,omitempty"`
@@ -25,20 +29,30 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
 	activityInfo := activity.GetInfo(ctx)
-	provider := shared.ConnectorStripe
+
+	// The request used to carry Provider=STRIPE as a hint for the server to resolve the
+	// connector when ConnectorID was left unset (confirmed against the v2.1.0 payments
+	// service: cmd/connectors/internal/api/service/transfer_initiation.go resolved
+	// ConnectorID from Provider via ListConnectorsByProvider, erroring on 0 or >1 matches).
+	// The current SDK's TransferInitiationRequest dropped that field entirely, so resolve it
+	// the same way client-side instead of silently sending no connector at all.
+	connectorID, err := a.resolveConnectorIDV1(ctx, request.ConnectorID, &stripeProvider)
+	if err != nil {
+		return err
+	}
+
 	ti := shared.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
 		DestinationAccountID: *request.Destination,
 		Description:          "Stripe Transfer",
-		ConnectorID:          request.ConnectorID,
-		Provider:             &provider,
+		ConnectorID:          &connectorID,
 		Type:                 shared.TransferInitiationRequestTypeTransfer,
 		Reference:            activityInfo.WorkflowExecution.ID + activityInfo.ActivityID,
 		Validated:            validated,
 	}
 
-	_, err := a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
+	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
 	if err != nil {
 		return err
 	}

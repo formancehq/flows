@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/ThreeDotsLabs/watermill v1.5.1
 	github.com/expr-lang/expr v1.17.7
-	github.com/formancehq/formance-sdk-go/v3 v3.2.0
+	github.com/formancehq/formance-sdk-go/v3 v3.8.1
 	github.com/formancehq/go-libs/v3 v3.3.0
 	github.com/formancehq/go-libs/v5 v5.7.0
 	github.com/go-chi/chi/v5 v5.3.0
@@ -23,6 +23,7 @@ require (
 	go.temporal.io/sdk v1.41.1
 	go.uber.org/fx v1.24.0
 	go.uber.org/mock v0.6.0
+	golang.org/x/mod v0.40.0
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -77,7 +78,6 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
-	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -218,7 +218,6 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
