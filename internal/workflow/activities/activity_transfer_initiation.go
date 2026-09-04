@@ -35,6 +35,37 @@ type CreateTransferInitiationRequest struct {
 	WaitingValidation *bool             `default:"false" json:"waitingValidation"`
 }
 
+// classifyV3Error converts a v3 SDK error into a temporal.ApplicationError. Every payments v3
+// error code maps to an HTTP 4xx except INTERNAL (500 - see go-libs' api.InternalServerError vs
+// api.BadRequest/api.NotFound, which every other declared code goes through). A 4xx won't
+// succeed by retrying the exact same request, so it's marked non-retryable directly here rather
+// than relying on the shared NonRetryableErrorTypes allowlist staying in lockstep with every
+// error code payments emits.
+func classifyV3Error(err *sdkerrors.V3ErrorResponse) error {
+	if err.ErrorCode == shared.V3ErrorsEnumInternal {
+		return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode), err.Details)
+	}
+	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil, err.Details)
+}
+
+// classifyV1Error is classifyV3Error's v1 counterpart.
+//
+// KNOWN LIMITATION: as of the latest published formance-sdk-go (v3.8.1), PaymentsErrorsEnum
+// only declares INTERNAL, VALIDATION and NOT_FOUND. CONFLICT, INVALID_ID,
+// MISSING_OR_INVALID_BODY and CONNECTOR_CAPABILITY_NOT_SUPPORTED were added to payments' own
+// openapi.yaml (commit 472e0af0) but that fix hasn't reached a published SDK release yet. A
+// v1/v2 server returning one of those four codes fails PaymentsErrorsEnum.UnmarshalJSON before
+// this function is ever reached, so createTransferInitiationV1/resolveConnectorIDV1 still see a
+// plain, retryable error for those specific codes rather than the *sdkerrors.PaymentsErrorResponse
+// this function expects. Re-check this once formance-sdk-go publishes a release built from a
+// payments openapi.yaml that includes 472e0af0.
+func classifyV1Error(err *sdkerrors.PaymentsErrorResponse) error {
+	if err.ErrorCode == shared.PaymentsErrorsEnumInternal {
+		return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode))
+	}
+	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil)
+}
+
 // CreateTransferInitiation picks between the v3 payment-initiations API and the legacy v1
 // transfer-initiations API based on the target stack's payments module version (see
 // getPaymentsVersion) - v3 only exists from payments major release v3 onward.
@@ -111,7 +142,7 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 	}
 
 	if v3Err.ErrorCode != shared.V3ErrorsEnumConflict {
-		return temporal.NewApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), v3Err.Details)
+		return classifyV3Error(v3Err)
 	}
 
 	// A payment initiation with this reference already exists - most likely a previous attempt
@@ -122,16 +153,19 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 	if ferr != nil {
 		// Could not confirm the existing record - surface the original conflict rather than
 		// silently retrying it forever.
-		return temporal.NewApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), v3Err.Details)
+		return temporal.NewNonRetryableApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), nil, v3Err.Details)
 	}
 
 	switch existing.Status {
 	case shared.V3PaymentInitiationStatusEnumFailed, shared.V3PaymentInitiationStatusEnumRejected:
+		// This isn't the conflict anymore - we resolved that by fetching. This is new
+		// information: the record we found is itself terminally dead (e.g. the PSP rejected
+		// it), so label it with its actual status rather than the CONFLICT that got us here.
 		msg := fmt.Sprintf("payment initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
 		if existing.Error != nil {
 			msg = fmt.Sprintf("%s: %s", msg, *existing.Error)
 		}
-		return temporal.NewApplicationError(msg, string(shared.V3ErrorsEnumConflict))
+		return temporal.NewNonRetryableApplicationError(msg, string(existing.Status), nil)
 	default:
 		// Already created, and not in a failure state - treat this as success.
 		return nil
@@ -147,7 +181,7 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 		return *connectorID, nil
 	}
 	if provider == nil || *provider == "" {
-		return "", temporal.NewApplicationError("either connectorID or provider must be specified", "VALIDATION")
+		return "", temporal.NewNonRetryableApplicationError("either connectorID or provider must be specified", "VALIDATION", nil)
 	}
 
 	resp, err := a.client.Payments.V3.ListConnectors(ctx, operations.V3ListConnectorsRequest{
@@ -159,7 +193,7 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 	})
 	if err != nil {
 		if v3Err, ok := err.(*sdkerrors.V3ErrorResponse); ok {
-			return "", temporal.NewApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), v3Err.Details)
+			return "", classifyV3Error(v3Err)
 		}
 		return "", err
 	}
@@ -167,13 +201,13 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 	connectors := resp.V3ConnectorsCursorResponse.Cursor.Data
 	switch len(connectors) {
 	case 0:
-		return "", temporal.NewApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION")
+		return "", temporal.NewNonRetryableApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION", nil)
 	case 1:
 		return connectors[0].ID, nil
 	default:
-		return "", temporal.NewApplicationError(
+		return "", temporal.NewNonRetryableApplicationError(
 			fmt.Sprintf("%d connectors installed for provider %q, specify connectorID explicitly", len(connectors), *provider),
-			"VALIDATION",
+			"VALIDATION", nil,
 		)
 	}
 }
@@ -183,8 +217,9 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 // v1 CreateTransferInitiation call. Unlike v3, it does not self-heal on CONFLICT by fetching
 // the existing record - v1's list/query DSL differs from v3's query builder used elsewhere in
 // this file, and guessing at it risks a subtly wrong filter. It does still classify SDK errors
-// into a typed ApplicationError so the existing NonRetryableErrorTypes policy (VALIDATION,
-// CONFLICT, ...) actually engages instead of retrying a terminal error forever.
+// via classifyV1Error so a terminal error (CONFLICT included) fails the workflow immediately
+// instead of retrying forever - see classifyV1Error's docstring for a known gap in that
+// coverage.
 func (a Activities) createTransferInitiationV1(ctx context.Context, request CreateTransferInitiationRequest) error {
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
@@ -240,7 +275,7 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
 	if err != nil {
 		if v1Err, ok := err.(*sdkerrors.PaymentsErrorResponse); ok {
-			return temporal.NewApplicationError(v1Err.ErrorMessage, string(v1Err.ErrorCode))
+			return classifyV1Error(v1Err)
 		}
 		return err
 	}
@@ -255,13 +290,13 @@ func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provi
 		return *connectorID, nil
 	}
 	if provider == nil || *provider == "" {
-		return "", temporal.NewApplicationError("either connectorID or provider must be specified", "VALIDATION")
+		return "", temporal.NewNonRetryableApplicationError("either connectorID or provider must be specified", "VALIDATION", nil)
 	}
 
 	resp, err := a.client.Payments.V1.ListAllConnectors(ctx)
 	if err != nil {
 		if v1Err, ok := err.(*sdkerrors.PaymentsErrorResponse); ok {
-			return "", temporal.NewApplicationError(v1Err.ErrorMessage, string(v1Err.ErrorCode))
+			return "", classifyV1Error(v1Err)
 		}
 		return "", err
 	}
@@ -277,13 +312,13 @@ func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provi
 
 	switch len(matches) {
 	case 0:
-		return "", temporal.NewApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION")
+		return "", temporal.NewNonRetryableApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION", nil)
 	case 1:
 		return matches[0], nil
 	default:
-		return "", temporal.NewApplicationError(
+		return "", temporal.NewNonRetryableApplicationError(
 			fmt.Sprintf("%d connectors installed for provider %q, specify connectorID explicitly", len(matches), *provider),
-			"VALIDATION",
+			"VALIDATION", nil,
 		)
 	}
 }
