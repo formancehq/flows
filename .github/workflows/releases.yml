@@ -6,7 +6,7 @@ on:
 
 jobs:
   GoReleaser:
-    uses: formancehq/ci/.github/workflows/go-release.yml@main
+    uses: formancehq/ci/.github/workflows/go-release.yml@v1
     secrets:
       NUMARY_GITHUB_TOKEN: ${{ secrets.NUMARY_GITHUB_TOKEN }}
       SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
