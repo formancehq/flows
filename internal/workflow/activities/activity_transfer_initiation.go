@@ -156,11 +156,17 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 		return temporal.NewNonRetryableApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), nil, v3Err.Details)
 	}
 
+	return classifyExistingPaymentInitiation(existing)
+}
+
+// classifyExistingPaymentInitiation decides what createTransferInitiationV3 should return once a
+// CONFLICT has been resolved by fetching the record it collided with. This isn't the conflict
+// anymore - that's already resolved by the fetch. A terminal failure status here is new
+// information (e.g. the PSP rejected the payout), so it's labeled with its actual status rather
+// than the CONFLICT that got us here.
+func classifyExistingPaymentInitiation(existing *shared.V3PaymentInitiation) error {
 	switch existing.Status {
 	case shared.V3PaymentInitiationStatusEnumFailed, shared.V3PaymentInitiationStatusEnumRejected:
-		// This isn't the conflict anymore - we resolved that by fetching. This is new
-		// information: the record we found is itself terminally dead (e.g. the PSP rejected
-		// it), so label it with its actual status rather than the CONFLICT that got us here.
 		msg := fmt.Sprintf("payment initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
 		if existing.Error != nil {
 			msg = fmt.Sprintf("%s: %s", msg, *existing.Error)
