@@ -178,7 +178,7 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 		)
 		txRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  m,
@@ -398,7 +398,7 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 		)
 		txRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  txMetadata,
@@ -464,7 +464,7 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 		)
 		txRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  txMetadata,
@@ -545,7 +545,7 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 		)
 		sourceTxRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  sourceTxMetadata,
@@ -581,7 +581,7 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 		)
 		destTxRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  destTxMetadata,
@@ -630,7 +630,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		)
 		txRequest = activities.PostTransaction{
 			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  m,

@@ -2042,10 +2042,10 @@ var (
 						Data: activities.PostTransaction{
 							// Uses Numscript with overdraft on source.ID (users:123)
 							Script: &shared.V2PostTransactionScript{
-								Plain: `send [USD 1000] (
+								Plain: pointer.For(`send [USD 1000] (
   source = @users:123 allowing unbounded overdraft
   destination = @liabilities:payouts-pending
-)`,
+)`),
 							},
 						},
 					},
@@ -2142,10 +2142,10 @@ var (
 						Data: activities.PostTransaction{
 							// Uses Numscript with overdraft for the throughAccount
 							Script: &shared.V2PostTransactionScript{
-								Plain: `send [EUR 500] (
+								Plain: pointer.For(`send [EUR 500] (
   source = @assets:stripe:incoming allowing unbounded overdraft
   destination = @revenue:merchants:456
-)`,
+)`),
 							},
 							Metadata: map[string]string{
 								moveFromLedgerMetadata: internalLedger,
@@ -2191,10 +2191,10 @@ var (
 						Data: activities.PostTransaction{
 							// Uses Numscript with overdraft on source.ID (users:sender)
 							Script: &shared.V2PostTransactionScript{
-								Plain: `send [GBP 250] (
+								Plain: pointer.For(`send [GBP 250] (
   source = @users:sender allowing unbounded overdraft
   destination = @bridge:outbound
-)`,
+)`),
 							},
 							Metadata: map[string]string{
 								moveToLedgerMetadata: "ledger2",
@@ -2214,10 +2214,10 @@ var (
 						Data: activities.PostTransaction{
 							// Uses Numscript with overdraft on destThroughAccount (bridge:inbound)
 							Script: &shared.V2PostTransactionScript{
-								Plain: `send [GBP 250] (
+								Plain: pointer.For(`send [GBP 250] (
   source = @bridge:inbound allowing unbounded overdraft
   destination = @merchants:receiver
-)`,
+)`),
 							},
 							Metadata: map[string]string{
 								moveFromLedgerMetadata: "ledger1",
