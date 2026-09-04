@@ -1,8 +1,13 @@
 package activities
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	sdk "github.com/formancehq/formance-sdk-go/v3"
 	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
 	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
 	"github.com/stretchr/testify/require"
@@ -80,7 +85,6 @@ func TestClassifyExistingPaymentInitiation(t *testing.T) {
 		existingError *string
 		expectSuccess bool
 	}{
-		{name: "waiting for validation is treated as success", status: shared.V3PaymentInitiationStatusEnumWaitingForValidation, expectSuccess: true},
 		{name: "scheduled for processing is treated as success", status: shared.V3PaymentInitiationStatusEnumScheduledForProcessing, expectSuccess: true},
 		{name: "processing is treated as success", status: shared.V3PaymentInitiationStatusEnumProcessing, expectSuccess: true},
 		{name: "processed is treated as success", status: shared.V3PaymentInitiationStatusEnumProcessed, expectSuccess: true},
@@ -96,7 +100,8 @@ func TestClassifyExistingPaymentInitiation(t *testing.T) {
 				Error:  tc.existingError,
 			}
 
-			err := classifyExistingPaymentInitiation(existing)
+			var a Activities
+			err := a.classifyExistingPaymentInitiation(context.Background(), existing)
 
 			if tc.expectSuccess {
 				require.NoError(t, err)
@@ -115,4 +120,63 @@ func TestClassifyExistingPaymentInitiation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestClassifyExistingPaymentInitiationWaitingForValidation covers the self-heal path added for
+// the "CreateTransfer workflow never actually started" incident: a payment initiation stuck at
+// WAITING_FOR_VALIDATION never received any adjustment past its initial one (nothing else retries
+// it on payments' side), so classifyExistingPaymentInitiation re-triggers it via /approve rather
+// than treating it as done.
+func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
+	existing := &shared.V3PaymentInitiation{
+		ID:     "payment_initiation_id",
+		Status: shared.V3PaymentInitiationStatusEnumWaitingForValidation,
+	}
+
+	t.Run("approve succeeds", func(t *testing.T) {
+		var approvedID string
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			approvedID = r.URL.Path
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusAccepted)
+			_ = json.NewEncoder(w).Encode(shared.V3ApprovePaymentInitiationResponse{
+				Data: shared.V3ApprovePaymentInitiationResponseData{TaskID: "task_id"},
+			})
+		}))
+		defer ts.Close()
+
+		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+
+		require.Contains(t, approvedID, existing.ID)
+
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.False(t, appErr.NonRetryable())
+		require.Equal(t, string(existing.Status), appErr.Type())
+		require.Contains(t, appErr.Message(), existing.ID)
+	})
+
+	t.Run("approve races with a concurrent retry and gets already-approved", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(sdkerrors.V3ErrorResponse{
+				ErrorCode:    shared.V3ErrorsEnumValidation,
+				ErrorMessage: "cannot approve an already approved payment initiation",
+			})
+		}))
+		defer ts.Close()
+
+		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+
+		// Still retryable, and doesn't surface the benign race as a failure - the next
+		// attempt re-checks the payment initiation's status from scratch.
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.False(t, appErr.NonRetryable())
+		require.Equal(t, string(existing.Status), appErr.Type())
+		require.NotContains(t, appErr.Message(), "already approved")
+	})
 }

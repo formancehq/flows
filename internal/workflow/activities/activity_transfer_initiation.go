@@ -156,7 +156,7 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 		return temporal.NewNonRetryableApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), nil, v3Err.Details)
 	}
 
-	return classifyExistingPaymentInitiation(existing)
+	return a.classifyExistingPaymentInitiation(ctx, existing)
 }
 
 // classifyExistingPaymentInitiation decides what createTransferInitiationV3 should return once a
@@ -164,7 +164,7 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 // anymore - that's already resolved by the fetch. A terminal failure status here is new
 // information (e.g. the PSP rejected the payout), so it's labeled with its actual status rather
 // than the CONFLICT that got us here.
-func classifyExistingPaymentInitiation(existing *shared.V3PaymentInitiation) error {
+func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, existing *shared.V3PaymentInitiation) error {
 	switch existing.Status {
 	case shared.V3PaymentInitiationStatusEnumFailed, shared.V3PaymentInitiationStatusEnumRejected:
 		msg := fmt.Sprintf("payment initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
@@ -172,6 +172,33 @@ func classifyExistingPaymentInitiation(existing *shared.V3PaymentInitiation) err
 			msg = fmt.Sprintf("%s: %s", msg, *existing.Error)
 		}
 		return temporal.NewNonRetryableApplicationError(msg, string(existing.Status), nil)
+	case shared.V3PaymentInitiationStatusEnumWaitingForValidation:
+		// Still at its initial status: the CreateTransfer workflow this payment initiation
+		// needs was never confirmed to have started (e.g. a previous attempt's ExecuteWorkflow
+		// call itself timed out before the workflow was registered with Temporal - see the
+		// incident this was built for). Nothing on the payments side retries this on its own,
+		// so re-trigger it via /approve. That's safe to call repeatedly: engine.CreateTransfer
+		// always targets the same Temporal workflow ID with WorkflowIDReusePolicy=REJECT_DUPLICATE,
+		// so if the workflow actually did start previously, this just attaches to it instead of
+		// duplicating the transfer. Return retryable regardless of the approve call's own outcome
+		// so the next attempt re-checks the payment initiation's status from scratch.
+		_, err := a.client.Payments.V3.ApprovePaymentInitiation(ctx, operations.V3ApprovePaymentInitiationRequest{
+			PaymentInitiationID: existing.ID,
+		})
+		if err != nil {
+			if v3Err, ok := err.(*sdkerrors.V3ErrorResponse); !ok || v3Err.ErrorCode != shared.V3ErrorsEnumValidation {
+				// Anything other than "already approved" (a benign race with a concurrent
+				// retry) is worth surfacing in the error message for the next attempt.
+				return temporal.NewApplicationError(
+					fmt.Sprintf("payment initiation %s still waiting for validation, re-approving failed: %v", existing.ID, err),
+					string(existing.Status), err,
+				)
+			}
+		}
+		return temporal.NewApplicationError(
+			fmt.Sprintf("payment initiation %s still waiting for validation, re-triggered approval", existing.ID),
+			string(existing.Status), nil,
+		)
 	default:
 		// Already created, and not in a failure state - treat this as success.
 		return nil
