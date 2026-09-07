@@ -320,7 +320,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.PaymentInitiationRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
@@ -331,7 +331,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 	}
 
 	// New behavior: Generic transfer initiation for all supported PSPs
-	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+	return activities.CreateTransferInitiation(internal.PaymentInitiationRetryContext(ctx), activities.CreateTransferInitiationRequest{
 		Amount:            amount.Amount,
 		Asset:             &amount.Asset,
 		Provider:          &destination.PSP,
@@ -660,7 +660,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.PaymentInitiationRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
@@ -671,7 +671,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 	}
 
 	// New behavior: Generic transfer initiation for all supported PSPs
-	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+	return activities.CreateTransferInitiation(internal.PaymentInitiationRetryContext(ctx), activities.CreateTransferInitiationRequest{
 		Amount:            amount.Amount,
 		Asset:             &amount.Asset,
 		Provider:          &destination.PSP,
