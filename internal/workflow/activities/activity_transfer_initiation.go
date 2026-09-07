@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/sdkerrors"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/shared"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"

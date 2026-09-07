@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -18,7 +18,7 @@ func (a Activities) ConfirmHold(ctx context.Context, request ConfirmHoldRequest)
 	response, err := a.client.Wallets.V1.ConfirmHold(
 		ctx,
 		operations.ConfirmHoldRequest{
-			ConfirmHoldRequest: &shared.ConfirmHoldRequest{},
+			ConfirmHoldRequest: &wallets.ConfirmHoldRequest{},
 			HoldID:             request.ID,
 			IdempotencyKey:     getIK(ctx),
 		},

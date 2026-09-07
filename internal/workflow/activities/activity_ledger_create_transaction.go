@@ -4,18 +4,17 @@ import (
 	"context"
 	stdtime "time"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
 	"github.com/formancehq/go-libs/v3/time"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/ledger"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
 
 // CreateTransactionResponse - OK
 type CreateTransactionResponse struct {
-	Data []shared.Transaction `json:"data"`
+	Data []ledger.Transaction `json:"data"`
 }
 
 type CreateTransactionRequest struct {
@@ -25,18 +24,18 @@ type CreateTransactionRequest struct {
 
 type PostTransaction struct {
 	Metadata  map[string]string               `json:"metadata,omitempty"`
-	Postings  []shared.V2Posting              `json:"postings,omitempty"`
+	Postings  []ledger.V2Posting              `json:"postings,omitempty"`
 	Reference *string                         `json:"reference,omitempty"`
-	Script    *shared.V2PostTransactionScript `json:"script,omitempty"`
+	Script    *ledger.V2PostTransactionScript `json:"script,omitempty"`
 	Timestamp *time.Time                      `json:"timestamp,omitempty"`
 }
 
-func (a Activities) CreateTransaction(ctx context.Context, request CreateTransactionRequest) (*shared.V2CreateTransactionResponse, error) {
+func (a Activities) CreateTransaction(ctx context.Context, request CreateTransactionRequest) (*ledger.V2CreateTransactionResponse, error) {
 
 	response, err := a.client.Ledger.V2.CreateTransaction(
 		ctx,
 		operations.V2CreateTransactionRequest{
-			V2PostTransaction: shared.V2PostTransaction{
+			V2PostTransaction: ledger.V2PostTransaction{
 				Metadata:  request.Data.Metadata,
 				Postings:  request.Data.Postings,
 				Reference: request.Data.Reference,
@@ -54,7 +53,7 @@ func (a Activities) CreateTransaction(ctx context.Context, request CreateTransac
 	)
 	if err != nil {
 		switch err := err.(type) {
-		case *sdkerrors.V2ErrorResponse:
+		case *ledger.V2ErrorResponseError:
 			return nil, temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode), err.Details)
 		default:
 			return nil, err
@@ -66,10 +65,10 @@ func (a Activities) CreateTransaction(ctx context.Context, request CreateTransac
 
 var CreateTransactionActivity = Activities{}.CreateTransaction
 
-func CreateTransaction(ctx workflow.Context, ledger string, request PostTransaction) (*shared.V2Transaction, error) {
-	tx := &shared.V2CreateTransactionResponse{}
+func CreateTransaction(ctx workflow.Context, ledgerName string, request PostTransaction) (*ledger.V2Transaction, error) {
+	tx := &ledger.V2CreateTransactionResponse{}
 	if err := executeActivity(ctx, CreateTransactionActivity, tx, CreateTransactionRequest{
-		Ledger: ledger,
+		Ledger: ledgerName,
 		Data:   request,
 	}); err != nil {
 		return nil, err

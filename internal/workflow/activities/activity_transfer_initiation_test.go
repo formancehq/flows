@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	sdk "github.com/formancehq/formance-sdk-go/v3"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	sdk "github.com/formancehq/formance-sdk-go/v5"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/sdkerrors"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/shared"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/temporal"
 )

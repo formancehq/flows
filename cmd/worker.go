@@ -3,7 +3,7 @@ package cmd
 import (
 	"net/http"
 
-	sdk "github.com/formancehq/formance-sdk-go/v3"
+	sdk "github.com/formancehq/formance-sdk-go/v5"
 	"github.com/formancehq/go-libs/v3/aws/iam"
 	"github.com/formancehq/go-libs/v3/bun/bunconnect"
 	"github.com/formancehq/go-libs/v3/licence"

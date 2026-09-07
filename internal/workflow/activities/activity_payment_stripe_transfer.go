@@ -4,14 +4,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/workflow"
 )
 
 // stripeProvider is passed to resolveConnectorIDV1 in place of the old Provider request
 // field - see the comment on StripeTransfer below.
-var stripeProvider = string(shared.ConnectorStripe)
+var stripeProvider = string(payments.ConnectorStripe)
 
 type StripeTransferRequest struct {
 	Amount      *big.Int `json:"amount,omitempty"`
@@ -41,13 +41,13 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 		return err
 	}
 
-	ti := shared.TransferInitiationRequest{
+	ti := payments.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
 		DestinationAccountID: *request.Destination,
 		Description:          "Stripe Transfer",
 		ConnectorID:          &connectorID,
-		Type:                 shared.TransferInitiationRequestTypeTransfer,
+		Type:                 payments.TransferInitiationRequestTypeTransfer,
 		Reference:            activityInfo.WorkflowExecution.ID + activityInfo.ActivityID,
 		Validated:            validated,
 	}
