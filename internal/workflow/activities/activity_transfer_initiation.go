@@ -157,7 +157,24 @@ func (a Activities) CreateTransferInitiation(ctx context.Context, request Create
 		ti.SourceAccountID = *request.Source
 	}
 
-	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
+	return a.createTransferInitiationWithSelfHeal(ctx, ti, !validated)
+}
+
+// createTransferInitiationWithSelfHeal calls payments' v1 CreateTransferInitiation and, on a
+// CONFLICT response, self-heals by fetching the record it collided with instead of failing the
+// activity outright. Shared by CreateTransferInitiation and StripeTransfer so this recovery
+// decision - whether a flaky-but-actually-recorded payout becomes a workflow failure - lives in
+// exactly one place instead of two copies that can silently drift.
+//
+// A CONFLICT here most likely means a previous attempt already reached the payments service and
+// was recorded, but its response never made it back here (e.g. this activity's own
+// StartToCloseTimeout fired first). Retrying the create would only hit the same conflict again,
+// so fetch the existing record instead and treat it as success - mirrors the v3 path's self-heal
+// (removed in this session's SDK migration but reinstated here after load testing showed a bare
+// CONFLICT-is-non-retryable classification turns a transient response-delay into a permanent
+// workflow failure).
+func (a Activities) createTransferInitiationWithSelfHeal(ctx context.Context, ti payments.TransferInitiationRequest, waitingValidationRequested bool) error {
+	_, err := a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
 	if err == nil {
 		return nil
 	}
@@ -171,21 +188,14 @@ func (a Activities) CreateTransferInitiation(ctx context.Context, request Create
 		return classifyPaymentError(pErr)
 	}
 
-	// A transfer initiation with this reference already exists - most likely a previous attempt
-	// reached the payments service and was recorded, but its response never made it back here
-	// (e.g. flows' own activity StartToCloseTimeout fired first). Retrying the create would only
-	// hit the same conflict again, so fetch the existing record instead and treat it as success -
-	// mirrors the v3 path's self-heal (removed in this session's SDK migration but reinstated here
-	// after load testing showed a bare CONFLICT-is-non-retryable classification turns a
-	// transient response-delay into a permanent workflow failure).
-	existing, ferr := a.getTransferInitiationByReference(ctx, reference)
+	existing, ferr := a.getTransferInitiationByReference(ctx, ti.Reference)
 	if ferr != nil {
 		// Could not confirm the existing record - surface the original conflict rather than
 		// silently retrying it forever.
 		return temporal.NewNonRetryableApplicationError(pErr.ErrorMessage, string(pErr.ErrorCode), nil)
 	}
 
-	return classifyExistingTransferInitiation(ctx, a, existing, !validated)
+	return classifyExistingTransferInitiation(ctx, a, existing, waitingValidationRequested)
 }
 
 // getTransferInitiationByReference looks up the single transfer initiation matching reference,

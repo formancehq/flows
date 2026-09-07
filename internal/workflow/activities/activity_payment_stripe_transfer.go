@@ -6,7 +6,6 @@ import (
 
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
-	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -59,29 +58,7 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 		Validated:            validated,
 	}
 
-	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
-	if err == nil {
-		return nil
-	}
-
-	pErr, ok := err.(*payments.PaymentsErrorResponse)
-	if !ok {
-		return err
-	}
-
-	if pErr.ErrorCode != payments.PaymentsErrorsEnumConflict {
-		return classifyPaymentError(pErr)
-	}
-
-	// See CreateTransferInitiation's identical self-heal comment: a CONFLICT here most likely
-	// means a previous attempt already reached payments and was recorded, but its response never
-	// made it back before this activity's StartToCloseTimeout fired.
-	existing, ferr := a.getTransferInitiationByReference(ctx, reference)
-	if ferr != nil {
-		return temporal.NewNonRetryableApplicationError(pErr.ErrorMessage, string(pErr.ErrorCode), nil)
-	}
-
-	return classifyExistingTransferInitiation(ctx, a, existing, !validated)
+	return a.createTransferInitiationWithSelfHeal(ctx, ti, !validated)
 }
 
 var StripeTransferActivity = Activities{}.StripeTransfer
