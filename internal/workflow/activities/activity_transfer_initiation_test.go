@@ -1,6 +1,7 @@
 package activities
 
 import (
+	"context"
 	"testing"
 
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
@@ -156,4 +157,42 @@ func TestPaymentsErrorsEnumUnmarshalsConflict(t *testing.T) {
 	var e payments.PaymentsErrorsEnum
 	require.NoError(t, e.UnmarshalJSON([]byte(`"CONFLICT"`)))
 	require.Equal(t, payments.PaymentsErrorsEnumConflict, e)
+}
+
+// TestClassifyExistingTransferInitiation covers the self-heal branches that don't require a live
+// payments client (the WAITING_FOR_VALIDATION "re-trigger validation" branch does call the client
+// and isn't covered here). This is what CreateTransferInitiation/StripeTransfer fall back to after
+// a CONFLICT resolves to an existing record - load testing showed that without it, a response
+// merely arriving late (past the activity's StartToCloseTimeout) turns into a permanent workflow
+// failure on retry, even though the transfer was already recorded successfully.
+func TestClassifyExistingTransferInitiation(t *testing.T) {
+	t.Run("failed is non-retryable", func(t *testing.T) {
+		errMsg := "insufficient funds"
+		existing := &payments.TransferInitiation{ID: "ti_1", Status: payments.TransferInitiationStatusFailed, Error: &errMsg}
+		err := classifyExistingTransferInitiation(context.Background(), Activities{}, existing, false)
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+		require.Equal(t, string(payments.TransferInitiationStatusFailed), appErr.Type())
+	})
+
+	t.Run("rejected is non-retryable", func(t *testing.T) {
+		existing := &payments.TransferInitiation{ID: "ti_2", Status: payments.TransferInitiationStatusRejected}
+		err := classifyExistingTransferInitiation(context.Background(), Activities{}, existing, false)
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+	})
+
+	t.Run("waiting for validation, caller asked for it, is success", func(t *testing.T) {
+		existing := &payments.TransferInitiation{ID: "ti_3", Status: payments.TransferInitiationStatusWaitingForValidation}
+		err := classifyExistingTransferInitiation(context.Background(), Activities{}, existing, true)
+		require.NoError(t, err)
+	})
+
+	t.Run("processing (already created, no failure) is success", func(t *testing.T) {
+		existing := &payments.TransferInitiation{ID: "ti_4", Status: payments.TransferInitiationStatusProcessing}
+		err := classifyExistingTransferInitiation(context.Background(), Activities{}, existing, false)
+		require.NoError(t, err)
+	})
 }

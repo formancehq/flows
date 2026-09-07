@@ -2,10 +2,12 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
 
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
@@ -107,10 +109,7 @@ func resolveProviderMatch(matches []string, provider string) (string, error) {
 // CreateTransferInitiation always targets the legacy v1 transfer-initiations API. This used to
 // pick between a v1 and a v3 (payment-initiations) path based on the target stack's payments
 // module version, but the v3 path was dropped after it was found to silently swallow failures
-// instead of reporting them. It does not self-heal on CONFLICT by fetching the existing record -
-// v1's list/query DSL differs from v3's query builder that self-heal was built against, and
-// guessing at it risks a subtly wrong filter - but CONFLICT and every other payments error code
-// is properly decodable and classified now (see classifyPaymentError).
+// instead of reporting them.
 func (a Activities) CreateTransferInitiation(ctx context.Context, request CreateTransferInitiationRequest) error {
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
@@ -134,6 +133,15 @@ func (a Activities) CreateTransferInitiation(ctx context.Context, request Create
 
 	description := defaultDescription(request.Description, request.Provider, transferType)
 
+	// reference is the idempotency key: stable across retries of this same activity invocation
+	// (RunID doesn't change across activity retries within one workflow execution), so a create
+	// that conflicts means a previous attempt already reached the payments service. RunID is
+	// required, not just WorkflowID: a Temporal reset restarts the same WorkflowID under a new
+	// RunID, and WorkflowID alone would then collide with the payment initiation the pre-reset
+	// run already created, silently skipping what should be a fresh attempt. Matches the RunID +
+	// ActivityID scheme getIK already uses for the same reason (see activity.go).
+	reference := activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID
+
 	ti := payments.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
@@ -141,31 +149,129 @@ func (a Activities) CreateTransferInitiation(ctx context.Context, request Create
 		Description:          description,
 		ConnectorID:          &connectorID,
 		Type:                 transferType,
-		// Reference is the idempotency key: stable across retries of this same activity
-		// invocation (RunID doesn't change across activity retries within one workflow
-		// execution), so a create that conflicts means a previous attempt already reached the
-		// payments service. RunID is required, not just WorkflowID: a Temporal reset restarts
-		// the same WorkflowID under a new RunID, and WorkflowID alone would then collide with
-		// the payment initiation the pre-reset run already created, silently skipping what
-		// should be a fresh attempt. Matches the RunID + ActivityID scheme getIK already uses
-		// for the same reason (see activity.go).
-		Reference: activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID,
-		Validated: validated,
-		Metadata:  request.Metadata,
+		Reference:            reference,
+		Validated:            validated,
+		Metadata:             request.Metadata,
 	}
 	if request.Source != nil {
 		ti.SourceAccountID = *request.Source
 	}
 
 	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
-	if err != nil {
-		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
-			return classifyPaymentError(pErr)
-		}
+	if err == nil {
+		return nil
+	}
+
+	pErr, ok := err.(*payments.PaymentsErrorResponse)
+	if !ok {
 		return err
 	}
 
-	return nil
+	if pErr.ErrorCode != payments.PaymentsErrorsEnumConflict {
+		return classifyPaymentError(pErr)
+	}
+
+	// A transfer initiation with this reference already exists - most likely a previous attempt
+	// reached the payments service and was recorded, but its response never made it back here
+	// (e.g. flows' own activity StartToCloseTimeout fired first). Retrying the create would only
+	// hit the same conflict again, so fetch the existing record instead and treat it as success -
+	// mirrors the v3 path's self-heal (removed in this session's SDK migration but reinstated here
+	// after load testing showed a bare CONFLICT-is-non-retryable classification turns a
+	// transient response-delay into a permanent workflow failure).
+	existing, ferr := a.getTransferInitiationByReference(ctx, reference)
+	if ferr != nil {
+		// Could not confirm the existing record - surface the original conflict rather than
+		// silently retrying it forever.
+		return temporal.NewNonRetryableApplicationError(pErr.ErrorMessage, string(pErr.ErrorCode), nil)
+	}
+
+	return classifyExistingTransferInitiation(ctx, a, existing, !validated)
+}
+
+// getTransferInitiationByReference looks up the single transfer initiation matching reference,
+// using the same "$match" query-builder DSL v1's list endpoint accepts (verified live against
+// /api/payments/transfer-initiations?query=...; distinct from v3's map-typed Query field, v1's is
+// a JSON-encoded string).
+func (a Activities) getTransferInitiationByReference(ctx context.Context, reference string) (*payments.TransferInitiation, error) {
+	queryJSON, err := json.Marshal(map[string]any{
+		"$match": map[string]any{"reference": reference},
+	})
+	if err != nil {
+		return nil, err
+	}
+	query := string(queryJSON)
+
+	resp, err := a.client.Payments.V1.ListTransferInitiations(ctx, operations.ListTransferInitiationsRequest{
+		Query: &query,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	data := resp.TransferInitiationsCursor.Cursor.Data
+	if len(data) != 1 {
+		return nil, fmt.Errorf("expected exactly one transfer initiation for reference %q, found %d", reference, len(data))
+	}
+	return &data[0], nil
+}
+
+// classifyExistingTransferInitiation decides what CreateTransferInitiation should return once a
+// CONFLICT has been resolved by fetching the record it collided with. This isn't the conflict
+// anymore - that's already resolved by the fetch. A terminal failure status here is new
+// information (e.g. the PSP rejected the payout), so it's labeled with its actual status rather
+// than the CONFLICT that got us here.
+//
+// waitingValidationRequested is the original request's own intent (request.WaitingValidation):
+// when true, the caller deliberately asked for the payment initiation to stop at
+// WAITING_FOR_VALIDATION pending a separate, explicit approval - not a symptom of a stuck attempt.
+// Re-triggering validation in that case would send the transfer against the caller's wishes.
+func classifyExistingTransferInitiation(ctx context.Context, a Activities, existing *payments.TransferInitiation, waitingValidationRequested bool) error {
+	switch existing.Status {
+	case payments.TransferInitiationStatusFailed, payments.TransferInitiationStatusRejected:
+		msg := fmt.Sprintf("transfer initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
+		if existing.Error != nil && *existing.Error != "" {
+			msg = fmt.Sprintf("%s: %s", msg, *existing.Error)
+		}
+		return temporal.NewNonRetryableApplicationError(msg, string(existing.Status), nil)
+	case payments.TransferInitiationStatusWaitingForValidation:
+		if waitingValidationRequested {
+			// This is the state the caller asked for, not a stuck self-heal case - nothing to do.
+			return nil
+		}
+		// Still at its initial status: nothing on the payments side retries this on its own, so
+		// re-trigger validation. Safe to call repeatedly: a benign race with a concurrent retry
+		// that already validated it is tolerated below. Return retryable regardless of the
+		// update call's own outcome so the next attempt re-fetches and re-checks the now-current
+		// status.
+		_, err := a.client.Payments.V1.UpdateTransferInitiationStatus(ctx, operations.UpdateTransferInitiationStatusRequest{
+			TransferID: existing.ID,
+			UpdateTransferInitiationStatusRequest: payments.UpdateTransferInitiationStatusRequest{
+				Status: payments.StatusValidated,
+			},
+		})
+		if err != nil {
+			pErr, ok := err.(*payments.PaymentsErrorResponse)
+			switch {
+			case !ok:
+				// Not a decoded API error (e.g. a transport failure) - transient, stay retryable.
+			case pErr.ErrorCode == payments.PaymentsErrorsEnumValidation && strings.Contains(strings.ToLower(pErr.ErrorMessage), "already"):
+				// Benign race with a concurrent retry - something else already moved this past
+				// WAITING_FOR_VALIDATION. Fall through to retryable so the next attempt re-fetches
+				// and re-checks the now-current status.
+			default:
+				// A genuine validation failure - classify like any other payments API error
+				// rather than assuming it's safe to retry forever.
+				return classifyPaymentError(pErr)
+			}
+		}
+		return temporal.NewApplicationError(
+			fmt.Sprintf("transfer initiation %s still waiting for validation, re-triggered validation", existing.ID),
+			string(existing.Status),
+		)
+	default:
+		// Already created, and not in a failure state - treat this as success.
+		return nil
+	}
 }
 
 // resolveConnectorID returns connectorID unchanged when set, otherwise resolves it from provider.

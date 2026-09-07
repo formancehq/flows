@@ -6,6 +6,7 @@ import (
 
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -41,6 +42,12 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 		return err
 	}
 
+	// RunID, not WorkflowID, is required: a Temporal reset restarts the same WorkflowID under a
+	// new RunID, and WorkflowID alone would then collide with the payment initiation the
+	// pre-reset run already created (see CreateTransferInitiation's reference comment, and getIK
+	// in activity.go for the same scheme).
+	reference := activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID
+
 	ti := payments.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
@@ -48,23 +55,33 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 		Description:          "Stripe Transfer",
 		ConnectorID:          &connectorID,
 		Type:                 payments.TransferInitiationRequestTypeTransfer,
-		// RunID, not WorkflowID, is required: a Temporal reset restarts the same WorkflowID
-		// under a new RunID, and WorkflowID alone would then collide with the payment
-		// initiation the pre-reset run already created (see CreateTransferInitiation's
-		// reference comment, and getIK in activity.go for the same scheme).
-		Reference: activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID,
-		Validated: validated,
+		Reference:            reference,
+		Validated:            validated,
 	}
 
 	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
-	if err != nil {
-		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
-			return classifyPaymentError(pErr)
-		}
+	if err == nil {
+		return nil
+	}
+
+	pErr, ok := err.(*payments.PaymentsErrorResponse)
+	if !ok {
 		return err
 	}
 
-	return nil
+	if pErr.ErrorCode != payments.PaymentsErrorsEnumConflict {
+		return classifyPaymentError(pErr)
+	}
+
+	// See CreateTransferInitiation's identical self-heal comment: a CONFLICT here most likely
+	// means a previous attempt already reached payments and was recorded, but its response never
+	// made it back before this activity's StartToCloseTimeout fired.
+	existing, ferr := a.getTransferInitiationByReference(ctx, reference)
+	if ferr != nil {
+		return temporal.NewNonRetryableApplicationError(pErr.ErrorMessage, string(pErr.ErrorCode), nil)
+	}
+
+	return classifyExistingTransferInitiation(ctx, a, existing, !validated)
 }
 
 var StripeTransferActivity = Activities{}.StripeTransfer

@@ -90,9 +90,18 @@ func (a Activities) UpdateInstance(ctx context.Context, instance *Instance) erro
 
 func (a Activities) InsertNewStage(ctx context.Context, instance Instance, ind int) (*Stage, error) {
 	stage := NewStage(instance.ID, activity.GetInfo(ctx).WorkflowExecution.RunID, ind)
+	// when a workflow times out this might already be present on retry
 	if _, err := a.db.NewInsert().
 		Model(&stage).
+		On("CONFLICT (stage, instance_id, temporal_run_id) DO NOTHING").
 		Exec(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := a.db.NewSelect().
+		Model(&stage).
+		WherePK().
+		Scan(ctx); err != nil {
 		return nil, err
 	}
 
