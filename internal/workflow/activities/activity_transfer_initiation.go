@@ -209,7 +209,7 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 		return temporal.NewNonRetryableApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), nil, v3Err.Details)
 	}
 
-	return a.classifyExistingPaymentInitiation(ctx, existing)
+	return a.classifyExistingPaymentInitiation(ctx, existing, !validated)
 }
 
 // classifyExistingPaymentInitiation decides what createTransferInitiationV3 should return once a
@@ -217,7 +217,13 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 // anymore - that's already resolved by the fetch. A terminal failure status here is new
 // information (e.g. the PSP rejected the payout), so it's labeled with its actual status rather
 // than the CONFLICT that got us here.
-func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, existing *shared.V3PaymentInitiation) error {
+//
+// waitingValidationRequested is the original request's own intent (request.WaitingValidation):
+// when true, the caller deliberately asked for the payment initiation to stop at
+// WAITING_FOR_VALIDATION pending a separate, explicit approval - not a symptom of the
+// CreateTransfer workflow failing to start. Re-triggering /approve in that case would send the
+// payment against the caller's wishes.
+func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, existing *shared.V3PaymentInitiation, waitingValidationRequested bool) error {
 	switch existing.Status {
 	case shared.V3PaymentInitiationStatusEnumFailed, shared.V3PaymentInitiationStatusEnumRejected:
 		msg := fmt.Sprintf("payment initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
@@ -226,6 +232,10 @@ func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, exist
 		}
 		return temporal.NewNonRetryableApplicationError(msg, string(existing.Status), nil)
 	case shared.V3PaymentInitiationStatusEnumWaitingForValidation:
+		if waitingValidationRequested {
+			// This is the state the caller asked for, not a stuck self-heal case - nothing to do.
+			return nil
+		}
 		// Still at its initial status: the CreateTransfer workflow this payment initiation
 		// needs was never confirmed to have started (e.g. a previous attempt's ExecuteWorkflow
 		// call itself timed out before the workflow was registered with Temporal - see the

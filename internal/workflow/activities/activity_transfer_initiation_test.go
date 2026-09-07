@@ -206,7 +206,7 @@ func TestClassifyExistingPaymentInitiation(t *testing.T) {
 			}
 
 			var a Activities
-			err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+			err := a.classifyExistingPaymentInitiation(context.Background(), existing, false)
 
 			if tc.expectSuccess {
 				require.NoError(t, err)
@@ -251,7 +251,7 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		defer ts.Close()
 
 		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
-		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing, false)
 
 		require.Contains(t, approvedID, existing.ID)
 
@@ -274,7 +274,7 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		defer ts.Close()
 
 		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
-		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing, false)
 
 		// Still retryable, and doesn't surface the benign race as a failure - the next
 		// attempt re-checks the payment initiation's status from scratch.
@@ -297,7 +297,7 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		defer ts.Close()
 
 		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
-		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing, false)
 
 		// Not the already-approved race - a real validation failure, so this must be
 		// non-retryable rather than silently assumed benign.
@@ -320,7 +320,7 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		defer ts.Close()
 
 		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
-		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing, false)
 
 		// Must not be blindly treated as a transient/retryable failure - classified via
 		// classifyV3Error like any other typed v3 API error.
@@ -328,5 +328,20 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		require.ErrorAs(t, err, &appErr)
 		require.True(t, appErr.NonRetryable())
 		require.Equal(t, string(shared.V3ErrorsEnumNotFound), appErr.Type())
+	})
+
+	t.Run("waiting for validation was requested by the caller - not a self-heal case", func(t *testing.T) {
+		approveCalled := false
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			approveCalled = true
+			w.WriteHeader(http.StatusAccepted)
+		}))
+		defer ts.Close()
+
+		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing, true)
+
+		require.NoError(t, err)
+		require.False(t, approveCalled, "should not re-trigger approval when the caller asked to wait for validation")
 	})
 }
