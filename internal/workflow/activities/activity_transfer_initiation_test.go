@@ -14,6 +14,111 @@ import (
 	"go.temporal.io/sdk/temporal"
 )
 
+func TestParseTransferType(t *testing.T) {
+	testCases := []struct {
+		name        string
+		requestType string
+		want        shared.V3PaymentInitiationTypeEnum
+		wantErr     bool
+	}{
+		{name: "empty defaults to transfer", requestType: "", want: shared.V3PaymentInitiationTypeEnumTransfer},
+		{name: "transfer", requestType: "TRANSFER", want: shared.V3PaymentInitiationTypeEnumTransfer},
+		{name: "payout", requestType: "PAYOUT", want: shared.V3PaymentInitiationTypeEnumPayout},
+		{name: "lowercase is case-insensitive", requestType: "payout", want: shared.V3PaymentInitiationTypeEnumPayout},
+		{name: "invalid", requestType: "REFUND", wantErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parseTransferType(tc.requestType, shared.V3PaymentInitiationTypeEnumTransfer, shared.V3PaymentInitiationTypeEnumPayout)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestDefaultDescription(t *testing.T) {
+	provider := "stripe"
+
+	testCases := []struct {
+		name        string
+		description string
+		provider    *string
+		want        string
+	}{
+		{name: "explicit description is kept", description: "invoice #123", provider: &provider, want: "invoice #123"},
+		{name: "falls back to provider and type", description: "", provider: &provider, want: "stripe PAYOUT"},
+		{name: "falls back without provider", description: "", provider: nil, want: "Transfer Initiation (PAYOUT)"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := defaultDescription(tc.description, tc.provider, shared.V3PaymentInitiationTypeEnumPayout)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestConnectorIDOrProviderRequired(t *testing.T) {
+	connectorID := "connector_id"
+	provider := "stripe"
+	empty := ""
+
+	t.Run("connectorID set wins", func(t *testing.T) {
+		id, resolved, err := connectorIDOrProviderRequired(&connectorID, nil)
+		require.NoError(t, err)
+		require.True(t, resolved)
+		require.Equal(t, connectorID, id)
+	})
+
+	t.Run("no connectorID, no provider is non-retryable", func(t *testing.T) {
+		_, resolved, err := connectorIDOrProviderRequired(nil, nil)
+		require.False(t, resolved)
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+	})
+
+	t.Run("empty connectorID and empty provider is non-retryable", func(t *testing.T) {
+		_, resolved, err := connectorIDOrProviderRequired(&empty, &empty)
+		require.False(t, resolved)
+		require.Error(t, err)
+	})
+
+	t.Run("no connectorID, provider set defers to caller", func(t *testing.T) {
+		id, resolved, err := connectorIDOrProviderRequired(nil, &provider)
+		require.NoError(t, err)
+		require.False(t, resolved)
+		require.Empty(t, id)
+	})
+}
+
+func TestResolveProviderMatch(t *testing.T) {
+	t.Run("no matches is non-retryable", func(t *testing.T) {
+		_, err := resolveProviderMatch(nil, "stripe")
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+	})
+
+	t.Run("single match wins", func(t *testing.T) {
+		id, err := resolveProviderMatch([]string{"connector_id"}, "stripe")
+		require.NoError(t, err)
+		require.Equal(t, "connector_id", id)
+	})
+
+	t.Run("multiple matches is non-retryable", func(t *testing.T) {
+		_, err := resolveProviderMatch([]string{"c1", "c2"}, "stripe")
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+	})
+}
+
 func TestClassifyV3Error(t *testing.T) {
 	testCases := []struct {
 		name         string

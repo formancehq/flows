@@ -66,6 +66,68 @@ func classifyV1Error(err *sdkerrors.PaymentsErrorResponse) error {
 	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil)
 }
 
+// parseTransferType maps the workflow-facing "TRANSFER"/"PAYOUT" string onto whichever SDK enum
+// type the caller uses. createTransferInitiationV3 (V3PaymentInitiationTypeEnum) and
+// createTransferInitiationV1 (TransferInitiationRequestType) declare the same two values as
+// distinct Go types, so this is generic over any ~string enum sharing that TRANSFER/PAYOUT shape.
+func parseTransferType[T ~string](requestType string, transfer, payout T) (T, error) {
+	if requestType == "" {
+		return transfer, nil
+	}
+	switch strings.ToUpper(requestType) {
+	case "PAYOUT":
+		return payout, nil
+	case "TRANSFER":
+		return transfer, nil
+	default:
+		var zero T
+		return zero, fmt.Errorf("invalid transfer type: %s (must be TRANSFER or PAYOUT)", requestType)
+	}
+}
+
+// defaultDescription returns request.Description unchanged when set, otherwise a fallback
+// mentioning the provider when known. Shared by createTransferInitiationV3/V1 - transferType's
+// concrete type differs between them (see parseTransferType) but %s formats either the same way.
+func defaultDescription[T ~string](description string, provider *string, transferType T) string {
+	if description != "" {
+		return description
+	}
+	if provider != nil {
+		return fmt.Sprintf("%s %s", *provider, transferType)
+	}
+	return fmt.Sprintf("Transfer Initiation (%s)", transferType)
+}
+
+// connectorIDOrProviderRequired validates the (connectorID, provider) pair shared by
+// resolveConnectorID and resolveConnectorIDV1: connectorID wins when set, otherwise a non-empty
+// provider is required to look one up. resolved reports whether id is already the final answer -
+// on false with a nil error, the caller must list connectors and resolve provider matches itself.
+func connectorIDOrProviderRequired(connectorID, provider *string) (id string, resolved bool, err error) {
+	if connectorID != nil && *connectorID != "" {
+		return *connectorID, true, nil
+	}
+	if provider == nil || *provider == "" {
+		return "", false, temporal.NewNonRetryableApplicationError("either connectorID or provider must be specified", "VALIDATION", nil)
+	}
+	return "", false, nil
+}
+
+// resolveProviderMatch applies the 0/1/many match-count cascade shared by resolveConnectorID and
+// resolveConnectorIDV1, once each has built its own list of connector IDs matching provider.
+func resolveProviderMatch(matches []string, provider string) (string, error) {
+	switch len(matches) {
+	case 0:
+		return "", temporal.NewNonRetryableApplicationError(fmt.Sprintf("no connector installed for provider %q", provider), "VALIDATION", nil)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("%d connectors installed for provider %q, specify connectorID explicitly", len(matches), provider),
+			"VALIDATION", nil,
+		)
+	}
+}
+
 // CreateTransferInitiation picks between the v3 payment-initiations API and the legacy v1
 // transfer-initiations API based on the target stack's payments module version (see
 // getPaymentsVersion) - v3 only exists from payments major release v3 onward.
@@ -86,16 +148,9 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 
 	activityInfo := activity.GetInfo(ctx)
 
-	transferType := shared.V3PaymentInitiationTypeEnumTransfer
-	if request.Type != "" {
-		switch strings.ToUpper(request.Type) {
-		case "PAYOUT":
-			transferType = shared.V3PaymentInitiationTypeEnumPayout
-		case "TRANSFER":
-			transferType = shared.V3PaymentInitiationTypeEnumTransfer
-		default:
-			return fmt.Errorf("invalid transfer type: %s (must be TRANSFER or PAYOUT)", request.Type)
-		}
+	transferType, err := parseTransferType(request.Type, shared.V3PaymentInitiationTypeEnumTransfer, shared.V3PaymentInitiationTypeEnumPayout)
+	if err != nil {
+		return err
 	}
 
 	connectorID, err := a.resolveConnectorID(ctx, request.ConnectorID, request.Provider)
@@ -103,14 +158,7 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 		return err
 	}
 
-	description := request.Description
-	if description == "" {
-		if request.Provider != nil {
-			description = fmt.Sprintf("%s %s", *request.Provider, transferType)
-		} else {
-			description = fmt.Sprintf("Transfer Initiation (%s)", transferType)
-		}
-	}
+	description := defaultDescription(request.Description, request.Provider, transferType)
 
 	// Reference is the idempotency key: stable across retries of this same activity invocation
 	// (RunID doesn't change across activity retries within one workflow execution), so a create
@@ -222,11 +270,8 @@ func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, exist
 // provider - callers with multiple connectors for the same provider must pass connectorID
 // explicitly.
 func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provider *string) (string, error) {
-	if connectorID != nil && *connectorID != "" {
-		return *connectorID, nil
-	}
-	if provider == nil || *provider == "" {
-		return "", temporal.NewNonRetryableApplicationError("either connectorID or provider must be specified", "VALIDATION", nil)
+	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
+		return id, err
 	}
 
 	resp, err := a.client.Payments.V3.ListConnectors(ctx, operations.V3ListConnectorsRequest{
@@ -244,17 +289,11 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 	}
 
 	connectors := resp.V3ConnectorsCursorResponse.Cursor.Data
-	switch len(connectors) {
-	case 0:
-		return "", temporal.NewNonRetryableApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION", nil)
-	case 1:
-		return connectors[0].ID, nil
-	default:
-		return "", temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("%d connectors installed for provider %q, specify connectorID explicitly", len(connectors), *provider),
-			"VALIDATION", nil,
-		)
+	matches := make([]string, len(connectors))
+	for i, c := range connectors {
+		matches[i] = c.ID
 	}
+	return resolveProviderMatch(matches, *provider)
 }
 
 // createTransferInitiationV1 is the fallback for stacks whose payments module predates the
@@ -272,16 +311,9 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 
 	activityInfo := activity.GetInfo(ctx)
 
-	transferType := shared.TransferInitiationRequestTypeTransfer
-	if request.Type != "" {
-		switch strings.ToUpper(request.Type) {
-		case "PAYOUT":
-			transferType = shared.TransferInitiationRequestTypePayout
-		case "TRANSFER":
-			transferType = shared.TransferInitiationRequestTypeTransfer
-		default:
-			return fmt.Errorf("invalid transfer type: %s (must be TRANSFER or PAYOUT)", request.Type)
-		}
+	transferType, err := parseTransferType(request.Type, shared.TransferInitiationRequestTypeTransfer, shared.TransferInitiationRequestTypePayout)
+	if err != nil {
+		return err
 	}
 
 	// The v2.1.0-era payments service (the actual population this fallback targets) resolved
@@ -295,14 +327,7 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 		return err
 	}
 
-	description := request.Description
-	if description == "" {
-		if request.Provider != nil {
-			description = fmt.Sprintf("%s %s", *request.Provider, transferType)
-		} else {
-			description = fmt.Sprintf("Transfer Initiation (%s)", transferType)
-		}
-	}
+	description := defaultDescription(request.Description, request.Provider, transferType)
 
 	ti := shared.TransferInitiationRequest{
 		Amount:               request.Amount,
@@ -336,11 +361,8 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 // resolveConnectorIDV1 is resolveConnectorID's counterpart for stacks without the v3 API:
 // v1 has no filtered connector listing, so it lists everything and matches provider client-side.
 func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provider *string) (string, error) {
-	if connectorID != nil && *connectorID != "" {
-		return *connectorID, nil
-	}
-	if provider == nil || *provider == "" {
-		return "", temporal.NewNonRetryableApplicationError("either connectorID or provider must be specified", "VALIDATION", nil)
+	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
+		return id, err
 	}
 
 	resp, err := a.client.Payments.V1.ListAllConnectors(ctx)
@@ -360,17 +382,7 @@ func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provi
 		}
 	}
 
-	switch len(matches) {
-	case 0:
-		return "", temporal.NewNonRetryableApplicationError(fmt.Sprintf("no connector installed for provider %q", *provider), "VALIDATION", nil)
-	case 1:
-		return matches[0], nil
-	default:
-		return "", temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("%d connectors installed for provider %q, specify connectorID explicitly", len(matches), *provider),
-			"VALIDATION", nil,
-		)
-	}
+	return resolveProviderMatch(matches, *provider)
 }
 
 func (a Activities) getPaymentInitiationByReference(ctx context.Context, reference string) (*shared.V3PaymentInitiation, error) {
