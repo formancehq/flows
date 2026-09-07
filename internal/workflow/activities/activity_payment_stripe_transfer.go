@@ -54,6 +54,9 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 
 	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
 	if err != nil {
+		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
+			return classifyPaymentError(pErr)
+		}
 		return err
 	}
 
