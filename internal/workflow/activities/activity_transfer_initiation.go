@@ -262,9 +262,11 @@ func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provide
 // v1 CreateTransferInitiation call. Unlike v3, it does not self-heal on CONFLICT by fetching
 // the existing record - v1's list/query DSL differs from v3's query builder used elsewhere in
 // this file, and guessing at it risks a subtly wrong filter. It does still classify SDK errors
-// via classifyV1Error so a terminal error (CONFLICT included) fails the workflow immediately
-// instead of retrying forever - see classifyV1Error's docstring for a known gap in that
-// coverage.
+// via classifyV1Error, but CONFLICT is one of the codes PaymentsErrorsEnum doesn't declare (see
+// classifyV1Error's docstring), so a real conflict here fails PaymentsErrorsEnum.UnmarshalJSON
+// before classifyV1Error is reached and falls through as a plain, unclassified error - retryable,
+// but no longer indefinitely: callers run this under PaymentInitiationRetryContext, whose
+// MaximumAttempts bounds it to ~40 minutes instead of forever.
 func (a Activities) createTransferInitiationV1(ctx context.Context, request CreateTransferInitiationRequest) error {
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
@@ -309,9 +311,12 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 		Description:          description,
 		ConnectorID:          &connectorID,
 		Type:                 transferType,
-		Reference:            activityInfo.WorkflowExecution.ID + activityInfo.ActivityID,
-		Validated:            validated,
-		Metadata:             request.Metadata,
+		// See createTransferInitiationV3's reference comment: RunID, not WorkflowID, is required
+		// so a Temporal reset (same WorkflowID, new RunID) doesn't collide with the payment
+		// initiation the pre-reset run already created.
+		Reference: activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID,
+		Validated: validated,
+		Metadata:  request.Metadata,
 	}
 	if request.Source != nil {
 		ti.SourceAccountID = *request.Source
