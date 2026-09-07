@@ -269,6 +269,16 @@ func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, exist
 // by listing installed connectors. Errors when zero or more than one connector matches the
 // provider - callers with multiple connectors for the same provider must pass connectorID
 // explicitly.
+//
+// Unlike resolveConnectorIDV1, provider isn't case-normalized before the $match filter here - not
+// an oversight. Payments' own query builder for "provider" (internal/storage/connectors.go's
+// connectorsQueryContext) already does strings.ToLower(models.ToV3Provider(v)) on the filter value
+// before comparing, and every stored provider is itself lowercase (migration
+// 13-connector-providers-lowercase.sql backfilled existing rows; the v3 install handler lowercases
+// new ones), so the match is case-insensitive server-side regardless of what casing is sent here -
+// verified live (both "routable" and "ROUTABLE" resolve the same connector). resolveConnectorIDV1
+// normalizes client-side via strings.EqualFold instead because its target - a pre-v3 payments
+// module - offers no such guarantee.
 func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provider *string) (string, error) {
 	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
 		return id, err
