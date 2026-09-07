@@ -4,7 +4,6 @@ import (
 	"context"
 	stdtime "time"
 
-	"github.com/formancehq/formance-sdk-go/v5/pkg/models/sdkerrors"
 	"github.com/pkg/errors"
 
 	"github.com/formancehq/go-libs/v3/time"
@@ -22,8 +21,8 @@ type DebitWalletRequest struct {
 
 type DebitWalletRequestPayload struct {
 	Amount      wallets.Monetary `json:"amount"`
-	Balances    []string        `json:"balances,omitempty"`
-	Description *string         `json:"description,omitempty"`
+	Balances    []string         `json:"balances,omitempty"`
+	Description *string          `json:"description,omitempty"`
 	Destination *wallets.Subject `json:"destination,omitempty"`
 	// Metadata associated with the wallet.
 	Metadata map[string]string `json:"metadata"`
@@ -56,7 +55,7 @@ func (a Activities) DebitWallet(ctx context.Context, request DebitWalletRequest)
 		},
 	)
 	if err != nil {
-		walletErrorResponse := &sdkerrors.WalletsErrorResponse{}
+		walletErrorResponse := &wallets.ErrorResponse{}
 		if errors.As(err, &walletErrorResponse) {
 			return nil, temporal.NewApplicationError(walletErrorResponse.ErrorMessage, string(walletErrorResponse.ErrorCode))
 		}

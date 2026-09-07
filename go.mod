@@ -22,10 +22,11 @@ require (
 	go.temporal.io/sdk v1.41.1
 	go.uber.org/fx v1.24.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/mod v0.40.0
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+require golang.org/x/mod v0.40.0 // indirect
 
 require (
 	dario.cat/mergo v1.0.2 // indirect

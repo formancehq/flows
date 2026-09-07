@@ -23,7 +23,7 @@ type CreditWalletRequestPayload struct {
 	// Metadata associated with the wallet.
 	Metadata  map[string]string `json:"metadata"`
 	Reference *string           `json:"reference,omitempty"`
-	Sources   []wallets.Subject  `json:"sources"`
+	Sources   []wallets.Subject `json:"sources"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 }
 
