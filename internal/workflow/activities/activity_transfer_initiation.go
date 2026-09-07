@@ -6,9 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v5/pkg/models/sdkerrors"
-	"github.com/formancehq/formance-sdk-go/v5/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
@@ -35,60 +33,38 @@ type CreateTransferInitiationRequest struct {
 	WaitingValidation *bool             `default:"false" json:"waitingValidation"`
 }
 
-// classifyV3Error converts a v3 SDK error into a temporal.ApplicationError. Every payments v3
-// error code maps to an HTTP 4xx except INTERNAL (500 - see go-libs' api.InternalServerError vs
-// api.BadRequest/api.NotFound, which every other declared code goes through). A 4xx won't
-// succeed by retrying the exact same request, so it's marked non-retryable directly here rather
-// than relying on the shared NonRetryableErrorTypes allowlist staying in lockstep with every
-// error code payments emits.
-func classifyV3Error(err *sdkerrors.V3ErrorResponse) error {
-	if err.ErrorCode == shared.V3ErrorsEnumInternal {
-		return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode), err.Details)
-	}
-	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil, err.Details)
-}
-
-// classifyV1Error is classifyV3Error's v1 counterpart.
-//
-// KNOWN LIMITATION: as of the latest published formance-sdk-go (v3.8.1), PaymentsErrorsEnum
-// only declares INTERNAL, VALIDATION and NOT_FOUND. CONFLICT, INVALID_ID,
-// MISSING_OR_INVALID_BODY and CONNECTOR_CAPABILITY_NOT_SUPPORTED were added to payments' own
-// openapi.yaml (commit 472e0af0) but that fix hasn't reached a published SDK release yet. A
-// v1/v2 server returning one of those four codes fails PaymentsErrorsEnum.UnmarshalJSON before
-// this function is ever reached, so createTransferInitiationV1/resolveConnectorIDV1 still see a
-// plain, retryable error for those specific codes rather than the *sdkerrors.PaymentsErrorResponse
-// this function expects. Re-check this once formance-sdk-go publishes a release built from a
-// payments openapi.yaml that includes 472e0af0.
-func classifyV1Error(err *sdkerrors.PaymentsErrorResponse) error {
-	if err.ErrorCode == shared.PaymentsErrorsEnumInternal {
+// classifyPaymentError converts a payments API error into a temporal.ApplicationError. Every
+// declared error code maps to an HTTP 4xx except INTERNAL (500), and a 4xx won't succeed by
+// retrying the exact same request, so it's marked non-retryable directly here. formance-sdk-go
+// v5.0.1's PaymentsErrorsEnum declares CONFLICT, INVALID_ID, MISSING_OR_INVALID_BODY and
+// CONNECTOR_CAPABILITY_NOT_SUPPORTED alongside INTERNAL/VALIDATION/NOT_FOUND - v3.8.1's enum only
+// had the latter three, so those four codes used to fail PaymentsErrorsEnum.UnmarshalJSON before
+// this function was ever reached and fell through as a plain, unclassified retryable error.
+func classifyPaymentError(err *payments.PaymentsErrorResponse) error {
+	if err.ErrorCode == payments.PaymentsErrorsEnumInternal {
 		return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode))
 	}
 	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil)
 }
 
-// parseTransferType maps the workflow-facing "TRANSFER"/"PAYOUT" string onto whichever SDK enum
-// type the caller uses. createTransferInitiationV3 (V3PaymentInitiationTypeEnum) and
-// createTransferInitiationV1 (TransferInitiationRequestType) declare the same two values as
-// distinct Go types, so this is generic over any ~string enum sharing that TRANSFER/PAYOUT shape.
-func parseTransferType[T ~string](requestType string, transfer, payout T) (T, error) {
+// parseTransferType maps the workflow-facing "TRANSFER"/"PAYOUT" string onto the SDK's enum type.
+func parseTransferType(requestType string) (payments.TransferInitiationRequestType, error) {
 	if requestType == "" {
-		return transfer, nil
+		return payments.TransferInitiationRequestTypeTransfer, nil
 	}
 	switch strings.ToUpper(requestType) {
 	case "PAYOUT":
-		return payout, nil
+		return payments.TransferInitiationRequestTypePayout, nil
 	case "TRANSFER":
-		return transfer, nil
+		return payments.TransferInitiationRequestTypeTransfer, nil
 	default:
-		var zero T
-		return zero, fmt.Errorf("invalid transfer type: %s (must be TRANSFER or PAYOUT)", requestType)
+		return "", fmt.Errorf("invalid transfer type: %s (must be TRANSFER or PAYOUT)", requestType)
 	}
 }
 
 // defaultDescription returns request.Description unchanged when set, otherwise a fallback
-// mentioning the provider when known. Shared by createTransferInitiationV3/V1 - transferType's
-// concrete type differs between them (see parseTransferType) but %s formats either the same way.
-func defaultDescription[T ~string](description string, provider *string, transferType T) string {
+// mentioning the provider when known.
+func defaultDescription(description string, provider *string, transferType payments.TransferInitiationRequestType) string {
 	if description != "" {
 		return description
 	}
@@ -98,10 +74,10 @@ func defaultDescription[T ~string](description string, provider *string, transfe
 	return fmt.Sprintf("Transfer Initiation (%s)", transferType)
 }
 
-// connectorIDOrProviderRequired validates the (connectorID, provider) pair shared by
-// resolveConnectorID and resolveConnectorIDV1: connectorID wins when set, otherwise a non-empty
-// provider is required to look one up. resolved reports whether id is already the final answer -
-// on false with a nil error, the caller must list connectors and resolve provider matches itself.
+// connectorIDOrProviderRequired validates the (connectorID, provider) pair: connectorID wins when
+// set, otherwise a non-empty provider is required to look one up. resolved reports whether id is
+// already the final answer - on false with a nil error, the caller must list connectors and
+// resolve provider matches itself.
 func connectorIDOrProviderRequired(connectorID, provider *string) (id string, resolved bool, err error) {
 	if connectorID != nil && *connectorID != "" {
 		return *connectorID, true, nil
@@ -112,8 +88,8 @@ func connectorIDOrProviderRequired(connectorID, provider *string) (id string, re
 	return "", false, nil
 }
 
-// resolveProviderMatch applies the 0/1/many match-count cascade shared by resolveConnectorID and
-// resolveConnectorIDV1, once each has built its own list of connector IDs matching provider.
+// resolveProviderMatch applies the 0/1/many match-count cascade once resolveConnectorID has built
+// its own list of connector IDs matching provider.
 func resolveProviderMatch(matches []string, provider string) (string, error) {
 	switch len(matches) {
 	case 0:
@@ -128,31 +104,29 @@ func resolveProviderMatch(matches []string, provider string) (string, error) {
 	}
 }
 
-// CreateTransferInitiation picks between the v3 payment-initiations API and the legacy v1
-// transfer-initiations API based on the target stack's payments module version (see
-// getPaymentsVersion) - v3 only exists from payments major release v3 onward.
+// CreateTransferInitiation always targets the legacy v1 transfer-initiations API. This used to
+// pick between a v1 and a v3 (payment-initiations) path based on the target stack's payments
+// module version, but the v3 path was dropped after it was found to silently swallow failures
+// instead of reporting them. It does not self-heal on CONFLICT by fetching the existing record -
+// v1's list/query DSL differs from v3's query builder that self-heal was built against, and
+// guessing at it risks a subtly wrong filter - but CONFLICT and every other payments error code
+// is properly decodable and classified now (see classifyPaymentError).
 func (a Activities) CreateTransferInitiation(ctx context.Context, request CreateTransferInitiationRequest) error {
-	pv, err := a.getPaymentsVersion(ctx)
-	if err != nil {
-		return fmt.Errorf("checking payments version: %w", err)
-	}
-
-	if !pv.supportsV3 {
-		return a.createTransferInitiationV1(ctx, request)
-	}
-	return a.createTransferInitiationV3(ctx, request)
-}
-
-func (a Activities) createTransferInitiationV3(ctx context.Context, request CreateTransferInitiationRequest) error {
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
 	activityInfo := activity.GetInfo(ctx)
 
-	transferType, err := parseTransferType(request.Type, shared.V3PaymentInitiationTypeEnumTransfer, shared.V3PaymentInitiationTypeEnumPayout)
+	transferType, err := parseTransferType(request.Type)
 	if err != nil {
 		return err
 	}
 
+	// The v2.1.0-era payments service (the actual population this targets) resolved ConnectorID
+	// from Provider server-side when ConnectorID was left unset (see
+	// cmd/connectors/internal/api/service/transfer_initiation.go in formancehq/stack
+	// releases/v2.1.0: ListConnectorsByProvider, erroring on 0 or >1 matches). The current SDK's
+	// TransferInitiationRequest no longer has a Provider field to carry that hint, so
+	// resolveConnectorID replicates the same resolution client-side instead.
 	connectorID, err := a.resolveConnectorID(ctx, request.ConnectorID, request.Provider)
 	if err != nil {
 		return err
@@ -160,205 +134,21 @@ func (a Activities) createTransferInitiationV3(ctx context.Context, request Crea
 
 	description := defaultDescription(request.Description, request.Provider, transferType)
 
-	// Reference is the idempotency key: stable across retries of this same activity invocation
-	// (RunID doesn't change across activity retries within one workflow execution), so a create
-	// that conflicts means a previous attempt already reached the payments service. RunID is
-	// required, not just WorkflowID: a Temporal reset restarts the same WorkflowID under a new
-	// RunID, and WorkflowID alone would then collide with the payment initiation the pre-reset
-	// run already created, silently skipping what should be a fresh attempt. Matches the RunID +
-	// ActivityID scheme getIK already uses for the same reason (see activity.go).
-	reference := activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID
-
-	_, err = a.client.Payments.V3.InitiatePayment(ctx, operations.V3InitiatePaymentRequest{
-		V3InitiatePaymentRequest: &shared.V3InitiatePaymentRequest{
-			Amount:               request.Amount,
-			Asset:                *request.Asset,
-			ConnectorID:          connectorID,
-			Description:          description,
-			DestinationAccountID: request.Destination,
-			Metadata:             request.Metadata,
-			Reference:            reference,
-			SourceAccountID:      request.Source,
-			Type:                 transferType,
-		},
-		// NoValidation mirrors the same flag the v1/v2 API exposed as the "validated" body field:
-		// true skips the manual validation step and forwards the request to the PSP directly.
-		NoValidation: &validated,
-	})
-	if err == nil {
-		return nil
-	}
-
-	v3Err, ok := err.(*sdkerrors.V3ErrorResponse)
-	if !ok {
-		return err
-	}
-
-	if v3Err.ErrorCode != shared.V3ErrorsEnumConflict {
-		return classifyV3Error(v3Err)
-	}
-
-	// A payment initiation with this reference already exists - most likely a previous attempt
-	// reached the payments service and was recorded, but its response never made it back here
-	// (e.g. we hit our own deadline first). Retrying the create would only hit the same conflict
-	// again, so fetch the existing record instead of retrying.
-	existing, ferr := a.getPaymentInitiationByReference(ctx, reference)
-	if ferr != nil {
-		// Could not confirm the existing record - surface the original conflict rather than
-		// silently retrying it forever.
-		return temporal.NewNonRetryableApplicationError(v3Err.ErrorMessage, string(v3Err.ErrorCode), nil, v3Err.Details)
-	}
-
-	return a.classifyExistingPaymentInitiation(ctx, existing, !validated)
-}
-
-// classifyExistingPaymentInitiation decides what createTransferInitiationV3 should return once a
-// CONFLICT has been resolved by fetching the record it collided with. This isn't the conflict
-// anymore - that's already resolved by the fetch. A terminal failure status here is new
-// information (e.g. the PSP rejected the payout), so it's labeled with its actual status rather
-// than the CONFLICT that got us here.
-//
-// waitingValidationRequested is the original request's own intent (request.WaitingValidation):
-// when true, the caller deliberately asked for the payment initiation to stop at
-// WAITING_FOR_VALIDATION pending a separate, explicit approval - not a symptom of the
-// CreateTransfer workflow failing to start. Re-triggering /approve in that case would send the
-// payment against the caller's wishes.
-func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, existing *shared.V3PaymentInitiation, waitingValidationRequested bool) error {
-	switch existing.Status {
-	case shared.V3PaymentInitiationStatusEnumFailed, shared.V3PaymentInitiationStatusEnumRejected:
-		msg := fmt.Sprintf("payment initiation %s already exists and is in a terminal failure state (%s)", existing.ID, existing.Status)
-		if existing.Error != nil {
-			msg = fmt.Sprintf("%s: %s", msg, *existing.Error)
-		}
-		return temporal.NewNonRetryableApplicationError(msg, string(existing.Status), nil)
-	case shared.V3PaymentInitiationStatusEnumWaitingForValidation:
-		if waitingValidationRequested {
-			// This is the state the caller asked for, not a stuck self-heal case - nothing to do.
-			return nil
-		}
-		// Still at its initial status: the CreateTransfer workflow this payment initiation
-		// needs was never confirmed to have started (e.g. a previous attempt's ExecuteWorkflow
-		// call itself timed out before the workflow was registered with Temporal - see the
-		// incident this was built for). Nothing on the payments side retries this on its own,
-		// so re-trigger it via /approve. That's safe to call repeatedly: engine.CreateTransfer
-		// always targets the same Temporal workflow ID with WorkflowIDReusePolicy=REJECT_DUPLICATE,
-		// so if the workflow actually did start previously, this just attaches to it instead of
-		// duplicating the transfer. Return retryable regardless of the approve call's own outcome
-		// so the next attempt re-checks the payment initiation's status from scratch.
-		_, err := a.client.Payments.V3.ApprovePaymentInitiation(ctx, operations.V3ApprovePaymentInitiationRequest{
-			PaymentInitiationID: existing.ID,
-		})
-		if err != nil {
-			v3Err, ok := err.(*sdkerrors.V3ErrorResponse)
-			switch {
-			case !ok:
-				// Not a decoded API error (e.g. a transport failure) - transient, stay retryable.
-			case v3Err.ErrorCode == shared.V3ErrorsEnumValidation && strings.Contains(v3Err.ErrorMessage, "already approved"):
-				// Benign race with a concurrent retry (see PaymentInitiationsApprove's
-				// "cannot approve an already approved payment initiation" message) - something
-				// else already moved this past WAITING_FOR_VALIDATION. Fall through to retryable
-				// so the next attempt re-fetches and re-checks the now-current status.
-			default:
-				// A genuine approval failure - a validation error that isn't the already-approved
-				// race, or a typed 4xx such as NOT_FOUND. Classify like any other v3 API error
-				// rather than assuming it's safe to retry forever.
-				return classifyV3Error(v3Err)
-			}
-		}
-		return temporal.NewApplicationError(
-			fmt.Sprintf("payment initiation %s still waiting for validation, re-triggered approval", existing.ID),
-			string(existing.Status), nil,
-		)
-	default:
-		// Already created, and not in a failure state - treat this as success.
-		return nil
-	}
-}
-
-// resolveConnectorID returns connectorID unchanged when set, otherwise resolves it from provider
-// by listing installed connectors. Errors when zero or more than one connector matches the
-// provider - callers with multiple connectors for the same provider must pass connectorID
-// explicitly.
-//
-// Unlike resolveConnectorIDV1, provider isn't case-normalized before the $match filter here - not
-// an oversight. Payments' own query builder for "provider" (internal/storage/connectors.go's
-// connectorsQueryContext) already does strings.ToLower(models.ToV3Provider(v)) on the filter value
-// before comparing, and every stored provider is itself lowercase (migration
-// 13-connector-providers-lowercase.sql backfilled existing rows; the v3 install handler lowercases
-// new ones), so the match is case-insensitive server-side regardless of what casing is sent here -
-// verified live (both "routable" and "ROUTABLE" resolve the same connector). resolveConnectorIDV1
-// normalizes client-side via strings.EqualFold instead because its target - a pre-v3 payments
-// module - offers no such guarantee.
-func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provider *string) (string, error) {
-	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
-		return id, err
-	}
-
-	resp, err := a.client.Payments.V3.ListConnectors(ctx, operations.V3ListConnectorsRequest{
-		Query: map[string]any{
-			"$match": map[string]any{
-				"provider": *provider,
-			},
-		},
-	})
-	if err != nil {
-		if v3Err, ok := err.(*sdkerrors.V3ErrorResponse); ok {
-			return "", classifyV3Error(v3Err)
-		}
-		return "", err
-	}
-
-	connectors := resp.V3ConnectorsCursorResponse.Cursor.Data
-	matches := make([]string, len(connectors))
-	for i, c := range connectors {
-		matches[i] = c.ID
-	}
-	return resolveProviderMatch(matches, *provider)
-}
-
-// createTransferInitiationV1 is the fallback for stacks whose payments module predates the
-// v3 payment-initiations API (getPaymentsVersion reports major < 3). It mirrors the original
-// v1 CreateTransferInitiation call. Unlike v3, it does not self-heal on CONFLICT by fetching
-// the existing record - v1's list/query DSL differs from v3's query builder used elsewhere in
-// this file, and guessing at it risks a subtly wrong filter. It does still classify SDK errors
-// via classifyV1Error, but CONFLICT is one of the codes PaymentsErrorsEnum doesn't declare (see
-// classifyV1Error's docstring), so a real conflict here fails PaymentsErrorsEnum.UnmarshalJSON
-// before classifyV1Error is reached and falls through as a plain, unclassified error - retryable,
-// but no longer indefinitely: callers run this under PaymentInitiationRetryContext, whose
-// MaximumAttempts bounds it to ~40 minutes instead of forever.
-func (a Activities) createTransferInitiationV1(ctx context.Context, request CreateTransferInitiationRequest) error {
-	validated := request.WaitingValidation == nil || !*request.WaitingValidation
-
-	activityInfo := activity.GetInfo(ctx)
-
-	transferType, err := parseTransferType(request.Type, shared.TransferInitiationRequestTypeTransfer, shared.TransferInitiationRequestTypePayout)
-	if err != nil {
-		return err
-	}
-
-	// The v2.1.0-era payments service (the actual population this fallback targets) resolved
-	// ConnectorID from Provider server-side when ConnectorID was left unset (see
-	// cmd/connectors/internal/api/service/transfer_initiation.go in formancehq/stack
-	// releases/v2.1.0: ListConnectorsByProvider, erroring on 0 or >1 matches). The current
-	// SDK's TransferInitiationRequest no longer has a Provider field to carry that hint, so
-	// resolveConnectorIDV1 replicates the same resolution client-side instead.
-	connectorID, err := a.resolveConnectorIDV1(ctx, request.ConnectorID, request.Provider)
-	if err != nil {
-		return err
-	}
-
-	description := defaultDescription(request.Description, request.Provider, transferType)
-
-	ti := shared.TransferInitiationRequest{
+	ti := payments.TransferInitiationRequest{
 		Amount:               request.Amount,
 		Asset:                *request.Asset,
 		DestinationAccountID: *request.Destination,
 		Description:          description,
 		ConnectorID:          &connectorID,
 		Type:                 transferType,
-		// See createTransferInitiationV3's reference comment: RunID, not WorkflowID, is required
-		// so a Temporal reset (same WorkflowID, new RunID) doesn't collide with the payment
-		// initiation the pre-reset run already created.
+		// Reference is the idempotency key: stable across retries of this same activity
+		// invocation (RunID doesn't change across activity retries within one workflow
+		// execution), so a create that conflicts means a previous attempt already reached the
+		// payments service. RunID is required, not just WorkflowID: a Temporal reset restarts
+		// the same WorkflowID under a new RunID, and WorkflowID alone would then collide with
+		// the payment initiation the pre-reset run already created, silently skipping what
+		// should be a fresh attempt. Matches the RunID + ActivityID scheme getIK already uses
+		// for the same reason (see activity.go).
 		Reference: activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID,
 		Validated: validated,
 		Metadata:  request.Metadata,
@@ -369,8 +159,8 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 
 	_, err = a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
 	if err != nil {
-		if v1Err, ok := err.(*sdkerrors.PaymentsErrorResponse); ok {
-			return classifyV1Error(v1Err)
+		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
+			return classifyPaymentError(pErr)
 		}
 		return err
 	}
@@ -378,17 +168,17 @@ func (a Activities) createTransferInitiationV1(ctx context.Context, request Crea
 	return nil
 }
 
-// resolveConnectorIDV1 is resolveConnectorID's counterpart for stacks without the v3 API:
+// resolveConnectorID returns connectorID unchanged when set, otherwise resolves it from provider.
 // v1 has no filtered connector listing, so it lists everything and matches provider client-side.
-func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provider *string) (string, error) {
+func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provider *string) (string, error) {
 	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
 		return id, err
 	}
 
 	resp, err := a.client.Payments.V1.ListAllConnectors(ctx)
 	if err != nil {
-		if v1Err, ok := err.(*sdkerrors.PaymentsErrorResponse); ok {
-			return "", classifyV1Error(v1Err)
+		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
+			return "", classifyPaymentError(pErr)
 		}
 		return "", err
 	}
@@ -403,25 +193,6 @@ func (a Activities) resolveConnectorIDV1(ctx context.Context, connectorID, provi
 	}
 
 	return resolveProviderMatch(matches, *provider)
-}
-
-func (a Activities) getPaymentInitiationByReference(ctx context.Context, reference string) (*shared.V3PaymentInitiation, error) {
-	resp, err := a.client.Payments.V3.ListPaymentInitiations(ctx, operations.V3ListPaymentInitiationsRequest{
-		Query: map[string]any{
-			"$match": map[string]any{
-				"reference": reference,
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	data := resp.V3PaymentInitiationsCursorResponse.Cursor.Data
-	if len(data) != 1 {
-		return nil, fmt.Errorf("expected exactly one payment initiation for reference %q, found %d", reference, len(data))
-	}
-	return &data[0], nil
 }
 
 var CreateTransferInitiationActivity = Activities{}.CreateTransferInitiation

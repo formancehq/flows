@@ -9,7 +9,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-// stripeProvider is passed to resolveConnectorIDV1 in place of the old Provider request
+// stripeProvider is passed to resolveConnectorID in place of the old Provider request
 // field - see the comment on StripeTransfer below.
 var stripeProvider = string(payments.ConnectorStripe)
 
@@ -36,7 +36,7 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 	// ConnectorID from Provider via ListConnectorsByProvider, erroring on 0 or >1 matches).
 	// The current SDK's TransferInitiationRequest dropped that field entirely, so resolve it
 	// the same way client-side instead of silently sending no connector at all.
-	connectorID, err := a.resolveConnectorIDV1(ctx, request.ConnectorID, &stripeProvider)
+	connectorID, err := a.resolveConnectorID(ctx, request.ConnectorID, &stripeProvider)
 	if err != nil {
 		return err
 	}
