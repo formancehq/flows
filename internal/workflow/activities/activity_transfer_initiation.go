@@ -191,13 +191,20 @@ func (a Activities) classifyExistingPaymentInitiation(ctx context.Context, exist
 			PaymentInitiationID: existing.ID,
 		})
 		if err != nil {
-			if v3Err, ok := err.(*sdkerrors.V3ErrorResponse); !ok || v3Err.ErrorCode != shared.V3ErrorsEnumValidation {
-				// Anything other than "already approved" (a benign race with a concurrent
-				// retry) is worth surfacing in the error message for the next attempt.
-				return temporal.NewApplicationError(
-					fmt.Sprintf("payment initiation %s still waiting for validation, re-approving failed: %v", existing.ID, err),
-					string(existing.Status), err,
-				)
+			v3Err, ok := err.(*sdkerrors.V3ErrorResponse)
+			switch {
+			case !ok:
+				// Not a decoded API error (e.g. a transport failure) - transient, stay retryable.
+			case v3Err.ErrorCode == shared.V3ErrorsEnumValidation && strings.Contains(v3Err.ErrorMessage, "already approved"):
+				// Benign race with a concurrent retry (see PaymentInitiationsApprove's
+				// "cannot approve an already approved payment initiation" message) - something
+				// else already moved this past WAITING_FOR_VALIDATION. Fall through to retryable
+				// so the next attempt re-fetches and re-checks the now-current status.
+			default:
+				// A genuine approval failure - a validation error that isn't the already-approved
+				// race, or a typed 4xx such as NOT_FOUND. Classify like any other v3 API error
+				// rather than assuming it's safe to retry forever.
+				return classifyV3Error(v3Err)
 			}
 		}
 		return temporal.NewApplicationError(

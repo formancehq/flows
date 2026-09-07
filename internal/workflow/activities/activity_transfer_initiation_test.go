@@ -179,4 +179,49 @@ func TestClassifyExistingPaymentInitiationWaitingForValidation(t *testing.T) {
 		require.Equal(t, string(existing.Status), appErr.Type())
 		require.NotContains(t, appErr.Message(), "already approved")
 	})
+
+	t.Run("approve fails with a genuine validation error", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(sdkerrors.V3ErrorResponse{
+				ErrorCode:    shared.V3ErrorsEnumValidation,
+				ErrorMessage: "amount must be positive",
+			})
+		}))
+		defer ts.Close()
+
+		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+
+		// Not the already-approved race - a real validation failure, so this must be
+		// non-retryable rather than silently assumed benign.
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+		require.Equal(t, string(shared.V3ErrorsEnumValidation), appErr.Type())
+		require.Equal(t, "amount must be positive", appErr.Message())
+	})
+
+	t.Run("approve fails with a typed 4xx like NOT_FOUND", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(sdkerrors.V3ErrorResponse{
+				ErrorCode:    shared.V3ErrorsEnumNotFound,
+				ErrorMessage: "payment initiation not found",
+			})
+		}))
+		defer ts.Close()
+
+		a := Activities{client: sdk.New(sdk.WithServerURL(ts.URL))}
+		err := a.classifyExistingPaymentInitiation(context.Background(), existing)
+
+		// Must not be blindly treated as a transient/retryable failure - classified via
+		// classifyV3Error like any other typed v3 API error.
+		var appErr *temporal.ApplicationError
+		require.ErrorAs(t, err, &appErr)
+		require.True(t, appErr.NonRetryable())
+		require.Equal(t, string(shared.V3ErrorsEnumNotFound), appErr.Type())
+	})
 }
