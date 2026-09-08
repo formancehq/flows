@@ -2,6 +2,7 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
@@ -147,6 +148,55 @@ func TestClassifyPaymentError(t *testing.T) {
 			require.Equal(t, "boom", appErr.Message())
 		})
 	}
+}
+
+func TestClassifyV3Error(t *testing.T) {
+	testCases := []struct {
+		name         string
+		errorCode    payments.V3ErrorsEnum
+		nonRetryable bool
+	}{
+		{name: "internal is retryable", errorCode: payments.V3ErrorsEnumInternal, nonRetryable: false},
+		{name: "validation is non-retryable", errorCode: payments.V3ErrorsEnumValidation, nonRetryable: true},
+		{name: "not found is non-retryable", errorCode: payments.V3ErrorsEnumNotFound, nonRetryable: true},
+		{name: "invalid id is non-retryable", errorCode: payments.V3ErrorsEnumInvalidID, nonRetryable: true},
+		{name: "missing or invalid body is non-retryable", errorCode: payments.V3ErrorsEnumMissingOrInvalidBody, nonRetryable: true},
+		{name: "conflict is non-retryable", errorCode: payments.V3ErrorsEnumConflict, nonRetryable: true},
+		{name: "connector capability not supported is non-retryable", errorCode: payments.V3ErrorsEnumConnectorCapabilityNotSupported, nonRetryable: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sdkErr := &payments.V3ErrorResponse{
+				ErrorCode:    tc.errorCode,
+				ErrorMessage: "boom",
+			}
+
+			var appErr *temporal.ApplicationError
+			require.ErrorAs(t, classifyV3Error(sdkErr), &appErr)
+			require.Equal(t, string(tc.errorCode), appErr.Type())
+			require.Equal(t, tc.nonRetryable, appErr.NonRetryable())
+			require.Equal(t, "boom", appErr.Message())
+		})
+	}
+}
+
+// TestConnectorEnumRejectsUnknownProvider pins the SDK-side defect resolveConnectorID routes
+// around: payments' v1-2 openapi declares Connector as a closed enum, its v2 handler emits any
+// newer provider verbatim (toV2Provider's default branch), and the generated UnmarshalJSON then
+// fails the entire GET /connectors response - which is how a payout to any PSP started failing
+// with "invalid value for Connector: routable" on stacks with a Routable connector installed.
+// V3Connector.Provider is a plain string, so the v3 listing decodes the same value fine.
+//
+// If the first assertion ever starts failing, formance-sdk-go relaxed the enum: the v1 listing is
+// safe again and resolveConnectorID's version dispatch can be reconsidered.
+func TestConnectorEnumRejectsUnknownProvider(t *testing.T) {
+	var c payments.Connector
+	require.ErrorContains(t, c.UnmarshalJSON([]byte(`"routable"`)), "invalid value for Connector: routable")
+
+	var v3 payments.V3Connector
+	require.NoError(t, json.Unmarshal([]byte(`{"provider":"routable"}`), &v3))
+	require.Equal(t, "routable", v3.Provider)
 }
 
 // TestPaymentsErrorsEnumUnmarshalsConflict is a narrow regression test for the actual gap that
