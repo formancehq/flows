@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 
 	sdk "github.com/formancehq/formance-sdk-go/v5"
@@ -31,17 +32,20 @@ func stackClientModule(cmd *cobra.Command) fx.Option {
 	)
 }
 
-func workerOptions(cmd *cobra.Command) fx.Option {
+func workerOptions(cmd *cobra.Command) (fx.Option, error) {
 
 	stack, _ := cmd.Flags().GetString(stackFlag)
 	temporalTaskQueue, _ := cmd.Flags().GetString(temporal.TemporalTaskQueueFlag)
-	temporalMaxParallelActivities, _ := cmd.Flags().GetInt(temporal.TemporalMaxParallelActivitiesFlag)
+	temporalMaxParallelActivities, err := cmd.Flags().GetFloat64(temporal.TemporalMaxParallelActivitiesFlag)
+	if err != nil {
+		return nil, fmt.Errorf("reading flag --%s: %w", temporal.TemporalMaxParallelActivitiesFlag, err)
+	}
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
 
 	return fx.Options(
 		stackClientModule(cmd),
 		temporalworker.NewWorkerModule(temporalTaskQueue, worker.Options{
-			TaskQueueActivitiesPerSecond: float64(temporalMaxParallelActivities),
+			TaskQueueActivitiesPerSecond: temporalMaxParallelActivities,
 		}),
 		triggers.NewListenerModule(
 			stack,
@@ -50,7 +54,7 @@ func workerOptions(cmd *cobra.Command) fx.Option {
 			true,
 			topics,
 		),
-	)
+	), nil
 }
 
 func newWorkerCommand() *cobra.Command {
@@ -62,7 +66,12 @@ func newWorkerCommand() *cobra.Command {
 				return err
 			}
 
-			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions(cmd)).Run(cmd)
+			workerOptions, err := workerOptions(cmd)
+			if err != nil {
+				return err
+			}
+
+			return service.New(cmd.OutOrStdout(), commonOptions, workerOptions).Run(cmd)
 		},
 	}
 	ret.Flags().String(stackURLFlag, "", "Stack url")
