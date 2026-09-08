@@ -4,10 +4,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/workflow"
 )
+
+// stripeProvider is passed to resolveConnectorID in place of the old Provider request
+// field - see the comment on StripeTransfer below.
+var stripeProvider = string(payments.ConnectorStripe)
 
 type StripeTransferRequest struct {
 	Amount      *big.Int `json:"amount,omitempty"`
@@ -25,25 +29,36 @@ func (a Activities) StripeTransfer(ctx context.Context, request StripeTransferRe
 	validated := request.WaitingValidation == nil || !*request.WaitingValidation
 
 	activityInfo := activity.GetInfo(ctx)
-	provider := shared.ConnectorStripe
-	ti := shared.TransferInitiationRequest{
-		Amount:               request.Amount,
-		Asset:                *request.Asset,
-		DestinationAccountID: *request.Destination,
-		Description:          "Stripe Transfer",
-		ConnectorID:          request.ConnectorID,
-		Provider:             &provider,
-		Type:                 shared.TransferInitiationRequestTypeTransfer,
-		Reference:            activityInfo.WorkflowExecution.ID + activityInfo.ActivityID,
-		Validated:            validated,
-	}
 
-	_, err := a.client.Payments.V1.CreateTransferInitiation(ctx, ti)
+	// The request used to carry Provider=STRIPE as a hint for the server to resolve the
+	// connector when ConnectorID was left unset (confirmed against the v2.1.0 payments
+	// service: cmd/connectors/internal/api/service/transfer_initiation.go resolved
+	// ConnectorID from Provider via ListConnectorsByProvider, erroring on 0 or >1 matches).
+	// The current SDK's TransferInitiationRequest dropped that field entirely, so resolve it
+	// the same way client-side instead of silently sending no connector at all.
+	connectorID, err := a.resolveConnectorID(ctx, request.ConnectorID, &stripeProvider)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	// RunID, not WorkflowID, is required: a Temporal reset restarts the same WorkflowID under a
+	// new RunID, and WorkflowID alone would then collide with the payment initiation the
+	// pre-reset run already created (see CreateTransferInitiation's reference comment, and getIK
+	// in activity.go for the same scheme).
+	reference := activityInfo.WorkflowExecution.RunID + activityInfo.ActivityID
+
+	ti := payments.TransferInitiationRequest{
+		Amount:               request.Amount,
+		Asset:                *request.Asset,
+		DestinationAccountID: *request.Destination,
+		Description:          "Stripe Transfer",
+		ConnectorID:          &connectorID,
+		Type:                 payments.TransferInitiationRequestTypeTransfer,
+		Reference:            reference,
+		Validated:            validated,
+	}
+
+	return a.createTransferInitiationWithSelfHeal(ctx, ti, !validated)
 }
 
 var StripeTransferActivity = Activities{}.StripeTransfer

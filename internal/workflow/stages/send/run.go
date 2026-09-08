@@ -10,7 +10,9 @@ import (
 	"github.com/formancehq/go-libs/v3/collectionutils"
 	"github.com/formancehq/go-libs/v3/metadata"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/ledger"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"github.com/formancehq/orchestration/internal/workflow/activities"
 	"github.com/formancehq/orchestration/internal/workflow/stages/internal"
 	"github.com/pkg/errors"
@@ -49,13 +51,13 @@ func justError[T any](v T, err error) error {
 	return err
 }
 
-func getWalletFromReference(ctx workflow.Context, ref WalletReference) (*shared.Wallet, error) {
+func getWalletFromReference(ctx workflow.Context, ref WalletReference) (*wallets.Wallet, error) {
 	if ref.ID != "" {
 		walletSource, err := activities.GetWallet(internal.InfiniteRetryContext(ctx), ref.ID)
 		if err != nil {
 			return nil, err
 		}
-		return &shared.Wallet{
+		return &wallets.Wallet{
 			CreatedAt: walletSource.CreatedAt,
 			ID:        walletSource.ID,
 			Ledger:    walletSource.Ledger,
@@ -114,21 +116,21 @@ func RunSend(ctx workflow.Context, send Send) (err error) {
 	panic("should not happen")
 }
 
-func runPaymentToWallet(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *WalletSource, amount *shared.Monetary, m metadata.Metadata) error {
+func runPaymentToWallet(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *WalletSource, amount *wallets.Monetary, m metadata.Metadata) error {
 	payment, err := savePayment(ctx, timestamp, source, m)
 	if err != nil {
 		return err
 	}
 	if amount == nil {
-		amount = &shared.Monetary{
+		amount = &wallets.Monetary{
 			Amount: payment.InitialAmount,
 			Asset:  payment.Asset,
 		}
 	}
 	// Determine the ledger and holding account for the payment
-	ledger := source.Ledger
-	if ledger == "" {
-		ledger = internalLedger
+	ledgerName := source.Ledger
+	if ledgerName == "" {
+		ledgerName = internalLedger
 	}
 	holdingAccount := source.HoldingAccount
 	if holdingAccount == "" {
@@ -136,7 +138,7 @@ func runPaymentToWallet(ctx workflow.Context, timestamp *time.Time, source *Paym
 	}
 	return runAccountToWallet(ctx, timestamp, &LedgerAccountSource{
 		ID:             holdingAccount,
-		Ledger:         ledger,
+		Ledger:         ledgerName,
 		ThroughAccount: "world", // The payment was already ingested, no need for custom throughAccount here
 	}, destination, amount, m)
 }
@@ -146,16 +148,16 @@ func paymentAccountName(paymentID string) string {
 	return fmt.Sprintf("payment:%s", paymentID)
 }
 
-func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, m metadata.Metadata) (*shared.Payment, error) {
+func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, m metadata.Metadata) (*payments.Payment, error) {
 	payment, err := activities.GetPayment(internal.InfiniteRetryContext(ctx), source.ID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "retrieving payment: %s", source.ID)
 	}
 
 	// Determine ledger, holding account, and through account
-	ledger := source.Ledger
-	if ledger == "" {
-		ledger = internalLedger
+	ledgerName := source.Ledger
+	if ledgerName == "" {
+		ledgerName = internalLedger
 	}
 	holdingAccount := source.HoldingAccount
 	if holdingAccount == "" {
@@ -177,8 +179,8 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 			payment.Asset, payment.InitialAmount.String(),
 		)
 		txRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  m,
@@ -186,7 +188,7 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 		}
 	} else {
 		txRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      payment.InitialAmount,
 				Asset:       payment.Asset,
 				Destination: holdingAccount,
@@ -198,7 +200,7 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 		}
 	}
 
-	_, err = activities.CreateTransaction(internal.InfiniteRetryContext(ctx), ledger, txRequest)
+	_, err = activities.CreateTransaction(internal.InfiniteRetryContext(ctx), ledgerName, txRequest)
 	if err != nil {
 		applicationError := &temporal.ApplicationError{}
 		if errors.As(err, &applicationError) {
@@ -212,21 +214,21 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 	return payment, nil
 }
 
-func runPaymentToAccount(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *LedgerAccountDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runPaymentToAccount(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, destination *LedgerAccountDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	payment, err := savePayment(ctx, timestamp, source, m)
 	if err != nil {
 		return err
 	}
 	if amount == nil {
-		amount = &shared.Monetary{
+		amount = &wallets.Monetary{
 			Amount: payment.InitialAmount,
 			Asset:  payment.Asset,
 		}
 	}
 	// Determine the ledger and holding account for the payment
-	ledger := source.Ledger
-	if ledger == "" {
-		ledger = internalLedger
+	ledgerName := source.Ledger
+	if ledgerName == "" {
+		ledgerName = internalLedger
 	}
 	holdingAccount := source.HoldingAccount
 	if holdingAccount == "" {
@@ -234,12 +236,12 @@ func runPaymentToAccount(ctx workflow.Context, timestamp *time.Time, source *Pay
 	}
 	return runAccountToAccount(ctx, timestamp, &LedgerAccountSource{
 		ID:             holdingAccount,
-		Ledger:         ledger,
+		Ledger:         ledgerName,
 		ThroughAccount: "world", // The payment was already ingested, no throughAccount needed for intermediate transfer
 	}, destination, amount, m)
 }
 
-func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *WalletDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *WalletDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
@@ -253,7 +255,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 	}
 	if sourceWallet.Ledger == destinationWallet.Ledger {
 		mainBalance := "main"
-		sourceSubject := shared.WalletSubject{
+		sourceSubject := wallets.WalletSubject{
 			Balance:    &mainBalance,
 			Identifier: sourceWallet.ID,
 			Type:       "WALLET",
@@ -262,7 +264,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 			Amount:    *amount,
 			Balance:   &destination.Balance,
 			Metadata:  m,
-			Sources:   []shared.Subject{{WalletSubject: &sourceSubject}},
+			Sources:   []wallets.Subject{{WalletSubject: &sourceSubject}},
 			Timestamp: timestamp,
 		})
 	}
@@ -288,7 +290,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 	})
 }
 
-func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *PaymentDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *PaymentDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
@@ -320,7 +322,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.PaymentInitiationRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
@@ -331,7 +333,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 	}
 
 	// New behavior: Generic transfer initiation for all supported PSPs
-	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+	return activities.CreateTransferInitiation(internal.PaymentInitiationRetryContext(ctx), activities.CreateTransferInitiationRequest{
 		Amount:            amount.Amount,
 		Asset:             &amount.Asset,
 		Provider:          &destination.PSP,
@@ -344,7 +346,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 	})
 }
 
-func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *LedgerAccountDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *WalletSource, destination *LedgerAccountDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
@@ -355,8 +357,8 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 	if sourceWallet.Ledger == destination.Ledger {
 		return justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
 			Amount: *amount,
-			Destination: &shared.Subject{
-				LedgerAccountSubject: &shared.LedgerAccountSubject{
+			Destination: &wallets.Subject{
+				LedgerAccountSubject: &wallets.LedgerAccountSubject{
 					Identifier: destination.ID,
 					Type:       "ACCOUNT",
 				},
@@ -397,15 +399,15 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 			amount.Asset, amount.Amount.String(),
 		)
 		txRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  txMetadata,
 		}
 	} else {
 		txRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: destination.ID,
@@ -419,7 +421,7 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, txRequest))
 }
 
-func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *WalletDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *WalletDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
@@ -430,8 +432,8 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 	if destinationWallet.Ledger == source.Ledger {
 		return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 			Amount: *amount,
-			Sources: []shared.Subject{{
-				LedgerAccountSubject: &shared.LedgerAccountSubject{
+			Sources: []wallets.Subject{{
+				LedgerAccountSubject: &wallets.LedgerAccountSubject{
 					Identifier: source.ID,
 					Type:       "ACCOUNT",
 				},
@@ -463,15 +465,15 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 			amount.Asset, amount.Amount.String(),
 		)
 		txRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  txMetadata,
 		}
 	} else {
 		txRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: throughAccount,
@@ -488,8 +490,8 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 
 	return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 		Amount: *amount,
-		Sources: []shared.Subject{{
-			LedgerAccountSubject: &shared.LedgerAccountSubject{
+		Sources: []wallets.Subject{{
+			LedgerAccountSubject: &wallets.LedgerAccountSubject{
 				Identifier: throughAccount,
 				Type:       "ACCOUNT",
 			},
@@ -502,13 +504,13 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 	})
 }
 
-func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *LedgerAccountDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *LedgerAccountDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
 	if source.Ledger == destination.Ledger {
 		return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: destination.ID,
@@ -544,15 +546,15 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 			amount.Asset, amount.Amount.String(),
 		)
 		sourceTxRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  sourceTxMetadata,
 		}
 	} else {
 		sourceTxRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: sourceThroughAccount,
@@ -580,15 +582,15 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 			amount.Asset, amount.Amount.String(),
 		)
 		destTxRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  destTxMetadata,
 		}
 	} else {
 		destTxRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: destination.ID,
@@ -602,7 +604,7 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, destTxRequest))
 }
 
-func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *PaymentDestination, amount *shared.Monetary, m metadata.Metadata) error {
+func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *PaymentDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
@@ -629,15 +631,15 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 			amount.Asset, amount.Amount.String(),
 		)
 		txRequest = activities.PostTransaction{
-			Script: &shared.V2PostTransactionScript{
-				Plain: script,
+			Script: &ledger.V2PostTransactionScript{
+				Plain: &script,
 			},
 			Timestamp: timestamp,
 			Metadata:  m,
 		}
 	} else {
 		txRequest = activities.PostTransaction{
-			Postings: []shared.V2Posting{{
+			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
 				Destination: throughAccount,
@@ -660,7 +662,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		if destination.PSP != "stripe" {
 			return errors.New("only stripe actually supported")
 		}
-		return activities.StripeTransfer(internal.InfiniteRetryContext(ctx), activities.StripeTransferRequest{
+		return activities.StripeTransfer(internal.PaymentInitiationRetryContext(ctx), activities.StripeTransferRequest{
 			Amount:            amount.Amount,
 			Asset:             &amount.Asset,
 			Destination:       &formanceAccountID,
@@ -671,7 +673,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 	}
 
 	// New behavior: Generic transfer initiation for all supported PSPs
-	return activities.CreateTransferInitiation(internal.InfiniteRetryContext(ctx), activities.CreateTransferInitiationRequest{
+	return activities.CreateTransferInitiation(internal.PaymentInitiationRetryContext(ctx), activities.CreateTransferInitiationRequest{
 		Amount:            amount.Amount,
 		Asset:             &amount.Asset,
 		Provider:          &destination.PSP,

@@ -1,7 +1,7 @@
 package send
 
 import (
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"github.com/formancehq/go-libs/v3/metadata"
 	"github.com/formancehq/go-libs/v3/time"
 	"github.com/formancehq/orchestration/internal/schema"
@@ -124,7 +124,7 @@ func (s Destination) WithAccount(src *LedgerAccountDestination) Destination {
 type Send struct {
 	Source      Source            `json:"source"`
 	Destination Destination       `json:"destination"`
-	Amount      *shared.Monetary  `json:"amount,omitempty"`
+	Amount      *wallets.Monetary `json:"amount,omitempty"`
 	Metadata    metadata.Metadata `json:"metadata,omitempty"`
 	Timestamp   *time.Time        `json:"timestamp"`
 }

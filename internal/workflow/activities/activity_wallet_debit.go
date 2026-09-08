@@ -4,13 +4,12 @@ import (
 	"context"
 	stdtime "time"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
 	"github.com/pkg/errors"
 
 	"github.com/formancehq/go-libs/v3/time"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -21,10 +20,10 @@ type DebitWalletRequest struct {
 }
 
 type DebitWalletRequestPayload struct {
-	Amount      shared.Monetary `json:"amount"`
-	Balances    []string        `json:"balances,omitempty"`
-	Description *string         `json:"description,omitempty"`
-	Destination *shared.Subject `json:"destination,omitempty"`
+	Amount      wallets.Monetary `json:"amount"`
+	Balances    []string         `json:"balances,omitempty"`
+	Description *string          `json:"description,omitempty"`
+	Destination *wallets.Subject `json:"destination,omitempty"`
 	// Metadata associated with the wallet.
 	Metadata map[string]string `json:"metadata"`
 	// Set to true to create a pending hold. If false, the wallet will be debited immediately.
@@ -33,11 +32,11 @@ type DebitWalletRequestPayload struct {
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 }
 
-func (a Activities) DebitWallet(ctx context.Context, request DebitWalletRequest) (*shared.DebitWalletResponse, error) {
+func (a Activities) DebitWallet(ctx context.Context, request DebitWalletRequest) (*wallets.DebitWalletResponse, error) {
 	response, err := a.client.Wallets.V1.DebitWallet(
 		ctx,
 		operations.DebitWalletRequest{
-			DebitWalletRequest: &shared.DebitWalletRequest{
+			DebitWalletRequest: &wallets.DebitWalletRequest{
 				Amount:      request.Data.Amount,
 				Balances:    request.Data.Balances,
 				Description: request.Data.Description,
@@ -56,7 +55,7 @@ func (a Activities) DebitWallet(ctx context.Context, request DebitWalletRequest)
 		},
 	)
 	if err != nil {
-		walletErrorResponse := &sdkerrors.WalletsErrorResponse{}
+		walletErrorResponse := &wallets.ErrorResponse{}
 		if errors.As(err, &walletErrorResponse) {
 			return nil, temporal.NewApplicationError(walletErrorResponse.ErrorMessage, string(walletErrorResponse.ErrorCode))
 		}
@@ -68,8 +67,8 @@ func (a Activities) DebitWallet(ctx context.Context, request DebitWalletRequest)
 
 var DebitWalletActivity = Activities{}.DebitWallet
 
-func DebitWallet(ctx workflow.Context, id string, request *DebitWalletRequestPayload) (*shared.Hold, error) {
-	ret := &shared.DebitWalletResponse{}
+func DebitWallet(ctx workflow.Context, id string, request *DebitWalletRequestPayload) (*wallets.Hold, error) {
+	ret := &wallets.DebitWalletResponse{}
 	if err := executeActivity(ctx, DebitWalletActivity, ret, DebitWalletRequest{
 		ID:   id,
 		Data: request,

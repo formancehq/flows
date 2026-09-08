@@ -3,8 +3,8 @@ package activities
 import (
 	"context"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/payments"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -12,7 +12,7 @@ type GetPaymentRequest struct {
 	ID string `json:"id"`
 }
 
-func (a Activities) GetPayment(ctx context.Context, request GetPaymentRequest) (*shared.PaymentResponse, error) {
+func (a Activities) GetPayment(ctx context.Context, request GetPaymentRequest) (*payments.PaymentResponse, error) {
 	response, err := a.client.Payments.V1.GetPayment(
 		ctx,
 		operations.GetPaymentRequest{
@@ -28,8 +28,8 @@ func (a Activities) GetPayment(ctx context.Context, request GetPaymentRequest) (
 
 var GetPaymentActivity = Activities{}.GetPayment
 
-func GetPayment(ctx workflow.Context, id string) (*shared.Payment, error) {
-	ret := &shared.PaymentResponse{}
+func GetPayment(ctx workflow.Context, id string) (*payments.Payment, error) {
+	ret := &payments.PaymentResponse{}
 	if err := executeActivity(ctx, GetPaymentActivity, ret, GetPaymentRequest{
 		ID: id,
 	}); err != nil {

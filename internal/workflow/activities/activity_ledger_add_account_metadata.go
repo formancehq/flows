@@ -3,8 +3,8 @@ package activities
 import (
 	"context"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/sdkerrors"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/ledger"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -27,7 +27,7 @@ func (a Activities) AddAccountMetadata(ctx context.Context, request AddAccountMe
 	)
 	if err != nil {
 		switch err := err.(type) {
-		case *sdkerrors.V2ErrorResponse:
+		case *ledger.V2ErrorResponseError:
 			return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode), err.Details)
 		default:
 			return err

@@ -6,8 +6,8 @@ import (
 
 	"github.com/formancehq/go-libs/v3/time"
 
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/operations"
-	"github.com/formancehq/formance-sdk-go/v3/pkg/models/shared"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/operations"
+	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -17,13 +17,13 @@ type CreditWalletRequest struct {
 }
 
 type CreditWalletRequestPayload struct {
-	Amount shared.Monetary `json:"amount"`
+	Amount wallets.Monetary `json:"amount"`
 	// The balance to credit
 	Balance *string `json:"balance,omitempty"`
 	// Metadata associated with the wallet.
 	Metadata  map[string]string `json:"metadata"`
 	Reference *string           `json:"reference,omitempty"`
-	Sources   []shared.Subject  `json:"sources"`
+	Sources   []wallets.Subject `json:"sources"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 }
 
@@ -31,7 +31,7 @@ func (a Activities) CreditWallet(ctx context.Context, request CreditWalletReques
 	_, err := a.client.Wallets.V1.CreditWallet(
 		ctx,
 		operations.CreditWalletRequest{
-			CreditWalletRequest: &shared.CreditWalletRequest{
+			CreditWalletRequest: &wallets.CreditWalletRequest{
 				Amount:    request.Data.Amount,
 				Balance:   request.Data.Balance,
 				Metadata:  request.Data.Metadata,
