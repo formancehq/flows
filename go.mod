@@ -26,7 +26,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require golang.org/x/mod v0.40.0
+require golang.org/x/mod v0.40.0 // indirect
 
 require (
 	dario.cat/mergo v1.0.2 // indirect

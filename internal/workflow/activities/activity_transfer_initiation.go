@@ -49,16 +49,6 @@ func classifyPaymentError(err *payments.PaymentsErrorResponse) error {
 	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil)
 }
 
-// classifyV3Error is classifyPaymentError's counterpart for the v3 API, whose error codes are a
-// distinct SDK enum declaring the same seven values. Same reasoning: every code but INTERNAL is a
-// 4xx that won't succeed by retrying the identical request.
-func classifyV3Error(err *payments.V3ErrorResponse) error {
-	if err.ErrorCode == payments.V3ErrorsEnumInternal {
-		return temporal.NewApplicationError(err.ErrorMessage, string(err.ErrorCode), err.Details)
-	}
-	return temporal.NewNonRetryableApplicationError(err.ErrorMessage, string(err.ErrorCode), nil, err.Details)
-}
-
 // parseTransferType maps the workflow-facing "TRANSFER"/"PAYOUT" string onto the SDK's enum type.
 func parseTransferType(requestType string) (payments.TransferInitiationRequestType, error) {
 	if requestType == "" {
@@ -294,78 +284,13 @@ func classifyExistingTransferInitiation(ctx context.Context, a Activities, exist
 	}
 }
 
-// resolveConnectorID returns connectorID unchanged when set, otherwise resolves it from
-// provider by listing installed connectors, picking the API surface the target stack actually
-// has (see getPaymentsVersion).
-//
-// The v3 listing is preferred wherever it exists, and not for its server-side filtering:
-// v1/v2's GET /connectors response decodes into ConnectorsResponseData.Provider, typed as the
-// closed Connector enum payments' v1-2 openapi still declares (STRIPE ... GENERIC), whose
-// generated UnmarshalJSON errors on anything else. Payments' v2 handler passes any provider
-// outside that set through verbatim - internal/api/v2/utils.go's toV2Provider maps only the
-// legacy names and its default branch returns the v3 provider name as-is - so one connector
-// for a newer provider ("routable", an EE plugin, say) makes the SDK fail the whole response
-// with `invalid value for Connector: routable`, taking payouts to every other PSP on that
-// stack down with it. V3Connector.Provider is a plain string and has no such ceiling.
+// resolveConnectorID returns connectorID unchanged when set, otherwise resolves it from provider.
+// v1 has no filtered connector listing, so it lists everything and matches provider client-side.
 func (a Activities) resolveConnectorID(ctx context.Context, connectorID, provider *string) (string, error) {
 	if id, resolved, err := connectorIDOrProviderRequired(connectorID, provider); resolved || err != nil {
 		return id, err
 	}
 
-	pv, err := a.getPaymentsVersion(ctx)
-	if err != nil {
-		return "", fmt.Errorf("checking payments version: %w", err)
-	}
-
-	if !pv.supportsV3 {
-		return a.resolveConnectorIDV1(ctx, *provider)
-	}
-	return a.resolveConnectorIDV3(ctx, *provider)
-}
-
-// resolveConnectorIDV3 resolves provider through v3's filtered connector listing. The filter
-// goes in the request body: v3's GET /v3/connectors reads its query builder from there (see
-// getQueryBuilder in payments' internal/api/v3/utils.go), falling back to a "query" param.
-//
-// provider isn't case-normalized before the $match filter - not an oversight. Payments' own
-// query builder for "provider" (internal/storage/connectors.go's connectorsQueryContext) does
-// strings.ToLower(models.ToV3Provider(v)) on the filter value before comparing, and every
-// stored provider is itself lowercase, so the match is case-insensitive server-side and also
-// folds the v1/v2 spellings onto their v3 keys ("BANKING-CIRCLE" -> "bankingcircle").
-//
-// Only the first page is read: resolveProviderMatch rejects anything but exactly one match
-// anyway, so a provider with more connectors than fit a page still ends up in its >1 branch.
-func (a Activities) resolveConnectorIDV3(ctx context.Context, provider string) (string, error) {
-	resp, err := a.client.Payments.V3.ListConnectors(ctx, operations.V3ListConnectorsRequest{
-		RequestBody: map[string]any{
-			"$match": map[string]any{
-				"provider": provider,
-			},
-		},
-	})
-	if err != nil {
-		if v3Err, ok := err.(*payments.V3ErrorResponse); ok {
-			return "", classifyV3Error(v3Err)
-		}
-		return "", err
-	}
-
-	var matches []string
-	if resp.V3ConnectorsCursorResponse != nil {
-		for _, c := range resp.V3ConnectorsCursorResponse.Cursor.Data {
-			matches = append(matches, c.ID)
-		}
-	}
-
-	return resolveProviderMatch(matches, provider)
-}
-
-// resolveConnectorIDV1 is resolveConnectorIDV3's counterpart for stacks whose payments module
-// predates the v3 API: v1 has no filtered connector listing, so it lists everything and matches
-// provider client-side. Safe from the closed-enum decode failure described on resolveConnectorID
-// for the population it targets - a pre-v3 payments module can only have the legacy providers
-// the enum already declares.
-func (a Activities) resolveConnectorIDV1(ctx context.Context, provider string) (string, error) {
 	resp, err := a.client.Payments.V1.ListAllConnectors(ctx)
 	if err != nil {
 		if pErr, ok := err.(*payments.PaymentsErrorResponse); ok {
@@ -377,13 +302,13 @@ func (a Activities) resolveConnectorIDV1(ctx context.Context, provider string) (
 	var matches []string
 	if resp.ConnectorsResponse != nil {
 		for _, c := range resp.ConnectorsResponse.Data {
-			if strings.EqualFold(string(c.Provider), provider) {
+			if strings.EqualFold(string(c.Provider), *provider) {
 				matches = append(matches, c.ConnectorID)
 			}
 		}
 	}
 
-	return resolveProviderMatch(matches, provider)
+	return resolveProviderMatch(matches, *provider)
 }
 
 var CreateTransferInitiationActivity = Activities{}.CreateTransferInitiation
