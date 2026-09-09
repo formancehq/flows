@@ -1,0 +1,1425 @@
+{
+  "specDocument": "openapi.yaml",
+  "productRevision": "9dc85b316cbfc2485dd8e176b7caa17b73e04e0d",
+  "baselineRevision": "693c58e27865f83332e6c3199d61fed81b742f41",
+  "totals": {
+    "specOperations": 35,
+    "uniqueOperationIds": 35,
+    "v1Operations": 17,
+    "v2Operations": 18,
+    "deprecatedOperations": 0,
+    "baselineCommands": 16,
+    "baselineMapped": 16,
+    "baselineExcluded": 0,
+    "baselineDistinctOperations": 17,
+    "withBaseline": 17,
+    "withoutBaseline": 18,
+    "blocked": 35,
+    "unblocked": 0,
+    "paginatedOperations": 4,
+    "unboundedCollections": 8,
+    "mutatingOperations": 15,
+    "destructiveOperations": 6
+  },
+  "operations": [
+    {
+      "operationId": "cancelEvent",
+      "method": "PUT",
+      "path": "/instances/{instanceID}/abort",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "cancelEvent",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "instances",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances stop \u003cinstance-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "createTrigger",
+      "method": "POST",
+      "path": "/triggers",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "createTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": null,
+      "requestBody": "TriggerData",
+      "successCode": "201",
+      "successBody": "CreateTriggerResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers create \u003cevent\u003e \u003cworkflow-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "createWorkflow",
+      "method": "POST",
+      "path": "/workflows",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "createWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": null,
+      "requestBody": "CreateWorkflowRequest",
+      "successCode": "201",
+      "successBody": "CreateWorkflowResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration workflows create \u003cfile\u003e|-"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "deleteTrigger",
+      "method": "DELETE",
+      "path": "/triggers/{triggerID}",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "deleteTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "triggers",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers delete \u003ctrigger-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "deleteWorkflow",
+      "method": "DELETE",
+      "path": "/workflows/{flowId}",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "deleteWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "flowId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "workflows",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration workflows delete \u003cworkflow-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "getInstance",
+      "method": "GET",
+      "path": "/instances/{instanceID}",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "getInstance",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "GetWorkflowInstanceResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances show \u003cinstance-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "getInstanceHistory",
+      "method": "GET",
+      "path": "/instances/{instanceID}/history",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "getInstanceHistory",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "GetWorkflowInstanceHistoryResponse",
+      "family": "instance-history",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances describe \u003cinstance-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "getInstanceStageHistory",
+      "method": "GET",
+      "path": "/instances/{instanceID}/stages/{number}/history",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "getInstanceStageHistory",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        },
+        {
+          "name": "number",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "GetWorkflowInstanceHistoryStageResponse",
+      "family": "instance-history",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances describe \u003cinstance-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "getServerInfo",
+      "method": "GET",
+      "path": "/_info",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "getServerInfo",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": null,
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ServerInfo",
+      "family": "server-probe",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "getWorkflow",
+      "method": "GET",
+      "path": "/workflows/{flowId}",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "getWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "flowId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "GetWorkflowResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances show \u003cinstance-id\u003e",
+        "orchestration workflows run \u003cid\u003e",
+        "orchestration workflows show \u003cid\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "listInstances",
+      "method": "GET",
+      "path": "/instances",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "listInstances",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "running",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "workflowID",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ListRunsResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances list"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "listTriggers",
+      "method": "GET",
+      "path": "/triggers",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "listTriggers",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ListTriggersResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers list"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B3-silent-truncation"
+      ]
+    },
+    {
+      "operationId": "listTriggersOccurrences",
+      "method": "GET",
+      "path": "/triggers/{triggerID}/occurrences",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "listTriggersOccurrences",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ListTriggersOccurrencesResponse",
+      "family": "trigger-occurrences",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers occurrences list"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "listWorkflows",
+      "method": "GET",
+      "path": "/workflows",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "listWorkflows",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": null,
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ListWorkflowsResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration workflows list"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "readTrigger",
+      "method": "GET",
+      "path": "/triggers/{triggerID}",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "readTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "ReadTriggerResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers show \u003ctrigger-id\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "runWorkflow",
+      "method": "POST",
+      "path": "/workflows/{workflowID}/instances",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "runWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "workflowID",
+          "in": "path",
+          "required": true
+        },
+        {
+          "name": "wait",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "RunWorkflowRequest",
+      "successCode": "201",
+      "successBody": "RunWorkflowResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": true
+      },
+      "baselineCommands": [
+        "orchestration workflows run \u003cid\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B4-unbounded-blocking-wait"
+      ]
+    },
+    {
+      "operationId": "sendEvent",
+      "method": "POST",
+      "path": "/instances/{instanceID}/events",
+      "tag": "orchestration.v1",
+      "version": "v1",
+      "sdkMethod": "sendEvent",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "(inline object)",
+      "successCode": "204",
+      "successBody": "",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration instances send-event \u003cinstance-id\u003e \u003cevent\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "testTrigger",
+      "method": "POST",
+      "path": "/v2/triggers/{triggerID}/test",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "TestTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "(inline object)",
+      "successCode": "200",
+      "successBody": "V2TestTriggerResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": [
+        "orchestration triggers test \u003ctrigger-id\u003e \u003cevent\u003e"
+      ],
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2CancelEvent",
+      "method": "PUT",
+      "path": "/v2/instances/{instanceID}/abort",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "CancelEvent",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "instances",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2CreateTrigger",
+      "method": "POST",
+      "path": "/v2/triggers",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "CreateTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": null,
+      "requestBody": "V2TriggerData",
+      "successCode": "201",
+      "successBody": "V2CreateTriggerResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2CreateWorkflow",
+      "method": "POST",
+      "path": "/v2/workflows",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "CreateWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": null,
+      "requestBody": "V2CreateWorkflowRequest",
+      "successCode": "201",
+      "successBody": "V2CreateWorkflowResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2DeleteTrigger",
+      "method": "DELETE",
+      "path": "/v2/triggers/{triggerID}",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "DeleteTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "triggers",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2DeleteWorkflow",
+      "method": "DELETE",
+      "path": "/v2/workflows/{flowId}",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "DeleteWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "flowId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "204",
+      "successBody": "",
+      "family": "workflows",
+      "risk": {
+        "destructive": true,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2GetInstance",
+      "method": "GET",
+      "path": "/v2/instances/{instanceID}",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "GetInstance",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2GetWorkflowInstanceResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2GetInstanceHistory",
+      "method": "GET",
+      "path": "/v2/instances/{instanceID}/history",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "GetInstanceHistory",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2GetWorkflowInstanceHistoryResponse",
+      "family": "instance-history",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "v2GetInstanceStageHistory",
+      "method": "GET",
+      "path": "/v2/instances/{instanceID}/stages/{number}/history",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "GetInstanceStageHistory",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        },
+        {
+          "name": "number",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2GetWorkflowInstanceHistoryStageResponse",
+      "family": "instance-history",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": true,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B2-unbounded-collection"
+      ]
+    },
+    {
+      "operationId": "v2GetServerInfo",
+      "method": "GET",
+      "path": "/v2/_info",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "GetServerInfo",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": null,
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ServerInfo",
+      "family": "server-probe",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2GetWorkflow",
+      "method": "GET",
+      "path": "/v2/workflows/{flowId}",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "GetWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "flowId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2GetWorkflowResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2ListInstances",
+      "method": "GET",
+      "path": "/v2/instances",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "ListInstances",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "running",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "workflowID",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ListRunsResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": true,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2ListTriggers",
+      "method": "GET",
+      "path": "/v2/triggers",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "ListTriggers",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "name",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ListTriggersResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": true,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2ListTriggersOccurrences",
+      "method": "GET",
+      "path": "/v2/triggers/{triggerID}/occurrences",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "ListTriggersOccurrences",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ListTriggersOccurrencesResponse",
+      "family": "trigger-occurrences",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": true,
+        "paginated": true,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2ListWorkflows",
+      "method": "GET",
+      "path": "/v2/workflows",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "ListWorkflows",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ListWorkflowsResponse",
+      "family": "workflows",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": true,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2ReadTrigger",
+      "method": "GET",
+      "path": "/v2/triggers/{triggerID}",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "ReadTrigger",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:read"
+      ],
+      "parameters": [
+        {
+          "name": "triggerID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "",
+      "successCode": "200",
+      "successBody": "V2ReadTriggerResponse",
+      "family": "triggers",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": true,
+        "replaySafe": true,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    },
+    {
+      "operationId": "v2RunWorkflow",
+      "method": "POST",
+      "path": "/v2/workflows/{workflowID}/instances",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "RunWorkflow",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "workflowID",
+          "in": "path",
+          "required": true
+        },
+        {
+          "name": "wait",
+          "in": "query",
+          "required": false
+        }
+      ],
+      "requestBody": "V2RunWorkflowRequest",
+      "successCode": "201",
+      "successBody": "V2RunWorkflowResponse",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": true
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable",
+        "B4-unbounded-blocking-wait"
+      ]
+    },
+    {
+      "operationId": "v2SendEvent",
+      "method": "POST",
+      "path": "/v2/instances/{instanceID}/events",
+      "tag": "orchestration.v2",
+      "version": "v2",
+      "sdkMethod": "SendEvent",
+      "deprecated": false,
+      "hasSecurity": true,
+      "scopes": [
+        "orchestration:write"
+      ],
+      "parameters": [
+        {
+          "name": "instanceID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "requestBody": "(inline object)",
+      "successCode": "204",
+      "successBody": "",
+      "family": "instances",
+      "risk": {
+        "destructive": false,
+        "secret": "",
+        "displayOnce": false,
+        "echoesUserExpressions": false,
+        "replaySafe": false,
+        "paginated": false,
+        "unboundedCollection": false,
+        "longRunning": false
+      },
+      "baselineCommands": null,
+      "blockers": [
+        "B1-generated-client-unusable"
+      ]
+    }
+  ]
+}
