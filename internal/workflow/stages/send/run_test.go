@@ -11,6 +11,7 @@ import (
 	"github.com/formancehq/formance-sdk-go/v5/pkg/models/wallets"
 	"github.com/formancehq/go-libs/v3/pointer"
 	"github.com/formancehq/orchestration/internal/workflow/activities"
+	"github.com/formancehq/orchestration/internal/workflow/stages/internal"
 	"github.com/formancehq/orchestration/internal/workflow/stages/internal/stagestesting"
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/temporal"
@@ -773,6 +774,49 @@ var (
 			},
 		},
 	}
+	accountToAccountInsufficientFund = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to account with insufficient fund",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:     "foo",
+				Ledger: "default",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:     "bar",
+				Ledger: "default",
+			}),
+			Amount: &wallets.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args: []any{
+					mock.Anything, activities.CreateTransactionRequest{
+						Ledger: "default",
+						Data: activities.PostTransaction{
+							Postings: []ledger.V2Posting{{
+								Amount:      big.NewInt(100),
+								Asset:       "USD",
+								Destination: "bar",
+								Source:      "foo",
+							}},
+						},
+					},
+				},
+				Returns: []any{nil, temporal.NewApplicationError(
+					"account had insufficient funds", internal.ErrorCodeInsufficientFund, "")},
+			},
+		},
+		// The single call is the point: InfiniteRetryContext sets no MaximumAttempts, so before
+		// INSUFFICIENT_FUND joined its NonRetryableErrorTypes this stage re-ran CreateTransaction
+		// against an unchanged balance for the life of the workflow.
+		ExpectedErrorCode:     internal.ErrorCodeInsufficientFund,
+		ExpectedActivityCalls: map[string]int{"CreateTransaction": 1},
+	}
+
 	accountToAccount = stagestesting.WorkflowTestCase[Send]{
 		Name: "account to account",
 		Stage: Send{
@@ -2262,6 +2306,8 @@ var testCases = []stagestesting.WorkflowTestCase[Send]{
 	accountToPaymentWithOverdraft,
 	paymentToAccountWithOverdraft,
 	accountToAccountMixedLedgerWithOverdraft,
+	// non-retryable error tests
+	accountToAccountInsufficientFund,
 }
 
 func TestSend(t *testing.T) {
