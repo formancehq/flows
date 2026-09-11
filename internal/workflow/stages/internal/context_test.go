@@ -44,14 +44,19 @@ func TestInfiniteRetryContextDoesNotRetryInsufficientFund(t *testing.T) {
 	require.Contains(t, opts.RetryPolicy.NonRetryableErrorTypes, ErrorCodeCompilationFailed)
 }
 
-// TestPaymentInitiationRetryContextKeepsCommonCodes guards against the append() in
-// InfiniteRetryContext mutating the shared commonNonRetryableErrorCodes backing array: the
-// PSP context must keep exactly the common codes and gain none of the ledger-only ones.
+// TestPaymentInitiationRetryContextKeepsCommonCodes pins the PSP context to exactly the
+// common codes. It builds the ledger context first, so a future change that lets that
+// context's append() write into the shared commonNonRetryableErrorCodes backing array shows
+// up here as ledger-only codes leaking into the PSP policy. The expected value is a literal
+// rather than commonNonRetryableErrorCodes itself: comparing the package variable against a
+// policy that was assigned that same variable compares a slice to itself and can never fail.
 func TestPaymentInitiationRetryContextKeepsCommonCodes(t *testing.T) {
 	t.Parallel()
 
+	_ = retryPolicyOf(t, InfiniteRetryContext)
 	opts := retryPolicyOf(t, PaymentInitiationRetryContext)
 
-	require.Equal(t, commonNonRetryableErrorCodes, opts.RetryPolicy.NonRetryableErrorTypes)
+	require.Equal(t, []string{ErrorCodeValidation, ErrorCodeConflict},
+		opts.RetryPolicy.NonRetryableErrorTypes)
 	require.EqualValues(t, 15, opts.RetryPolicy.MaximumAttempts)
 }
