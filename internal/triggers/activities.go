@@ -81,8 +81,13 @@ func (a Activities) EvalTriggerVariables(ctx context.Context, trigger Trigger, r
 }
 
 func (a Activities) InsertTriggerOccurrence(ctx context.Context, occurrence Occurrence) error {
+	// Idempotent: the occurrence id is part of the recorded activity input, so a
+	// Temporal retry after a lost ack (the row was committed but the result never
+	// reached the server) replays the exact same row. Without this, the retry
+	// fails forever on triggers_occurrences_pkey and wedges ExecuteTrigger.
 	_, err := a.db.NewInsert().
 		Model(pointer.For(occurrence)).
+		On("CONFLICT (id) DO NOTHING").
 		Exec(ctx)
 	return err
 }
