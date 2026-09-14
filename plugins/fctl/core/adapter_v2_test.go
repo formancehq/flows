@@ -316,11 +316,18 @@ func TestMalformedProductResultsFailClosed(t *testing.T) {
 	}
 }
 
-// TestProductHTTPErrorsReachTheHostTyped pins the failure the adapter surfaces
-// for a non-2xx product response. The shared bridge classifies it, so the
-// adapter must forward the typed code, the HTTP status and the retryability
-// verdict unchanged instead of flattening them into its own diagnostic.
-func TestProductHTTPErrorsReachTheHostTyped(t *testing.T) {
+// TestProductHTTPErrorsSurfaceTypedFromTheAdapter pins the failure value the
+// adapter returns for a non-2xx product response. The shared bridge classifies
+// it, so the adapter must forward the typed code, the HTTP status and the
+// retryability verdict unchanged instead of flattening them into its own
+// diagnostic.
+//
+// Scope: this is the adapter's in-process return value, not what a host sees.
+// Flows' only entrypoint is the portable component, whose terminal frame
+// carries a failure code alone, so the status and retryability asserted here do
+// not cross that boundary. The host-visible contract is pinned separately by
+// component.TestOnlyTheTypedFailureCodeCrossesThePortableHostBoundary.
+func TestProductHTTPErrorsSurfaceTypedFromTheAdapter(t *testing.T) {
 	for _, test := range []struct {
 		status        int32
 		wantRetryable bool

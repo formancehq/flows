@@ -13,13 +13,13 @@ require gopkg.in/yaml.v3 v3.0.1
 require (
 	github.com/formancehq/fctl-v2-poc/pkg/plugin v0.0.0
 	go.bytecodealliance.org/pkg v0.2.2
+	google.golang.org/protobuf v1.36.12
 	openapi v0.0.0
 )
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05 // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 replace openapi => ../../pkg/client

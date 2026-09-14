@@ -51,9 +51,13 @@ client without float64 rounding.
 The adapter imports the product's generated `pkg/client` as a nested module and
 supplies `producthttp` as its HTTP client. It does not configure generated
 security or retries: endpoint, credentials, request admission and retry policy
-remain host-owned. A non-2xx product response is classified by that bridge, so
-the adapter forwards the typed `product_http_error` failure, its HTTP status and
-its retryability verdict without reinterpreting them. Nix pins the exact
+remain host-owned. A non-2xx product response is classified by that bridge and
+the adapter forwards the resulting typed failure without reinterpreting it. Only
+its code crosses the portable boundary: the pinned SDK's terminal frame carries
+a failure code and nothing else, so a host sees `product_http_error` where it
+used to see the opaque `product_response_failed`, while the failure's message,
+its `httpStatus` details and its retryability verdict stay adapter-local. A host
+retry policy cannot be built on them today. Nix pins the exact
 Speakeasy CLI version recorded in the client lock. `just generate-client`
 regenerates with that pin and checks the nested module;
 `just generated-client-regeneration-check` regenerates in an isolated copy and
