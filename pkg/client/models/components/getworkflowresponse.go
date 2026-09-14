@@ -3,6 +3,7 @@
 package components
 
 type GetWorkflowResponse struct {
+	// A workflow definition and the stages it runs
 	Data Workflow `json:"data"`
 }
 

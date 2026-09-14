@@ -2,6 +2,7 @@
 
 package components
 
+// Filter - How the trigger's filter evaluated against the sample event
 type Filter struct {
 	Match *bool   `json:"match,omitempty"`
 	Error *string `json:"error,omitempty"`
@@ -40,8 +41,11 @@ func (o *Variables) GetError() *string {
 	return o.Error
 }
 
+// V2TriggerTest - Result of evaluating a trigger against a sample event, without running the workflow
 type V2TriggerTest struct {
-	Filter    *Filter              `json:"filter,omitempty"`
+	// How the trigger's filter evaluated against the sample event
+	Filter *Filter `json:"filter,omitempty"`
+	// The variables the trigger would build from the sample event
 	Variables map[string]Variables `json:"variables,omitempty"`
 }
 

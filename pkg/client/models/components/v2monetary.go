@@ -7,6 +7,7 @@ import (
 	"openapi/internal/utils"
 )
 
+// V2Monetary - An amount together with the asset it is denominated in
 type V2Monetary struct {
 	// The asset of the monetary value.
 	Asset string `json:"asset"`

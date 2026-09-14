@@ -2,7 +2,9 @@
 
 package components
 
+// ActivityConfirmHold - Arguments for the activity that confirms a wallet hold
 type ActivityConfirmHold struct {
+	// Identifier of the hold to confirm
 	ID string `json:"id"`
 }
 

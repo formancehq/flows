@@ -11,10 +11,13 @@ type Wallet struct {
 	// The unique ID of the wallet.
 	ID string `json:"id"`
 	// Metadata associated with the wallet.
-	Metadata  map[string]string `json:"metadata"`
-	Name      string            `json:"name"`
-	CreatedAt time.Time         `json:"createdAt"`
-	Ledger    string            `json:"ledger"`
+	Metadata map[string]string `json:"metadata"`
+	// Human-readable name of the wallet
+	Name string `json:"name"`
+	// When the wallet was created
+	CreatedAt time.Time `json:"createdAt"`
+	// Name of the ledger backing this wallet
+	Ledger string `json:"ledger"`
 }
 
 func (w Wallet) MarshalJSON() ([]byte, error) {

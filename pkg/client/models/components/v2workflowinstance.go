@@ -7,16 +7,26 @@ import (
 	"time"
 )
 
+// V2WorkflowInstance - One run of a workflow, tracking its per-stage progress
 type V2WorkflowInstance struct {
-	WorkflowID   string          `json:"workflowID"`
-	ID           string          `json:"id"`
-	CreatedAt    time.Time       `json:"createdAt"`
-	UpdatedAt    time.Time       `json:"updatedAt"`
-	Status       []V2StageStatus `json:"status,omitempty"`
-	Terminated   bool            `json:"terminated"`
-	TerminatedAt *time.Time      `json:"terminatedAt,omitempty"`
-	Error        *string         `json:"error,omitempty"`
-	Workflow     *V2Workflow     `json:"workflow,omitempty"`
+	// Identifier of the workflow this run belongs to
+	WorkflowID string `json:"workflowID"`
+	// Unique identifier of the run
+	ID string `json:"id"`
+	// When the run was started
+	CreatedAt time.Time `json:"createdAt"`
+	// When the run was last updated
+	UpdatedAt time.Time `json:"updatedAt"`
+	// Per-stage progress of the run
+	Status []V2StageStatus `json:"status,omitempty"`
+	// Whether the run has finished, successfully or not
+	Terminated bool `json:"terminated"`
+	// When the run finished, absent while it is still running
+	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
+	// Why the run failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// A workflow definition and the stages it runs
+	Workflow *V2Workflow `json:"workflow,omitempty"`
 }
 
 func (v V2WorkflowInstance) MarshalJSON() ([]byte, error) {

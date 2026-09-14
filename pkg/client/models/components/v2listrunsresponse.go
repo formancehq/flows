@@ -2,6 +2,7 @@
 
 package components
 
+// V2ListRunsResponseCursor - Paginated cursor wrapping the list of runs
 type V2ListRunsResponseCursor struct {
 	PageSize int64                `json:"pageSize"`
 	HasMore  bool                 `json:"hasMore"`
@@ -46,6 +47,7 @@ func (o *V2ListRunsResponseCursor) GetData() []V2WorkflowInstance {
 }
 
 type V2ListRunsResponse struct {
+	// Paginated cursor wrapping the list of runs
 	Cursor V2ListRunsResponseCursor `json:"cursor"`
 }
 

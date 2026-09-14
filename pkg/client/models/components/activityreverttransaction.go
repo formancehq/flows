@@ -2,9 +2,12 @@
 
 package components
 
+// ActivityRevertTransaction - Arguments for the activity that reverts a ledger transaction
 type ActivityRevertTransaction struct {
+	// Name of the ledger holding the transaction
 	Ledger string `json:"ledger"`
-	ID     string `json:"id"`
+	// Identifier of the transaction to revert
+	ID string `json:"id"`
 }
 
 func (o *ActivityRevertTransaction) GetLedger() string {

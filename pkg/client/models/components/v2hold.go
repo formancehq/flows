@@ -2,15 +2,18 @@
 
 package components
 
+// V2Hold - Funds locked by a pending wallet debit, later either confirmed or voided
 type V2Hold struct {
 	// The unique ID of the hold.
 	ID string `json:"id"`
 	// The ID of the wallet the hold is associated with.
 	WalletID string `json:"walletID"`
 	// Metadata associated with the hold.
-	Metadata    map[string]string `json:"metadata"`
-	Description string            `json:"description"`
-	Destination *V2Subject        `json:"destination,omitempty"`
+	Metadata map[string]string `json:"metadata"`
+	// Human-readable reason the funds were held
+	Description string `json:"description"`
+	// The counterparty of a wallet movement, either a ledger account or another wallet
+	Destination *V2Subject `json:"destination,omitempty"`
 }
 
 func (o *V2Hold) GetID() string {

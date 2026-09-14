@@ -7,14 +7,19 @@ import (
 	"time"
 )
 
+// CreditWalletRequest - A credit to apply to a wallet
 type CreditWalletRequest struct {
+	// An amount together with the asset it is denominated in
 	Amount Monetary `json:"amount"`
 	// Metadata associated with the wallet.
-	Metadata  map[string]string `json:"metadata"`
-	Reference *string           `json:"reference,omitempty"`
-	Sources   []Subject         `json:"sources"`
+	Metadata map[string]string `json:"metadata"`
+	// Optional caller-supplied identifier used to deduplicate the credit
+	Reference *string `json:"reference,omitempty"`
+	// Where the funds come from
+	Sources []Subject `json:"sources"`
 	// The balance to credit
-	Balance   *string    `json:"balance,omitempty"`
+	Balance *string `json:"balance,omitempty"`
+	// The transaction time to record on the resulting transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 }
 

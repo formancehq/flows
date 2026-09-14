@@ -2,6 +2,7 @@
 
 package components
 
+// V2ListTriggersResponseCursor - Paginated cursor wrapping the list of triggers
 type V2ListTriggersResponseCursor struct {
 	PageSize int64       `json:"pageSize"`
 	HasMore  bool        `json:"hasMore"`
@@ -46,6 +47,7 @@ func (o *V2ListTriggersResponseCursor) GetData() []V2Trigger {
 }
 
 type V2ListTriggersResponse struct {
+	// Paginated cursor wrapping the list of triggers
 	Cursor V2ListTriggersResponseCursor `json:"cursor"`
 }
 

@@ -2,9 +2,13 @@
 
 package components
 
+// StageSendSource - Where a send stage takes the funds from
 type StageSendSource struct {
-	Wallet  *StageSendSourceWallet  `json:"wallet,omitempty"`
+	// Take the funds from a wallet
+	Wallet *StageSendSourceWallet `json:"wallet,omitempty"`
+	// Take the funds from a ledger account
 	Account *StageSendSourceAccount `json:"account,omitempty"`
+	// Take the funds from a payment
 	Payment *StageSendSourcePayment `json:"payment,omitempty"`
 }
 

@@ -25,6 +25,7 @@ jobs:
     uses: formancehq/ci/.github/workflows/go-dirty.yml@v1
     secrets:
       SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+      GIT_PRIVATE_TOKEN: ${{ secrets.NUMARY_GITHUB_TOKEN }}
 
   Tests:
     uses: formancehq/ci/.github/workflows/go-test.yml@v1
@@ -32,6 +33,7 @@ jobs:
       runner-profile: namespace-profile-linux-amd64-4vcpu
     secrets:
       SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+      GIT_PRIVATE_TOKEN: ${{ secrets.NUMARY_GITHUB_TOKEN }}
 
   GoReleaser:
     needs: [Dirty]

@@ -2,8 +2,11 @@
 
 package components
 
+// V2WorkflowConfig - The stages a workflow runs, in order
 type V2WorkflowConfig struct {
-	Name   *string          `json:"name,omitempty"`
+	// Human-readable name for the workflow
+	Name *string `json:"name,omitempty"`
+	// The stages executed in order when the workflow runs
 	Stages []map[string]any `json:"stages"`
 }
 

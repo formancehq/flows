@@ -1,9 +1,11 @@
 # StageSendSourceWallet
 
+Take the funds from a wallet
+
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `ID`               | *string*           | :heavy_check_mark: | N/A                |
-| `Balance`          | **string*          | :heavy_minus_sign: | N/A                |
+| Field                                                                            | Type                                                                             | Required                                                                         | Description                                                                      |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `ID`                                                                             | *string*                                                                         | :heavy_check_mark:                                                               | Identifier of the wallet to take funds from                                      |
+| `Balance`                                                                        | **string*                                                                        | :heavy_minus_sign:                                                               | Name of the balance within the wallet. Defaults to the main balance when omitted |

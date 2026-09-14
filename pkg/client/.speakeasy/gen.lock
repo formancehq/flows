@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: e26e5b37-4391-4462-9a20-c517a83a166a
 management:
-  docChecksum: dfc3ed9eb806fc9e8c6629a3d2a0a637
+  docChecksum: 0d77882e08662a94594e4266caa58440
   docVersion: 0.1.0
   speakeasyVersion: 1.351.0
   generationVersion: 2.384.1
-  releaseVersion: 0.1.4
-  configChecksum: c78571211c83f4afeeaed43ac964a7c8
+  releaseVersion: 0.1.5
+  configChecksum: 6215df21602deba38310da21bc149ef7
 features:
   go:
     additionalDependencies: 0.1.0
@@ -114,8 +114,6 @@ generatedFiles:
   - /models/components/stagesendsourcewallet.go
   - /models/components/stagesenddestination.go
   - /models/components/stagesenddestinationpayment.go
-  - /models/components/stagesenddestinationaccount.go
-  - /models/components/stagesenddestinationwallet.go
   - /models/components/monetary.go
   - /models/components/stagedelay.go
   - /models/components/stagewaitevent.go
@@ -126,25 +124,25 @@ generatedFiles:
   - /models/components/workflowinstancehistorystageoutput.go
   - /models/components/listwalletsresponse.go
   - /models/components/wallet.go
-  - /models/components/activitygetwalletoutput.go
+  - /models/components/getwalletresponse.go
   - /models/components/walletwithbalances.go
   - /models/components/assetholder.go
-  - /models/components/activitydebitwalletoutput.go
+  - /models/components/debitwalletresponse.go
   - /models/components/hold.go
   - /models/components/subject.go
   - /models/components/ledgeraccountsubject.go
   - /models/components/walletsubject.go
-  - /models/components/activitygetpaymentoutput.go
+  - /models/components/paymentresponse.go
   - /models/components/payment.go
   - /models/components/paymentmetadata.go
   - /models/components/paymentadjustment.go
   - /models/components/paymentstatus.go
   - /models/components/connector.go
-  - /models/components/activityreverttransactionoutput.go
+  - /models/components/reverttransactionresponse.go
   - /models/components/transaction.go
   - /models/components/posting.go
-  - /models/components/activitycreatetransactionoutput.go
-  - /models/components/activitygetaccountoutput.go
+  - /models/components/createtransactionresponse.go
+  - /models/components/accountresponse.go
   - /models/components/account.go
   - /models/components/volume.go
   - /models/components/workflowinstancehistorystageinput.go
@@ -157,7 +155,8 @@ generatedFiles:
   - /models/components/creditwalletrequest.go
   - /models/components/activityconfirmhold.go
   - /models/components/activitygetpayment.go
-  - /models/components/activitystripetransfer.go
+  - /models/components/createtransferinitiationrequest.go
+  - /models/components/stripetransferrequest.go
   - /models/components/activityreverttransaction.go
   - /models/components/activitycreatetransaction.go
   - /models/components/posttransaction.go
@@ -194,8 +193,6 @@ generatedFiles:
   - /models/components/v2stagesendsourcewallet.go
   - /models/components/v2stagesenddestination.go
   - /models/components/v2stagesenddestinationpayment.go
-  - /models/components/v2stagesenddestinationaccount.go
-  - /models/components/v2stagesenddestinationwallet.go
   - /models/components/v2monetary.go
   - /models/components/v2stagedelay.go
   - /models/components/v2stagewaitevent.go
@@ -206,24 +203,24 @@ generatedFiles:
   - /models/components/v2workflowinstancehistorystageoutput.go
   - /models/components/v2listwalletsresponse.go
   - /models/components/v2wallet.go
-  - /models/components/v2activitygetwalletoutput.go
+  - /models/components/v2getwalletresponse.go
   - /models/components/v2walletwithbalances.go
   - /models/components/v2assetholder.go
-  - /models/components/v2activitydebitwalletoutput.go
+  - /models/components/v2debitwalletresponse.go
   - /models/components/v2hold.go
   - /models/components/v2subject.go
   - /models/components/v2ledgeraccountsubject.go
   - /models/components/v2walletsubject.go
-  - /models/components/v2activitygetpaymentoutput.go
+  - /models/components/v2paymentresponse.go
   - /models/components/v2payment.go
   - /models/components/v2paymentmetadata.go
   - /models/components/v2paymentadjustment.go
   - /models/components/v2paymentstatus.go
   - /models/components/v2connector.go
-  - /models/components/v2activitycreatetransactionoutput.go
+  - /models/components/v2createtransactionresponse.go
   - /models/components/v2transaction.go
   - /models/components/v2posting.go
-  - /models/components/v2activitygetaccountoutput.go
+  - /models/components/v2accountresponse.go
   - /models/components/v2account.go
   - /models/components/v2volume.go
   - /models/components/v2workflowinstancehistorystageinput.go
@@ -236,7 +233,8 @@ generatedFiles:
   - /models/components/v2creditwalletrequest.go
   - /models/components/v2activityconfirmhold.go
   - /models/components/v2activitygetpayment.go
-  - /models/components/v2activitystripetransfer.go
+  - /models/components/v2createtransferinitiationrequest.go
+  - /models/components/v2stripetransferrequest.go
   - /models/components/v2activitycreatetransaction.go
   - /models/components/v2posttransaction.go
   - /models/components/v2activityaddaccountmetadata.go
@@ -338,9 +336,8 @@ generatedFiles:
   - docs/models/components/stagesendsourceaccount.md
   - docs/models/components/stagesendsourcewallet.md
   - docs/models/components/stagesenddestination.md
+  - docs/models/components/type.md
   - docs/models/components/stagesenddestinationpayment.md
-  - docs/models/components/stagesenddestinationaccount.md
-  - docs/models/components/stagesenddestinationwallet.md
   - docs/models/components/monetary.md
   - docs/models/components/stagedelay.md
   - docs/models/components/stagewaitevent.md
@@ -352,17 +349,17 @@ generatedFiles:
   - docs/models/components/cursor.md
   - docs/models/components/listwalletsresponse.md
   - docs/models/components/wallet.md
-  - docs/models/components/activitygetwalletoutput.md
+  - docs/models/components/getwalletresponse.md
   - docs/models/components/balances.md
   - docs/models/components/walletwithbalances.md
   - docs/models/components/assetholder.md
-  - docs/models/components/activitydebitwalletoutput.md
+  - docs/models/components/debitwalletresponse.md
   - docs/models/components/hold.md
   - docs/models/components/subject.md
   - docs/models/components/ledgeraccountsubject.md
   - docs/models/components/walletsubject.md
-  - docs/models/components/activitygetpaymentoutput.md
-  - docs/models/components/type.md
+  - docs/models/components/paymentresponse.md
+  - docs/models/components/paymenttype.md
   - docs/models/components/scheme.md
   - docs/models/components/raw.md
   - docs/models/components/payment.md
@@ -371,11 +368,11 @@ generatedFiles:
   - docs/models/components/paymentadjustment.md
   - docs/models/components/paymentstatus.md
   - docs/models/components/connector.md
-  - docs/models/components/activityreverttransactionoutput.md
+  - docs/models/components/reverttransactionresponse.md
   - docs/models/components/transaction.md
   - docs/models/components/posting.md
-  - docs/models/components/activitycreatetransactionoutput.md
-  - docs/models/components/activitygetaccountoutput.md
+  - docs/models/components/createtransactionresponse.md
+  - docs/models/components/accountresponse.md
   - docs/models/components/account.md
   - docs/models/components/volume.md
   - docs/models/components/workflowinstancehistorystageinput.md
@@ -388,8 +385,11 @@ generatedFiles:
   - docs/models/components/creditwalletrequest.md
   - docs/models/components/activityconfirmhold.md
   - docs/models/components/activitygetpayment.md
+  - docs/models/components/createtransferinitiationrequesttype.md
+  - docs/models/components/createtransferinitiationrequestmetadata.md
+  - docs/models/components/createtransferinitiationrequest.md
   - docs/models/components/metadata.md
-  - docs/models/components/activitystripetransfer.md
+  - docs/models/components/stripetransferrequest.md
   - docs/models/components/activityreverttransaction.md
   - docs/models/components/activitycreatetransaction.md
   - docs/models/components/script.md
@@ -432,9 +432,8 @@ generatedFiles:
   - docs/models/components/v2stagesendsourceaccount.md
   - docs/models/components/v2stagesendsourcewallet.md
   - docs/models/components/v2stagesenddestination.md
+  - docs/models/components/v2stagesenddestinationpaymenttype.md
   - docs/models/components/v2stagesenddestinationpayment.md
-  - docs/models/components/v2stagesenddestinationaccount.md
-  - docs/models/components/v2stagesenddestinationwallet.md
   - docs/models/components/v2monetary.md
   - docs/models/components/v2stagedelay.md
   - docs/models/components/v2stagewaitevent.md
@@ -446,16 +445,16 @@ generatedFiles:
   - docs/models/components/v2listwalletsresponsecursor.md
   - docs/models/components/v2listwalletsresponse.md
   - docs/models/components/v2wallet.md
-  - docs/models/components/v2activitygetwalletoutput.md
+  - docs/models/components/v2getwalletresponse.md
   - docs/models/components/v2walletwithbalancesbalances.md
   - docs/models/components/v2walletwithbalances.md
   - docs/models/components/v2assetholder.md
-  - docs/models/components/v2activitydebitwalletoutput.md
+  - docs/models/components/v2debitwalletresponse.md
   - docs/models/components/v2hold.md
   - docs/models/components/v2subject.md
   - docs/models/components/v2ledgeraccountsubject.md
   - docs/models/components/v2walletsubject.md
-  - docs/models/components/v2activitygetpaymentoutput.md
+  - docs/models/components/v2paymentresponse.md
   - docs/models/components/v2paymenttype.md
   - docs/models/components/v2paymentscheme.md
   - docs/models/components/v2paymentraw.md
@@ -465,10 +464,10 @@ generatedFiles:
   - docs/models/components/v2paymentadjustment.md
   - docs/models/components/v2paymentstatus.md
   - docs/models/components/v2connector.md
-  - docs/models/components/v2activitycreatetransactionoutput.md
+  - docs/models/components/v2createtransactionresponse.md
   - docs/models/components/v2transaction.md
   - docs/models/components/v2posting.md
-  - docs/models/components/v2activitygetaccountoutput.md
+  - docs/models/components/v2accountresponse.md
   - docs/models/components/v2account.md
   - docs/models/components/v2volume.md
   - docs/models/components/v2workflowinstancehistorystageinput.md
@@ -481,8 +480,11 @@ generatedFiles:
   - docs/models/components/v2creditwalletrequest.md
   - docs/models/components/v2activityconfirmhold.md
   - docs/models/components/v2activitygetpayment.md
-  - docs/models/components/v2activitystripetransfermetadata.md
-  - docs/models/components/v2activitystripetransfer.md
+  - docs/models/components/v2createtransferinitiationrequesttype.md
+  - docs/models/components/v2createtransferinitiationrequestmetadata.md
+  - docs/models/components/v2createtransferinitiationrequest.md
+  - docs/models/components/v2stripetransferrequestmetadata.md
+  - docs/models/components/v2stripetransferrequest.md
   - docs/models/components/v2activitycreatetransaction.md
   - docs/models/components/v2posttransactionscript.md
   - docs/models/components/v2posttransaction.md

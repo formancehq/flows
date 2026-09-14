@@ -2,10 +2,14 @@
 
 package components
 
+// UpdateAccount - Metadata to set on a ledger account
 type UpdateAccount struct {
-	ID       string            `json:"id"`
+	// Address of the ledger account to update
+	ID string `json:"id"`
+	// Metadata to set on the account
 	Metadata map[string]string `json:"metadata"`
-	Ledger   string            `json:"ledger"`
+	// Name of the ledger holding the account
+	Ledger string `json:"ledger"`
 }
 
 func (o *UpdateAccount) GetID() string {

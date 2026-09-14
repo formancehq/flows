@@ -1,0 +1,8 @@
+# PaymentResponse
+
+
+## Fields
+
+| Field                                                    | Type                                                     | Required                                                 | Description                                              |
+| -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `Data`                                                   | [components.Payment](../../models/components/payment.md) | :heavy_check_mark:                                       | A payment observed or initiated through a connector      |

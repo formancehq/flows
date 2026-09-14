@@ -3,6 +3,7 @@
 package components
 
 type V2CreateWorkflowResponse struct {
+	// A workflow definition and the stages it runs
 	Data V2Workflow `json:"data"`
 }
 

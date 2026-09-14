@@ -8,15 +8,21 @@ import (
 	"time"
 )
 
+// V2PaymentAdjustmentRaw - The provider's original payload for this adjustment
 type V2PaymentAdjustmentRaw struct {
 }
 
 type V2PaymentAdjustment struct {
-	Status   V2PaymentStatus        `json:"status"`
-	Amount   *big.Int               `json:"amount"`
-	Date     time.Time              `json:"date"`
-	Raw      V2PaymentAdjustmentRaw `json:"raw"`
-	Absolute bool                   `json:"absolute"`
+	// Where a payment stands in its lifecycle
+	Status V2PaymentStatus `json:"status"`
+	// Amount carried by this adjustment
+	Amount *big.Int `json:"amount"`
+	// When the adjustment was recorded
+	Date time.Time `json:"date"`
+	// The provider's original payload for this adjustment
+	Raw V2PaymentAdjustmentRaw `json:"raw"`
+	// Whether amount replaces the payment's amount rather than adding to it
+	Absolute bool `json:"absolute"`
 }
 
 func (v V2PaymentAdjustment) MarshalJSON() ([]byte, error) {

@@ -7,15 +7,20 @@ import (
 	"time"
 )
 
+// V2DebitWalletRequest - A debit to apply to a wallet
 type V2DebitWalletRequest struct {
+	// An amount together with the asset it is denominated in
 	Amount V2Monetary `json:"amount"`
 	// Set to true to create a pending hold. If false, the wallet will be debited immediately.
 	Pending *bool `json:"pending,omitempty"`
 	// Metadata associated with the wallet.
-	Metadata    map[string]string `json:"metadata"`
-	Description *string           `json:"description,omitempty"`
-	Destination *V2Subject        `json:"destination,omitempty"`
-	Balances    []string          `json:"balances,omitempty"`
+	Metadata map[string]string `json:"metadata"`
+	// Human-readable reason for the debit
+	Description *string `json:"description,omitempty"`
+	// The counterparty of a wallet movement, either a ledger account or another wallet
+	Destination *V2Subject `json:"destination,omitempty"`
+	// Names of the balances to debit from, in order. Defaults to the main balance when omitted
+	Balances []string `json:"balances,omitempty"`
 	// cannot be used in conjunction with `pending` property
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 }

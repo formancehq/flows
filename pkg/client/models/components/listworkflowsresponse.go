@@ -3,6 +3,7 @@
 package components
 
 type ListWorkflowsResponse struct {
+	// The workflows defined on this stack
 	Data []Workflow `json:"data"`
 }
 

@@ -8,9 +8,13 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, nur }:
+  outputs = { self, nixpkgs, nur, rust-overlay }:
     let
       goVersion = 26;
 
@@ -26,7 +30,7 @@
           let
             pkgs = import nixpkgs {
               inherit system;
-              overlays = [ self.overlays.default nur.overlays.default ];
+              overlays = [ self.overlays.default nur.overlays.default rust-overlay.overlays.default ];
               config.allowUnfree = true;
             };
           in
@@ -85,9 +89,14 @@
       defaultPackage.aarch64-darwin = self.packages.aarch64-darwin.speakeasy;
 
       devShells = forEachSupportedSystem ({ pkgs, system }:
+        let
+          componentTools = pkgs.callPackage ./nix/fctl-component-tools.nix { };
+        in
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
+              binaryen
+              componentTools.componentize-go
               go
               gotools
               golangci-lint
@@ -96,6 +105,8 @@
               self.packages.${system}.speakeasy
               just
               mockgen
+              componentTools.wasi-virt
+              componentTools.wasm-tools
               jdk11
               yq-go
             ];

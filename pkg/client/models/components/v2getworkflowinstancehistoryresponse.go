@@ -3,6 +3,7 @@
 package components
 
 type V2GetWorkflowInstanceHistoryResponse struct {
+	// Per-stage history of a workflow run
 	Data []V2WorkflowInstanceHistory `json:"data"`
 }
 

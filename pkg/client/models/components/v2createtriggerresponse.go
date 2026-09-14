@@ -3,6 +3,7 @@
 package components
 
 type V2CreateTriggerResponse struct {
+	// A rule that starts a workflow when a matching event arrives
 	Data V2Trigger `json:"data"`
 }
 

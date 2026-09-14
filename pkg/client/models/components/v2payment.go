@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// V2PaymentType - Direction of the payment
 type V2PaymentType string
 
 const (
@@ -42,6 +43,7 @@ func (e *V2PaymentType) UnmarshalJSON(data []byte) error {
 	}
 }
 
+// V2PaymentScheme - Payment scheme or rail the payment travelled over
 type V2PaymentScheme string
 
 const (
@@ -116,25 +118,42 @@ func (e *V2PaymentScheme) UnmarshalJSON(data []byte) error {
 	}
 }
 
+// V2PaymentRaw - The provider's original payload, passed through untouched
 type V2PaymentRaw struct {
 }
 
+// V2Payment - A payment observed or initiated through a connector
 type V2Payment struct {
-	ID                   string                `json:"id"`
-	Reference            string                `json:"reference"`
-	SourceAccountID      string                `json:"sourceAccountID"`
-	DestinationAccountID string                `json:"destinationAccountID"`
-	ConnectorID          string                `json:"connectorID"`
-	Provider             *V2Connector          `json:"provider,omitempty"`
-	Type                 V2PaymentType         `json:"type"`
-	Status               V2PaymentStatus       `json:"status"`
-	InitialAmount        *big.Int              `json:"initialAmount"`
-	Scheme               V2PaymentScheme       `json:"scheme"`
-	Asset                string                `json:"asset"`
-	CreatedAt            time.Time             `json:"createdAt"`
-	Raw                  *V2PaymentRaw         `json:"raw"`
-	Adjustments          []V2PaymentAdjustment `json:"adjustments"`
-	Metadata             *V2PaymentMetadata    `json:"metadata"`
+	// Unique identifier of the payment
+	ID string `json:"id"`
+	// Identifier the payment carries at the provider
+	Reference string `json:"reference"`
+	// Identifier of the account the funds left
+	SourceAccountID string `json:"sourceAccountID"`
+	// Identifier of the account the funds reached
+	DestinationAccountID string `json:"destinationAccountID"`
+	// Identifier of the connector that produced the payment
+	ConnectorID string `json:"connectorID"`
+	// The payment provider behind a connector
+	Provider *V2Connector `json:"provider,omitempty"`
+	// Direction of the payment
+	Type V2PaymentType `json:"type"`
+	// Where a payment stands in its lifecycle
+	Status V2PaymentStatus `json:"status"`
+	// Amount the payment was created with, before any adjustment
+	InitialAmount *big.Int `json:"initialAmount"`
+	// Payment scheme or rail the payment travelled over
+	Scheme V2PaymentScheme `json:"scheme"`
+	// Asset the payment is denominated in
+	Asset string `json:"asset"`
+	// When the payment was created
+	CreatedAt time.Time `json:"createdAt"`
+	// The provider's original payload, passed through untouched
+	Raw *V2PaymentRaw `json:"raw"`
+	// Successive changes to the payment's amount and status
+	Adjustments []V2PaymentAdjustment `json:"adjustments"`
+	// Arbitrary key/value pairs attached to a payment
+	Metadata *V2PaymentMetadata `json:"metadata"`
 }
 
 func (v V2Payment) MarshalJSON() ([]byte, error) {

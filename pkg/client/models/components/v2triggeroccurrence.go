@@ -8,12 +8,18 @@ import (
 )
 
 type V2TriggerOccurrence struct {
-	Date               time.Time           `json:"date"`
-	WorkflowInstanceID *string             `json:"workflowInstanceID,omitempty"`
-	WorkflowInstance   *V2WorkflowInstance `json:"workflowInstance,omitempty"`
-	TriggerID          string              `json:"triggerID"`
-	Error              *string             `json:"error,omitempty"`
-	Event              map[string]any      `json:"event"`
+	// When the trigger fired
+	Date time.Time `json:"date"`
+	// Identifier of the run the trigger started, absent when it started none
+	WorkflowInstanceID *string `json:"workflowInstanceID,omitempty"`
+	// One run of a workflow, tracking its per-stage progress
+	WorkflowInstance *V2WorkflowInstance `json:"workflowInstance,omitempty"`
+	// Identifier of the trigger that fired
+	TriggerID string `json:"triggerID"`
+	// Why the trigger failed to start a run, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// The event that fired the trigger
+	Event map[string]any `json:"event"`
 }
 
 func (v V2TriggerOccurrence) MarshalJSON() ([]byte, error) {

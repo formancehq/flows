@@ -2,9 +2,39 @@
 
 package components
 
+import (
+	"openapi/internal/utils"
+)
+
+// StageSendSourceAccount - Take the funds from a ledger account
 type StageSendSourceAccount struct {
-	ID     string  `json:"id"`
+	// Address of the ledger account to take funds from
+	ID string `json:"id"`
+	// Name of the ledger holding the account
 	Ledger *string `json:"ledger,omitempty"`
+	// Account used when this ledger account interacts with external systems (payments, cross-ledger).
+	// - As SOURCE going to payment: funds are sent to this account (e.g., "liabilities:payouts-pending")
+	// - As DESTINATION from payment: funds come from this account (e.g., "assets:stripe:incoming")
+	// - For cross-ledger transfers: replaces "world" on both sides
+	//
+	ThroughAccount *string `default:"world" json:"throughAccount"`
+	// Enables unbounded overdraft on the throughAccount when set to true.
+	// This is useful when the throughAccount represents a liability or bridge account
+	// that needs to go negative (e.g., "liabilities:payouts-pending").
+	// Only applies when throughAccount is not "world" (which already has unbounded overdraft).
+	//
+	AllowOverdraft *bool `default:"false" json:"allowOverdraft"`
+}
+
+func (s StageSendSourceAccount) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(s, "", false)
+}
+
+func (s *StageSendSourceAccount) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &s, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *StageSendSourceAccount) GetID() string {
@@ -19,4 +49,18 @@ func (o *StageSendSourceAccount) GetLedger() *string {
 		return nil
 	}
 	return o.Ledger
+}
+
+func (o *StageSendSourceAccount) GetThroughAccount() *string {
+	if o == nil {
+		return nil
+	}
+	return o.ThroughAccount
+}
+
+func (o *StageSendSourceAccount) GetAllowOverdraft() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.AllowOverdraft
 }

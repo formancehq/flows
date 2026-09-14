@@ -3,6 +3,7 @@
 package components
 
 type GetWorkflowInstanceHistoryResponse struct {
+	// Per-stage history of a workflow run
 	Data []WorkflowInstanceHistory `json:"data"`
 }
 

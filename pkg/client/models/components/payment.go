@@ -10,19 +10,20 @@ import (
 	"time"
 )
 
-type Type string
+// PaymentType - Direction of the payment
+type PaymentType string
 
 const (
-	TypePayIn    Type = "PAY-IN"
-	TypePayout   Type = "PAYOUT"
-	TypeTransfer Type = "TRANSFER"
-	TypeOther    Type = "OTHER"
+	PaymentTypePayIn    PaymentType = "PAY-IN"
+	PaymentTypePayout   PaymentType = "PAYOUT"
+	PaymentTypeTransfer PaymentType = "TRANSFER"
+	PaymentTypeOther    PaymentType = "OTHER"
 )
 
-func (e Type) ToPointer() *Type {
+func (e PaymentType) ToPointer() *PaymentType {
 	return &e
 }
-func (e *Type) UnmarshalJSON(data []byte) error {
+func (e *PaymentType) UnmarshalJSON(data []byte) error {
 	var v string
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
@@ -35,13 +36,14 @@ func (e *Type) UnmarshalJSON(data []byte) error {
 	case "TRANSFER":
 		fallthrough
 	case "OTHER":
-		*e = Type(v)
+		*e = PaymentType(v)
 		return nil
 	default:
-		return fmt.Errorf("invalid value for Type: %v", v)
+		return fmt.Errorf("invalid value for PaymentType: %v", v)
 	}
 }
 
+// Scheme - Payment scheme or rail the payment travelled over
 type Scheme string
 
 const (
@@ -116,25 +118,42 @@ func (e *Scheme) UnmarshalJSON(data []byte) error {
 	}
 }
 
+// Raw - The provider's original payload, passed through untouched
 type Raw struct {
 }
 
+// Payment - A payment observed or initiated through a connector
 type Payment struct {
-	ID                   string              `json:"id"`
-	Reference            string              `json:"reference"`
-	SourceAccountID      string              `json:"sourceAccountID"`
-	DestinationAccountID string              `json:"destinationAccountID"`
-	ConnectorID          string              `json:"connectorID"`
-	Provider             *Connector          `json:"provider,omitempty"`
-	Type                 Type                `json:"type"`
-	Status               PaymentStatus       `json:"status"`
-	InitialAmount        *big.Int            `json:"initialAmount"`
-	Scheme               Scheme              `json:"scheme"`
-	Asset                string              `json:"asset"`
-	CreatedAt            time.Time           `json:"createdAt"`
-	Raw                  *Raw                `json:"raw"`
-	Adjustments          []PaymentAdjustment `json:"adjustments"`
-	Metadata             *PaymentMetadata    `json:"metadata"`
+	// Unique identifier of the payment
+	ID string `json:"id"`
+	// Identifier the payment carries at the provider
+	Reference string `json:"reference"`
+	// Identifier of the account the funds left
+	SourceAccountID string `json:"sourceAccountID"`
+	// Identifier of the account the funds reached
+	DestinationAccountID string `json:"destinationAccountID"`
+	// Identifier of the connector that produced the payment
+	ConnectorID string `json:"connectorID"`
+	// The payment provider behind a connector
+	Provider *Connector `json:"provider,omitempty"`
+	// Direction of the payment
+	Type PaymentType `json:"type"`
+	// Where a payment stands in its lifecycle
+	Status PaymentStatus `json:"status"`
+	// Amount the payment was created with, before any adjustment
+	InitialAmount *big.Int `json:"initialAmount"`
+	// Payment scheme or rail the payment travelled over
+	Scheme Scheme `json:"scheme"`
+	// Asset the payment is denominated in
+	Asset string `json:"asset"`
+	// When the payment was created
+	CreatedAt time.Time `json:"createdAt"`
+	// The provider's original payload, passed through untouched
+	Raw *Raw `json:"raw"`
+	// Successive changes to the payment's amount and status
+	Adjustments []PaymentAdjustment `json:"adjustments"`
+	// Arbitrary key/value pairs attached to a payment
+	Metadata *PaymentMetadata `json:"metadata"`
 }
 
 func (p Payment) MarshalJSON() ([]byte, error) {
@@ -190,9 +209,9 @@ func (o *Payment) GetProvider() *Connector {
 	return o.Provider
 }
 
-func (o *Payment) GetType() Type {
+func (o *Payment) GetType() PaymentType {
 	if o == nil {
-		return Type("")
+		return PaymentType("")
 	}
 	return o.Type
 }

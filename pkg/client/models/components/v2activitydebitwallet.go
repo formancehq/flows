@@ -2,8 +2,11 @@
 
 package components
 
+// V2ActivityDebitWallet - Arguments for the activity that debits a wallet
 type V2ActivityDebitWallet struct {
-	ID   *string               `json:"id,omitempty"`
+	// Identifier of the wallet to debit
+	ID *string `json:"id,omitempty"`
+	// A debit to apply to a wallet
 	Data *V2DebitWalletRequest `json:"data,omitempty"`
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// V2PostTransactionScript - A Numscript program executed to produce the postings. Mutually exclusive with postings
 type V2PostTransactionScript struct {
 	Plain string         `json:"plain"`
 	Vars  map[string]any `json:"vars,omitempty"`
@@ -26,12 +27,18 @@ func (o *V2PostTransactionScript) GetVars() map[string]any {
 	return o.Vars
 }
 
+// V2PostTransaction - A transaction to write to a ledger
 type V2PostTransaction struct {
-	Timestamp *time.Time               `json:"timestamp,omitempty"`
-	Postings  []V2Posting              `json:"postings,omitempty"`
-	Script    *V2PostTransactionScript `json:"script,omitempty"`
-	Reference *string                  `json:"reference,omitempty"`
-	Metadata  map[string]string        `json:"metadata"`
+	// The transaction time to record, letting you backdate or postdate the transaction. See [bi-temporality](https://docs.formance.com/modules/ledger/working-with/bi-temporality)
+	Timestamp *time.Time `json:"timestamp,omitempty"`
+	// Fund movements to apply. Mutually exclusive with script
+	Postings []V2Posting `json:"postings,omitempty"`
+	// A Numscript program executed to produce the postings. Mutually exclusive with postings
+	Script *V2PostTransactionScript `json:"script,omitempty"`
+	// Optional caller-supplied identifier, unique within the ledger, used to deduplicate transactions
+	Reference *string `json:"reference,omitempty"`
+	// Arbitrary key/value pairs attached to the resource
+	Metadata map[string]string `json:"metadata"`
 }
 
 func (v V2PostTransaction) MarshalJSON() ([]byte, error) {

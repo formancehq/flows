@@ -3,6 +3,7 @@
 package components
 
 type RunWorkflowResponse struct {
+	// One run of a workflow, tracking its per-stage progress
 	Data WorkflowInstance `json:"data"`
 }
 

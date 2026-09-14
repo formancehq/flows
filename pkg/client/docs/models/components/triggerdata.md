@@ -3,11 +3,11 @@
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `Event`            | *string*           | :heavy_check_mark: | N/A                |
-| `WorkflowID`       | *string*           | :heavy_check_mark: | N/A                |
-| `Version`          | **string*          | :heavy_minus_sign: | N/A                |
-| `Filter`           | **string*          | :heavy_minus_sign: | N/A                |
-| `Vars`             | map[string]*any*   | :heavy_minus_sign: | N/A                |
-| `Name`             | **string*          | :heavy_minus_sign: | N/A                |
+| Field                                                                           | Type                                                                            | Required                                                                        | Description                                                                     |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `Event`                                                                         | *string*                                                                        | :heavy_check_mark:                                                              | Type of event that fires this trigger                                           |
+| `WorkflowID`                                                                    | *string*                                                                        | :heavy_check_mark:                                                              | Identifier of the workflow to run when the trigger fires                        |
+| `Version`                                                                       | **string*                                                                       | :heavy_minus_sign:                                                              | Version of the trigger definition                                               |
+| `Filter`                                                                        | **string*                                                                       | :heavy_minus_sign:                                                              | Expression evaluated against the event. The workflow runs only when it matches  |
+| `Vars`                                                                          | map[string]*any*                                                                | :heavy_minus_sign:                                                              | Expressions evaluated against the event to build the workflow's input variables |
+| `Name`                                                                          | **string*                                                                       | :heavy_minus_sign:                                                              | Human-readable name for the trigger                                             |

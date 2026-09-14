@@ -1,9 +1,11 @@
 # V2ActivityCreateTransaction
 
+Arguments for the activity that writes a transaction to a ledger
+
 
 ## Fields
 
 | Field                                                                         | Type                                                                          | Required                                                                      | Description                                                                   |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `Ledger`                                                                      | **string*                                                                     | :heavy_minus_sign:                                                            | N/A                                                                           |
-| `Data`                                                                        | [*components.V2PostTransaction](../../models/components/v2posttransaction.md) | :heavy_minus_sign:                                                            | N/A                                                                           |
+| `Ledger`                                                                      | **string*                                                                     | :heavy_minus_sign:                                                            | Name of the ledger to write the transaction to                                |
+| `Data`                                                                        | [*components.V2PostTransaction](../../models/components/v2posttransaction.md) | :heavy_minus_sign:                                                            | A transaction to write to a ledger                                            |

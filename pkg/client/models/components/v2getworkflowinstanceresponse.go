@@ -3,6 +3,7 @@
 package components
 
 type V2GetWorkflowInstanceResponse struct {
+	// One run of a workflow, tracking its per-stage progress
 	Data V2WorkflowInstance `json:"data"`
 }
 
