@@ -16,7 +16,7 @@
 
   outputs = { self, nixpkgs, nur, rust-overlay }:
     let
-      goVersion = 25;
+      goVersion = 26;
 
       supportedSystems = [
         "x86_64-linux"
