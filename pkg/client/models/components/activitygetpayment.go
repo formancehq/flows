@@ -2,7 +2,9 @@
 
 package components
 
+// ActivityGetPayment - Arguments for the activity that reads a payment
 type ActivityGetPayment struct {
+	// Identifier of the payment to read
 	ID string `json:"id"`
 }
 

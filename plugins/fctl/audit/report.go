@@ -16,6 +16,8 @@ type Record struct {
 	BaselineCommands []string `json:"baselineCommands"`
 	// Blockers are the blocker IDs recorded against this operation, sorted.
 	Blockers []string `json:"blockers"`
+	// SourceRisks are pinned product-source constraints contained by the adapter.
+	SourceRisks []string `json:"sourceRisks"`
 }
 
 // Totals are the counts the inventory document quotes. Every one of them is
@@ -50,6 +52,9 @@ type Totals struct {
 	// Unblocked is SpecOperations minus Blocked: proven facts, no recorded
 	// blocker. It is not an acceptance claim; the runtime gates are separate.
 	Unblocked int `json:"unblocked"`
+	// SourceRiskOperations counts operations affected by a source constraint;
+	// it is deliberately independent from admission.
+	SourceRiskOperations int `json:"sourceRiskOperations"`
 
 	// PaginatedOperations is the number declaring cursor + pageSize.
 	PaginatedOperations int `json:"paginatedOperations"`
@@ -102,6 +107,12 @@ func Build(specPath string) (*Report, error) {
 			blockersByOp[op] = append(blockersByOp[op], b.ID)
 		}
 	}
+	sourceRisksByOp := map[string][]string{}
+	for _, risk := range SourceRisks {
+		for _, op := range risk.OperationIDs {
+			sourceRisksByOp[op] = append(sourceRisksByOp[op], risk.ID)
+		}
+	}
 
 	report := &Report{
 		SpecDocument:     filepath.Base(specPath),
@@ -118,12 +129,15 @@ func Build(specPath string) (*Report, error) {
 		sort.Strings(commands)
 		blocks := append([]string(nil), blockersByOp[op.OperationID]...)
 		sort.Strings(blocks)
+		risks := append([]string(nil), sourceRisksByOp[op.OperationID]...)
+		sort.Strings(risks)
 		report.Operations = append(report.Operations, Record{
 			Operation:        op,
 			Family:           family,
 			Risk:             RiskOf(op),
 			BaselineCommands: commands,
 			Blockers:         blocks,
+			SourceRisks:      risks,
 		})
 	}
 
@@ -152,6 +166,9 @@ func Build(specPath string) (*Report, error) {
 		}
 		if len(r.Blockers) > 0 {
 			t.Blocked++
+		}
+		if len(r.SourceRisks) > 0 {
+			t.SourceRiskOperations++
 		}
 		if r.Risk.Paginated {
 			t.PaginatedOperations++

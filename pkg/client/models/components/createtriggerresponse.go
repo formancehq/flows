@@ -3,6 +3,7 @@
 package components
 
 type CreateTriggerResponse struct {
+	// A rule that starts a workflow when a matching event arrives
 	Data Trigger `json:"data"`
 }
 

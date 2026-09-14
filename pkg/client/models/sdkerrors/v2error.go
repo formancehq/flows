@@ -7,6 +7,7 @@ import (
 	"fmt"
 )
 
+// V2ErrorErrorCode - Machine-readable error code identifying the failure
 type V2ErrorErrorCode string
 
 const (
@@ -38,8 +39,10 @@ func (e *V2ErrorErrorCode) UnmarshalJSON(data []byte) error {
 
 // V2Error - General error
 type V2Error struct {
-	ErrorCode    V2ErrorErrorCode `json:"errorCode"`
-	ErrorMessage string           `json:"errorMessage"`
+	// Machine-readable error code identifying the failure
+	ErrorCode V2ErrorErrorCode `json:"errorCode"`
+	// Human-readable description of the error
+	ErrorMessage string `json:"errorMessage"`
 }
 
 var _ error = &V2Error{}

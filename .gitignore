@@ -2,5 +2,6 @@
 vendor
 orchestration
 dist
+.claude-flow/
 coverage.txt
 coverage-fctl.txt

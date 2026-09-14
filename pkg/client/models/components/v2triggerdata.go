@@ -3,12 +3,18 @@
 package components
 
 type V2TriggerData struct {
-	Event      string         `json:"event"`
-	WorkflowID string         `json:"workflowID"`
-	Version    *string        `json:"version,omitempty"`
-	Filter     *string        `json:"filter,omitempty"`
-	Vars       map[string]any `json:"vars,omitempty"`
-	Name       *string        `json:"name,omitempty"`
+	// Type of event that fires this trigger
+	Event string `json:"event"`
+	// Identifier of the workflow to run when the trigger fires
+	WorkflowID string `json:"workflowID"`
+	// Version of the trigger definition
+	Version *string `json:"version,omitempty"`
+	// Expression evaluated against the event. The workflow runs only when it matches
+	Filter *string `json:"filter,omitempty"`
+	// Expressions evaluated against the event to build the workflow's input variables
+	Vars map[string]any `json:"vars,omitempty"`
+	// Human-readable name for the trigger
+	Name *string `json:"name,omitempty"`
 }
 
 func (o *V2TriggerData) GetEvent() string {

@@ -36,6 +36,7 @@ func (r *Report) Markdown() string {
 		{"Operations with no legacy precedent", t.WithoutBaseline},
 		{"Operations carrying a blocker", t.Blocked},
 		{"Operations with no recorded blocker", t.Unblocked},
+		{"Operations carrying a recorded source risk", t.SourceRiskOperations},
 		{"Operations declaring cursor pagination", t.PaginatedOperations},
 		{"Operations returning an unbounded collection", t.UnboundedCollections},
 		{"Operations using a state-changing method", t.MutatingOperations},
@@ -54,10 +55,10 @@ func (r *Report) Markdown() string {
 
 	for _, f := range families {
 		fmt.Fprintf(&b, "### %s (%d)\n\n", f, len(groups[f]))
-		b.WriteString("| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |\n")
-		b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|\n")
+		b.WriteString("| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |\n")
+		b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|---|\n")
 		for _, rec := range groups[f] {
-			fmt.Fprintf(&b, "| `%s` | `%s` | %s | %s | `%s` | %s | %s | %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| `%s` | `%s` | %s | %s | `%s` | %s | %s | %s | %s | %s | %s | %s |\n",
 				rec.OperationID,
 				rec.SDKMethod,
 				rec.Version,
@@ -68,6 +69,7 @@ func (r *Report) Markdown() string {
 				successCell(rec.Operation),
 				riskCell(rec.Risk),
 				commandCell(rec.BaselineCommands),
+				listCell(rec.SourceRisks),
 				listCell(rec.Blockers),
 			)
 		}
@@ -87,16 +89,29 @@ func (r *Report) Markdown() string {
 	}
 
 	b.WriteString("\n## Operations with no legacy precedent\n\n")
-	b.WriteString("| operationId | Major | Method | Path | Blockers |\n|---|---|---|---|---|\n")
+	b.WriteString("| operationId | Major | Method | Path | Source risks | Admission blockers |\n|---|---|---|---|---|---|\n")
 	for _, rec := range r.Operations {
 		if len(rec.BaselineCommands) > 0 {
 			continue
 		}
-		fmt.Fprintf(&b, "| `%s` | %s | %s | `%s` | %s |\n",
-			rec.OperationID, rec.Version, rec.Method, rec.Path, listCell(rec.Blockers))
+		fmt.Fprintf(&b, "| `%s` | %s | %s | `%s` | %s | %s |\n",
+			rec.OperationID, rec.Version, rec.Method, rec.Path, listCell(rec.SourceRisks), listCell(rec.Blockers))
 	}
 
-	b.WriteString("\n## Blockers\n\n")
+	b.WriteString("\n## Recorded source risks\n\n")
+	for _, risk := range SourceRisks {
+		fmt.Fprintf(&b, "### %s (%s)\n\n", risk.ID, pluralOperations(len(risk.OperationIDs)))
+		fmt.Fprintf(&b, "%s\n\n", risk.Summary)
+		fmt.Fprintf(&b, "**Evidence.** %s\n\n", risk.Evidence)
+		if risk.Reproduce != "" {
+			b.WriteString("**Reproduce.**\n\n```sh\n" + risk.Reproduce + "\n```\n\n")
+		}
+	}
+
+	b.WriteString("## Current admission blockers\n\n")
+	if len(Blockers) == 0 {
+		b.WriteString("None. The admitted v2 catalogue contains each recorded source constraint.\n\n")
+	}
 	for _, blocker := range Blockers {
 		fmt.Fprintf(&b, "### %s (%s)\n\n", blocker.ID, pluralOperations(len(blocker.OperationIDs)))
 		fmt.Fprintf(&b, "%s\n\n", blocker.Summary)

@@ -4,13 +4,11 @@
 // against.
 //
 // The package is deliberately read-only and dependency-light: it is the
-// preparation artefact for the fctl Flows plugin (fctl-v2 programme Task 10B)
-// and must stay usable before any plugin runtime, component ABI, or transport
-// exists. It contains no HTTP client, no plugin entry point, and no generated
-// bindings.
+// evidence layer for the fctl Flows plugin and stays independent from the
+// runtime, component ABI and transport implementation.
 //
-// It also does not import this repository's own generated client. That client
-// cannot be imported: see Blockers B1 in blockers.go.
+// It also does not import the generated client: the audit remains an
+// independent OpenAPI oracle for adapter/catalogue contract tests.
 package audit
 
 import (

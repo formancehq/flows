@@ -2,7 +2,9 @@
 
 package components
 
+// V2ActivityVoidHold - Arguments for the activity that releases a wallet hold
 type V2ActivityVoidHold struct {
+	// Identifier of the hold to release
 	ID string `json:"id"`
 }
 

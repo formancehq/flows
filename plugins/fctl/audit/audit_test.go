@@ -151,16 +151,18 @@ func TestBlockedOperationsExist(t *testing.T) {
 	}
 }
 
-// TestGeneratedClientBlockerCoversEverything pins the consequence of B1: while
-// the generated client is unusable, no operation is admissible.
-func TestGeneratedClientBlockerCoversEverything(t *testing.T) {
+// TestSourceRisksAreNotAdmissionBlockers pins the distinction between product
+// source defects and the adapter's current admitted surface.
+func TestSourceRisksAreNotAdmissionBlockers(t *testing.T) {
 	report := build(t)
-	if report.Totals.Blocked != report.Totals.SpecOperations {
-		t.Fatalf("blocked = %d, want all %d operations while B1 stands",
-			report.Totals.Blocked, report.Totals.SpecOperations)
+	if report.Totals.Blocked != 0 {
+		t.Fatalf("blocked = %d, want no current admission blockers", report.Totals.Blocked)
 	}
-	if report.Totals.Unblocked != 0 {
-		t.Fatalf("unblocked = %d, want 0 while B1 stands", report.Totals.Unblocked)
+	if report.Totals.Unblocked != report.Totals.SpecOperations {
+		t.Fatalf("unblocked = %d, want %d", report.Totals.Unblocked, report.Totals.SpecOperations)
+	}
+	if report.Totals.SourceRiskOperations != 10 {
+		t.Fatalf("source-risk operations = %d, want 10 source-behavior risks", report.Totals.SourceRiskOperations)
 	}
 }
 
@@ -301,23 +303,23 @@ func TestOnlyV2ListingsArePaginated(t *testing.T) {
 	}
 }
 
-// TestUnboundedCollectionsAreBlocked proves the risk derivation and the blocker
-// table agree: every operation flagged unbounded carries B2 or B3.
-func TestUnboundedCollectionsAreBlocked(t *testing.T) {
+// TestUnboundedCollectionsCarrySourceRisks proves the source classification is
+// retained even though the adapter contains it with response/request ceilings.
+func TestUnboundedCollectionsCarrySourceRisks(t *testing.T) {
 	report := build(t)
 	for _, rec := range report.Operations {
 		if !rec.Risk.UnboundedCollection {
 			continue
 		}
 		var covered bool
-		for _, id := range rec.Blockers {
+		for _, id := range rec.SourceRisks {
 			if id == "B2-unbounded-collection" || id == "B3-silent-truncation" {
 				covered = true
 			}
 		}
 		if !covered {
-			t.Errorf("%s returns an unbounded collection but carries no bounding blocker (%v)",
-				rec.OperationID, rec.Blockers)
+			t.Errorf("%s returns an unbounded collection but carries no source risk (%v)",
+				rec.OperationID, rec.SourceRisks)
 		}
 	}
 }
@@ -391,6 +393,11 @@ func TestMarkdownCoversEveryOperation(t *testing.T) {
 	for _, b := range audit.Blockers {
 		if !strings.Contains(rendered, b.ID) {
 			t.Errorf("generated markdown omits blocker %s", b.ID)
+		}
+	}
+	for _, risk := range audit.SourceRisks {
+		if !strings.Contains(rendered, risk.ID) {
+			t.Errorf("generated markdown omits source risk %s", risk.ID)
 		}
 	}
 	for _, d := range audit.Divergences {

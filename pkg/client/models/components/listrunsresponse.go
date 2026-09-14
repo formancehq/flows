@@ -3,6 +3,7 @@
 package components
 
 type ListRunsResponse struct {
+	// The runs of this workflow
 	Data []WorkflowInstance `json:"data"`
 }
 

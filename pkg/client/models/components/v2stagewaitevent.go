@@ -3,6 +3,7 @@
 package components
 
 type V2StageWaitEvent struct {
+	// Type of event the workflow waits for before continuing
 	Event string `json:"event"`
 }
 

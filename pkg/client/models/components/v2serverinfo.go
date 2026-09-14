@@ -3,6 +3,7 @@
 package components
 
 type V2ServerInfo struct {
+	// Version of the orchestration service
 	Version string `json:"version"`
 }
 

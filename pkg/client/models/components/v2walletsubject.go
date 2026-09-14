@@ -3,9 +3,12 @@
 package components
 
 type V2WalletSubject struct {
-	Type       string  `json:"type"`
-	Identifier string  `json:"identifier"`
-	Balance    *string `json:"balance,omitempty"`
+	// Discriminator identifying this subject as a wallet
+	Type string `json:"type"`
+	// Identifier of the wallet
+	Identifier string `json:"identifier"`
+	// Name of the balance within the wallet. Defaults to the main balance when omitted
+	Balance *string `json:"balance,omitempty"`
 }
 
 func (o *V2WalletSubject) GetType() string {

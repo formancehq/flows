@@ -6,11 +6,8 @@ import "sort"
 // read from. It is the commit this preparation is committed on top of.
 const ProductRevision = "9dc85b316cbfc2485dd8e176b7caa17b73e04e0d"
 
-// GeneratedClientModulePath is the module path pkg/client/go.mod actually
-// declares at ProductRevision. It is neither the repository's own root module
-// path (github.com/formancehq/orchestration) nor the path its own sources
-// import (github.com/formancehq/flows/pkg/client): see Blocker
-// B1-generated-client-unusable.
+// GeneratedClientModulePath is the module path pkg/client/go.mod declares.
+// The plugin imports this nested module through a local replacement.
 const GeneratedClientModulePath = "openapi"
 
 // ModulePath is this module's own path. It is a subdirectory of the repository
@@ -18,8 +15,8 @@ const GeneratedClientModulePath = "openapi"
 // contract for this repository regardless of the VCS name.
 const ModulePath = "github.com/formancehq/orchestration/plugins/fctl"
 
-// Blocker is a recorded reason an operation cannot yet be admitted into the
-// plugin catalogue, separate from the verified facts about it.
+// Blocker is a current reason an operation cannot be admitted into the plugin
+// catalogue, separate from source defects that the adapter safely contains.
 type Blocker struct {
 	// OperationIDs are the operations the blocker applies to.
 	OperationIDs []string
@@ -34,36 +31,16 @@ type Blocker struct {
 	Reproduce string
 }
 
-// Blockers are the recorded admission blockers for the orchestration surface.
-// Each one blocks only the operations it lists.
-var Blockers = []Blocker{
-	{
-		ID:           "B1-generated-client-unusable",
-		OperationIDs: allOperationIDs(),
-		Summary: "The repository's generated client does not build and cannot " +
-			"be imported: pkg/client/go.mod declares `module openapi` while its " +
-			"own sources import two different paths, and pkg/client/go.sum " +
-			"carries no module-content hash for any of its three dependencies. " +
-			"Task 10B requires the plugin to route every operation through this " +
-			"client and forbids hand-written DTOs, endpoints and transports, so " +
-			"no operation can be admitted until the client is buildable and " +
-			"importable under a resolvable module path.",
-		Evidence: "pkg/client/go.mod line 2 declares `module openapi` with " +
-			"`go 1.20`, against `module github.com/formancehq/orchestration` " +
-			"and `go 1.25.10` in the root go.mod. Of the 221 Go files under " +
-			"pkg/client, 94 import `openapi/...` and pkg/client/formance.go " +
-			"imports `github.com/formancehq/flows/pkg/client/...`, so the two " +
-			"halves of the module disagree about its own path and neither " +
-			"matches the declaration. pkg/client/go.sum holds exactly three " +
-			"lines, all `/go.mod` hashes, and no `h1:` module-content hash. " +
-			"The root go.mod neither requires nor replaces the client, so " +
-			"nothing in this repository compiles it. The client is regenerated " +
-			"by `just generate-client` (speakeasy), so the module path is a " +
-			"generation-configuration decision — between the root module " +
-			"namespace and the VCS namespace — not a hand-editable typo.",
-		Reproduce: "cd pkg/client && go build ./...  # module declares its path as: openapi\n" +
-			"cd pkg/client && GOFLAGS=-mod=readonly go build ./internal/utils  # missing go.sum entry",
-	},
+// SourceRisk records a product-source constraint independently from whether
+// the current adapter contains it. It intentionally has the same evidence
+// shape as an admission blocker.
+type SourceRisk Blocker
+
+// SourceRisks are facts about the pinned product source. The current adapter
+// resolves or contains them through the generated client over producthttp, v2
+// route selection, response limits, request ceilings and the host execution
+// deadline. They therefore do not make an admitted command unavailable.
+var SourceRisks = []SourceRisk{
 	{
 		ID: "B2-unbounded-collection",
 		OperationIDs: []string{
@@ -77,9 +54,9 @@ var Blockers = []Blocker{
 		},
 		Summary: "These operations return a collection the caller has no " +
 			"declared way to bound, and the server applies no limit either, so " +
-			"the response size is a function of stored state. A portable " +
-			"component with a bounded result payload cannot admit them until " +
-			"the boundary either declares pagination or declares a ceiling.",
+			"the response size is a function of stored state. The adapter " +
+			"contains this with host response limits, paginated v2 listings and " +
+			"a bounded number of stage-history requests.",
 		Evidence: "openapi.yaml declares no cursor/pageSize parameter on any of " +
 			"the seven. For the three v1 listings the server passes a " +
 			"zero-valued OffsetPaginatedQuery " +
@@ -120,10 +97,9 @@ var Blockers = []Blocker{
 		OperationIDs: []string{"runWorkflow", "v2RunWorkflow"},
 		Summary: "With `wait=true` these operations block until the Temporal " +
 			"workflow terminates, with no server-side deadline. The legacy " +
-			"command exposed exactly this as `--wait`. A portable component " +
-			"executes under a host-owned deadline and cancellation contract " +
-			"that is not frozen yet, so the waiting form cannot be admitted " +
-			"until the host's cancellation and timeout semantics are decided.",
+			"command exposed exactly this as `--wait`. The portable component " +
+			"contains the source behavior through the host-owned execution " +
+			"deadline and cancellation contract.",
 		Evidence: "openapi.yaml declares `wait` (query, boolean) on POST " +
 			"/workflows/{workflowID}/instances and its /v2 form. " +
 			"internal/api/v1/handler_run_workflow.go and " +
@@ -136,11 +112,9 @@ var Blockers = []Blocker{
 	},
 }
 
-// allOperationIDs returns every operationId classified in classify.go, sorted.
-// It is used by the service-wide blocker so that adding an operation to the
-// document cannot silently escape it: the completeness test cross-checks the
-// family table against the document.
-func allOperationIDs() []string { return ClassifiedOperationIDs() }
+// Blockers contains current catalogue-admission blockers. Every command
+// admitted by the v2 catalogue has a bounded, host-mediated execution path.
+var Blockers = []Blocker{}
 
 // BlockedOperationIDs returns the sorted, de-duplicated set of operationIds
 // carrying at least one blocker.
@@ -148,6 +122,23 @@ func BlockedOperationIDs() []string {
 	seen := map[string]struct{}{}
 	for _, b := range Blockers {
 		for _, id := range b.OperationIDs {
+			seen[id] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for id := range seen {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// SourceRiskOperationIDs returns operations affected by at least one recorded
+// product-source risk, independently from current catalogue admission.
+func SourceRiskOperationIDs() []string {
+	seen := map[string]struct{}{}
+	for _, risk := range SourceRisks {
+		for _, id := range risk.OperationIDs {
 			seen[id] = struct{}{}
 		}
 	}

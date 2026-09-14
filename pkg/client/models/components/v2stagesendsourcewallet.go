@@ -2,8 +2,11 @@
 
 package components
 
+// V2StageSendSourceWallet - Take the funds from a wallet
 type V2StageSendSourceWallet struct {
-	ID      string  `json:"id"`
+	// Identifier of the wallet to take funds from
+	ID string `json:"id"`
+	// Name of the balance within the wallet. Defaults to the main balance when omitted
 	Balance *string `json:"balance,omitempty"`
 }
 

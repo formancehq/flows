@@ -2,20 +2,24 @@
 
 package components
 
+// StageSendDestination - Where a send stage puts the funds
 type StageSendDestination struct {
-	Wallet  *StageSendDestinationWallet  `json:"wallet,omitempty"`
-	Account *StageSendDestinationAccount `json:"account,omitempty"`
+	// Send the funds to a wallet
+	Wallet *StageSendSourceWallet `json:"wallet,omitempty"`
+	// Send the funds to a ledger account
+	Account *StageSendSourceAccount `json:"account,omitempty"`
+	// Send the funds to a payment
 	Payment *StageSendDestinationPayment `json:"payment,omitempty"`
 }
 
-func (o *StageSendDestination) GetWallet() *StageSendDestinationWallet {
+func (o *StageSendDestination) GetWallet() *StageSendSourceWallet {
 	if o == nil {
 		return nil
 	}
 	return o.Wallet
 }
 
-func (o *StageSendDestination) GetAccount() *StageSendDestinationAccount {
+func (o *StageSendDestination) GetAccount() *StageSendSourceAccount {
 	if o == nil {
 		return nil
 	}

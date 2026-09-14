@@ -14,28 +14,27 @@ Every count quoted below is derived by `plugins/fctl/audit` and pinned by
 |---|---|
 | Orchestration (this repository, `origin/main`) | `9dc85b316cbfc2485dd8e176b7caa17b73e04e0d` |
 | Legacy fctl baseline | `693c58e27865f83332e6c3199d61fed81b742f41` |
-| fctl-v2 programme tree | `8de8c4539ea6664351762dd8dd0e865292e3f216` |
+| fctl plugin SDK | `545521bfa222250af6b4419b194c7967cded0379` (`../fctl-sdk.lock.json`) |
 
 The repository's root module is `github.com/formancehq/orchestration` while its
 VCS name is `formancehq/flows`. Both names appear below and they are not
 interchangeable; §6 records what that costs.
 
-## 2. What this directory is, and is not
+## 2. Implementation boundary
 
-This is the Flows-owned preparation for the fctl Flows plugin (fctl-v2
-programme Task 10B). It contains **no plugin**: no runtime, no component entry
-point, no HTTP client, no generated bindings, no ABI, no catalogue, no adapter.
+This directory contains the Flows-owned command provider, v2 adapter, portable
+component lifecycle and deterministic build. The host owns Stack target
+resolution, credentials, request admission, deadlines and rendering. The
+catalogue admits the 16 established command leaves and maps them to the current
+v2 operations; the server probes remain host-owned. Its module path is
+`github.com/formancehq/orchestration/plugins/fctl`.
 
-The programme gates every product plugin implementation behind its MVP4
-contract freeze (portable component lifecycle, host-owned access and
-capabilities, exact per-operation authorisation scopes). Writing a catalogue or
-an adapter against an unfrozen ABI produces work that has to be thrown away.
-Establishing *which operations exist, which ones the legacy CLI covered, what
-each one requires, and what is genuinely blocked* does not depend on that
-freeze, and it is the input the later implementation needs.
-
-For Flows there is a second, product-local reason to stop here: the generated
-client this plugin is required to use does not build. See §6, blocker B1.
+The adapter imports the generated `pkg/client` nested module and supplies the
+public `producthttp` bridge as its HTTP client, without configuring generated
+security or retries. Nix pins the Speakeasy CLI version recorded in the client
+lock, and the isolated regeneration gate requires a null diff. The fctl SDK
+lock pins the source repository, commit, module path, SDK NAR hash and canonical
+WIT hash without embedding a developer checkout path.
 
 ## 3. Operation surface
 
@@ -121,6 +120,11 @@ portable component with a bounded result payload.
 and the server renders the cursor back through `sharedapi.RenderCursor`. Pinned
 by `TestOnlyV2ListingsArePaginated`.
 
+The adapter preserves cursors as opaque strings and rejects incoherent
+envelopes before emitting a result: `hasMore=true` requires non-empty `next`,
+while `hasMore=false` forbids it. The same check applies to single-page and
+all-pages execution.
+
 **8 operations return a collection with no declared way to bound it**, and
 they fail in two different ways:
 
@@ -176,6 +180,10 @@ as `Risk.EchoesUserExpressions` rather than as a secret, because calling it a
 secret would imply a redaction contract that does not exist and should not be
 invented here.
 
+Trigger `vars` and trigger-test events are arbitrary JSON. The adapter uses
+lossless JSON numbers before handing their typed maps to the generated client,
+so integer tokens above 2^53 are not rounded through `float64`.
+
 **Idempotence — no inbound key anywhere.** The document declares no
 `Idempotency-Key` parameter or header on any operation in either major, and the
 word does not appear in it at all (`TestNoIdempotencyKeyIsDeclared`). The
@@ -195,70 +203,33 @@ server derives the scope from the HTTP method (§7 D4). A read-only command
 behind a write scope is a fact to surface to the operator, not one to correct
 in the plugin.
 
-## 7. Blockers
+## 7. Recorded source risks
 
-Recorded in `audit/blockers.go`, separated from the facts above. **All 35
-operations are blocked**, because B1 is service-wide.
+Recorded in `audit/blockers.go`, separated from current catalogue admission.
+**10 operations carry a recorded product-behavior source risk**. **35 operations have no current admission blocker** and the generated-client build and
+regeneration gates are green.
+The current plugin contains the command-facing cases by selecting v2
+listings, enforcing host response limits, bounding multi-request history
+traversal and relying on the host execution deadline.
 
-### B1 — the generated client does not build and cannot be imported
+### B2 — source-side unbounded collection (7 operations)
 
-This is the one that stops Task 10B for Flows. The task requires each product
-core to route every operation through its own generated `pkg/client` and
-explicitly forbids hand-written DTOs, endpoints and transports. At the pinned
-revision that client is not usable:
+See §5. This affects `listWorkflows`, `listInstances`,
+`listTriggersOccurrences`, `getInstanceHistory`, `getInstanceStageHistory`,
+`v2GetInstanceHistory`, and `v2GetInstanceStageHistory`. The adapter selects
+the paginated v2 listings and places response and request-count ceilings around
+the two v2 history reads.
 
-- `pkg/client/go.mod` declares `module openapi` with `go 1.20`, against
-  `module github.com/formancehq/orchestration` and `go 1.25.10` in the root
-  `go.mod`.
-- Of the 221 Go files under `pkg/client`, **94 import `openapi/...`** and
-  `pkg/client/formance.go` imports
-  **`github.com/formancehq/flows/pkg/client/...`**. The two halves of the
-  module disagree about its own path, and neither matches the declaration.
-- `pkg/client/go.sum` holds exactly three lines, all `/go.mod` hashes, with
-  **no `h1:` module-content hash** for any of its three dependencies.
-- The root `go.mod` neither requires nor replaces the client, so nothing in
-  this repository compiles it.
+### B3 — v1 silent truncation (1 operation)
 
-Reproduce:
+See §5. This affects only `listTriggers`; the catalogue uses the cursor-bearing
+v2 operation instead.
 
-```sh
-cd pkg/client && go build ./...
-# openapi imports github.com/formancehq/flows/pkg/client/internal/hooks:
-#   module declares its path as: openapi
-#           but was required as: github.com/formancehq/flows/pkg/client
+### B4 — source-side unbounded blocking wait (2 operations)
 
-cd pkg/client && GOFLAGS=-mod=readonly go build ./internal/utils
-# missing go.sum entry for module providing package github.com/cenkalti/backoff/v4
-```
-
-**Not repaired here, deliberately.** The client is regenerated by
-`just generate-client` (speakeasy), so its module path is a
-generation-configuration decision, not a hand-editable typo — and the decision
-is a real one, between the root module namespace
-(`github.com/formancehq/orchestration/pkg/client`) and the VCS namespace
-(`github.com/formancehq/flows/pkg/client`, which is what the generated sources
-already assume). Editing the generated tree by hand would be overwritten by the
-next generation and would hide the choice. This module therefore declares
-`github.com/formancehq/orchestration/plugins/fctl` — a subdirectory of the
-authoritative root module path — and does not import `pkg/client` at all.
-
-### B2 — unbounded collection (7 operations)
-
-See §5. Blocks `listWorkflows`, `listInstances`, `listTriggersOccurrences`,
-`getInstanceHistory`, `getInstanceStageHistory`, `v2GetInstanceHistory`,
-`v2GetInstanceStageHistory` until the boundary either declares pagination or
-declares a ceiling.
-
-### B3 — silent truncation (1 operation)
-
-See §5. Blocks `listTriggers`. The v2 form is unaffected and is the correct
-target for a `flows triggers list` command.
-
-### B4 — unbounded blocking wait (2 operations)
-
-See §5. Blocks the *waiting* form of `runWorkflow` and `v2RunWorkflow` until
-the host's deadline and cancellation semantics are frozen. The non-waiting form
-is not blocked by B4.
+See §5. The product provides no deadline for the waiting form of `runWorkflow`
+or `v2RunWorkflow`; the portable invocation remains bounded by the host-owned
+execution deadline and cancellation contract.
 
 ## 8. Spec-versus-server divergences
 
@@ -281,9 +252,9 @@ D1 and D2 together are the actionable pair for fctl-v2: **the version probe is
 `GET /_info`, unauthenticated, for every major**, and no `/v2` variant exists at
 runtime regardless of what the document and the client say.
 
-## 9. What is prepared, and what remains gated
+## 9. Implemented surface and remaining external gates
 
-Prepared and committed here:
+Implemented locally here:
 
 - the exhaustive operation inventory, derived from source, regenerated by
   command and gated for determinism;
@@ -295,33 +266,13 @@ Prepared and committed here:
 - the risk profile per operation: destructive, secret, display-once,
   user-expression, replay-safety, pagination, unbounded, long-running;
 - four blockers and eight divergences, each with named evidence and, where one
-  exists, a reproducing command.
+  exists, a reproducing command;
+- a 16-command v2 catalogue with exact operations and scopes;
+- a generated-client adapter over `producthttp`, portable lifecycle, WIT and deterministic
+  two-lane build recipe;
+- focused catalogue, adapter, pagination and lifecycle tests.
 
-**Nothing else is claimed.** In particular the following Task 10B acceptance
-items are **not** met and are **not** ticked:
-
-- [ ] no catalogue exists, and none can be written while B1 stands;
-- [ ] no `producthttp` adapter, no `core/execute.go`, no per-major adapter;
-- [ ] no portable component entry point, no WASM component, no local artifact
-      recipe;
-- [ ] no OCI installation, no dual-host validation, no browser-host coverage;
-- [ ] no integration scenario, real read or real mutation, against a running
-      service;
-- [ ] no `/_info` preflight against a live Stack 3.2 service, so the product
-      major returned at runtime is unverified here.
-
-Remaining gates before a portable Flows component, in order:
-
-1. **B1** — decide the generated client's module path, fix it in the speakeasy
-   generation configuration, regenerate, and commit a `pkg/client` that builds
-   with a complete `go.sum`. Until then no plugin code in this repository can
-   compile against it.
-2. **fctl-v2 MVP4 4B / 4C / 4D** — the portable ABI freeze, the component
-   lifecycle, and the old-path retirement. Task 10B implementation waits on all
-   three by the programme's own dependency statement.
-3. **B2 / B3** — a bounding decision for the seven unbounded collections and
-   the truncating listing, or an explicit catalogue choice to expose only the
-   v2 listings.
-4. **B4** — the host deadline and cancellation contract, before `--wait` can be
-   offered.
-5. **D7** — prove the `name` filter before exposing it.
+Release acceptance also still needs a built artifact receipt, OCI installation,
+dual-host execution and live-service read/mutation evidence. The `name` filter
+divergence remains server-owned and must be considered before relying on it in
+production.

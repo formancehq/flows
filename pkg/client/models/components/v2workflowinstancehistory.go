@@ -8,11 +8,17 @@ import (
 )
 
 type V2WorkflowInstanceHistory struct {
-	Name         string     `json:"name"`
-	Input        V2Stage    `json:"input"`
-	Error        *string    `json:"error,omitempty"`
-	Terminated   bool       `json:"terminated"`
-	StartedAt    time.Time  `json:"startedAt"`
+	// Name of the stage this history entry records
+	Name string `json:"name"`
+	// One step of a workflow, whose shape depends on the stage type
+	Input V2Stage `json:"input"`
+	// Why the stage failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// Whether the stage has finished
+	Terminated bool `json:"terminated"`
+	// When the stage started
+	StartedAt time.Time `json:"startedAt"`
+	// When the stage finished, absent while it is still running
 	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
 }
 

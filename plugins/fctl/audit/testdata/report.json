@@ -14,8 +14,9 @@
     "baselineDistinctOperations": 17,
     "withBaseline": 17,
     "withoutBaseline": 18,
-    "blocked": 35,
-    "unblocked": 0,
+    "blocked": 0,
+    "unblocked": 35,
+    "sourceRiskOperations": 10,
     "paginatedOperations": 4,
     "unboundedCollections": 8,
     "mutatingOperations": 15,
@@ -58,9 +59,8 @@
       "baselineCommands": [
         "orchestration instances stop \u003cinstance-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "createTrigger",
@@ -92,9 +92,8 @@
       "baselineCommands": [
         "orchestration triggers create \u003cevent\u003e \u003cworkflow-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "createWorkflow",
@@ -126,9 +125,8 @@
       "baselineCommands": [
         "orchestration workflows create \u003cfile\u003e|-"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "deleteTrigger",
@@ -166,9 +164,8 @@
       "baselineCommands": [
         "orchestration triggers delete \u003ctrigger-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "deleteWorkflow",
@@ -206,9 +203,8 @@
       "baselineCommands": [
         "orchestration workflows delete \u003cworkflow-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "getInstance",
@@ -246,9 +242,8 @@
       "baselineCommands": [
         "orchestration instances show \u003cinstance-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "getInstanceHistory",
@@ -286,8 +281,8 @@
       "baselineCommands": [
         "orchestration instances describe \u003cinstance-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -332,8 +327,8 @@
       "baselineCommands": [
         "orchestration instances describe \u003cinstance-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -365,9 +360,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "getWorkflow",
@@ -407,9 +401,8 @@
         "orchestration workflows run \u003cid\u003e",
         "orchestration workflows show \u003cid\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "listInstances",
@@ -452,8 +445,8 @@
       "baselineCommands": [
         "orchestration instances list"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -493,8 +486,8 @@
       "baselineCommands": [
         "orchestration triggers list"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B3-silent-truncation"
       ]
     },
@@ -534,8 +527,8 @@
       "baselineCommands": [
         "orchestration triggers occurrences list"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -569,8 +562,8 @@
       "baselineCommands": [
         "orchestration workflows list"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -610,9 +603,8 @@
       "baselineCommands": [
         "orchestration triggers show \u003ctrigger-id\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "runWorkflow",
@@ -655,8 +647,8 @@
       "baselineCommands": [
         "orchestration workflows run \u003cid\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B4-unbounded-blocking-wait"
       ]
     },
@@ -696,9 +688,8 @@
       "baselineCommands": [
         "orchestration instances send-event \u003cinstance-id\u003e \u003cevent\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "testTrigger",
@@ -736,9 +727,8 @@
       "baselineCommands": [
         "orchestration triggers test \u003ctrigger-id\u003e \u003cevent\u003e"
       ],
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2CancelEvent",
@@ -774,9 +764,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2CreateTrigger",
@@ -806,9 +795,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2CreateWorkflow",
@@ -838,9 +826,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2DeleteTrigger",
@@ -876,9 +863,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2DeleteWorkflow",
@@ -914,9 +900,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2GetInstance",
@@ -952,9 +937,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2GetInstanceHistory",
@@ -990,8 +974,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -1034,8 +1018,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B2-unbounded-collection"
       ]
     },
@@ -1067,9 +1051,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2GetWorkflow",
@@ -1105,9 +1088,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2ListInstances",
@@ -1158,9 +1140,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2ListTriggers",
@@ -1206,9 +1187,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2ListTriggersOccurrences",
@@ -1254,9 +1234,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2ListWorkflows",
@@ -1297,9 +1276,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2ReadTrigger",
@@ -1335,9 +1313,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     },
     {
       "operationId": "v2RunWorkflow",
@@ -1378,8 +1355,8 @@
         "longRunning": true
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable",
+      "blockers": null,
+      "sourceRisks": [
         "B4-unbounded-blocking-wait"
       ]
     },
@@ -1417,9 +1394,8 @@
         "longRunning": false
       },
       "baselineCommands": null,
-      "blockers": [
-        "B1-generated-client-unusable"
-      ]
+      "blockers": null,
+      "sourceRisks": null
     }
   ]
 }

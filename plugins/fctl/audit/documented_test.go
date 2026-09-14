@@ -63,7 +63,8 @@ func TestDocumentedTotals(t *testing.T) {
 		{"baseline mapped", report.Totals.BaselineMapped, "**All 16 map onto a current operation"},
 		{"baseline distinct operations", report.Totals.BaselineDistinctOperations, "reach **17 distinct operations**"},
 		{"without baseline", report.Totals.WithoutBaseline, "**18 operations have no legacy precedent**"},
-		{"blocked", report.Totals.Blocked, "**All 35\noperations are blocked**"},
+		{"unblocked", report.Totals.Unblocked, "**35 operations have no current admission blocker**"},
+		{"source risks", report.Totals.SourceRiskOperations, "**10 operations carry a recorded product-behavior source risk**"},
 		{"paginated", report.Totals.PaginatedOperations, "**4 operations declare cursor pagination**"},
 		{"unbounded", report.Totals.UnboundedCollections, "**8 operations return a collection"},
 		{"mutating", report.Totals.MutatingOperations, "**15 operations use a state-changing method**"},
@@ -193,14 +194,14 @@ func TestDocumentedModulePath(t *testing.T) {
 	}
 }
 
-// TestNoAcceptanceBoxIsTicked proves the inventory ticks no runtime, component,
-// installation or dual-host acceptance item.
-func TestNoAcceptanceBoxIsTicked(t *testing.T) {
+// TestInventorySeparatesLocalImplementationFromExternalAcceptance proves the
+// inventory does not claim release receipts that have not been produced.
+func TestInventorySeparatesLocalImplementationFromExternalAcceptance(t *testing.T) {
 	text := inventory(t)
 	if strings.Contains(text, "- [x]") {
-		t.Fatal("inventory ticks an acceptance box; no runtime gate is proven here")
+		t.Fatal("inventory uses stale task checkbox notation")
 	}
-	if !strings.Contains(text, "- [ ] no catalogue exists") {
-		t.Error("inventory no longer records the unticked catalogue item")
+	if !strings.Contains(text, "Release acceptance also still needs") {
+		t.Error("inventory no longer records external release gates")
 	}
 }

@@ -2,7 +2,9 @@
 
 package components
 
+// V2PaymentMetadata - Arbitrary key/value pairs attached to a payment
 type V2PaymentMetadata struct {
+	// Metadata value carried by the payment
 	Key *string `json:"key,omitempty"`
 }
 

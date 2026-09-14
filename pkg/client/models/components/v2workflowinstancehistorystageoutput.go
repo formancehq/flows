@@ -2,44 +2,51 @@
 
 package components
 
+// V2WorkflowInstanceHistoryStageOutput - Result an activity returned, keyed by activity name
 type V2WorkflowInstanceHistoryStageOutput struct {
-	GetAccount        *V2ActivityGetAccountOutput        `json:"GetAccount,omitempty"`
-	CreateTransaction *V2ActivityCreateTransactionOutput `json:"CreateTransaction,omitempty"`
-	GetPayment        *V2ActivityGetPaymentOutput        `json:"GetPayment,omitempty"`
-	DebitWallet       *V2ActivityDebitWalletOutput       `json:"DebitWallet,omitempty"`
-	GetWallet         *V2ActivityGetWalletOutput         `json:"GetWallet,omitempty"`
-	ListWallets       *V2ListWalletsResponse             `json:"ListWallets,omitempty"`
+	// Result of the activity that reads a ledger account
+	GetAccount *V2AccountResponse `json:"GetAccount,omitempty"`
+	// Result of the activity that writes a transaction to a ledger
+	CreateTransaction *V2CreateTransactionResponse `json:"CreateTransaction,omitempty"`
+	// Result of the activity that reads a payment
+	GetPayment *V2PaymentResponse `json:"GetPayment,omitempty"`
+	// Result of the activity that debits a wallet
+	DebitWallet *V2DebitWalletResponse `json:"DebitWallet,omitempty"`
+	// Result of the activity that reads a wallet
+	GetWallet *V2GetWalletResponse `json:"GetWallet,omitempty"`
+	// A page of wallets
+	ListWallets *V2ListWalletsResponse `json:"ListWallets,omitempty"`
 }
 
-func (o *V2WorkflowInstanceHistoryStageOutput) GetGetAccount() *V2ActivityGetAccountOutput {
+func (o *V2WorkflowInstanceHistoryStageOutput) GetGetAccount() *V2AccountResponse {
 	if o == nil {
 		return nil
 	}
 	return o.GetAccount
 }
 
-func (o *V2WorkflowInstanceHistoryStageOutput) GetCreateTransaction() *V2ActivityCreateTransactionOutput {
+func (o *V2WorkflowInstanceHistoryStageOutput) GetCreateTransaction() *V2CreateTransactionResponse {
 	if o == nil {
 		return nil
 	}
 	return o.CreateTransaction
 }
 
-func (o *V2WorkflowInstanceHistoryStageOutput) GetGetPayment() *V2ActivityGetPaymentOutput {
+func (o *V2WorkflowInstanceHistoryStageOutput) GetGetPayment() *V2PaymentResponse {
 	if o == nil {
 		return nil
 	}
 	return o.GetPayment
 }
 
-func (o *V2WorkflowInstanceHistoryStageOutput) GetDebitWallet() *V2ActivityDebitWalletOutput {
+func (o *V2WorkflowInstanceHistoryStageOutput) GetDebitWallet() *V2DebitWalletResponse {
 	if o == nil {
 		return nil
 	}
 	return o.DebitWallet
 }
 
-func (o *V2WorkflowInstanceHistoryStageOutput) GetGetWallet() *V2ActivityGetWalletOutput {
+func (o *V2WorkflowInstanceHistoryStageOutput) GetGetWallet() *V2GetWalletResponse {
 	if o == nil {
 		return nil
 	}

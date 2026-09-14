@@ -8,16 +8,26 @@ import (
 )
 
 type V2WorkflowInstanceHistoryStage struct {
-	Name          string                                `json:"name"`
-	Input         V2WorkflowInstanceHistoryStageInput   `json:"input"`
-	Output        *V2WorkflowInstanceHistoryStageOutput `json:"output,omitempty"`
-	Error         *string                               `json:"error,omitempty"`
-	Terminated    bool                                  `json:"terminated"`
-	StartedAt     time.Time                             `json:"startedAt"`
-	TerminatedAt  *time.Time                            `json:"terminatedAt,omitempty"`
-	LastFailure   *string                               `json:"lastFailure,omitempty"`
-	Attempt       int64                                 `json:"attempt"`
-	NextExecution *time.Time                            `json:"nextExecution,omitempty"`
+	// Name of the activity this history entry records
+	Name string `json:"name"`
+	// Arguments an activity was called with, keyed by activity name
+	Input V2WorkflowInstanceHistoryStageInput `json:"input"`
+	// Result an activity returned, keyed by activity name
+	Output *V2WorkflowInstanceHistoryStageOutput `json:"output,omitempty"`
+	// Why the activity failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// Whether the activity has finished
+	Terminated bool `json:"terminated"`
+	// When the activity started
+	StartedAt time.Time `json:"startedAt"`
+	// When the activity finished, absent while it is still running
+	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
+	// Error reported by the most recent failed attempt
+	LastFailure *string `json:"lastFailure,omitempty"`
+	// How many times the activity has been attempted
+	Attempt int64 `json:"attempt"`
+	// When the next retry is scheduled, absent once the activity is settled
+	NextExecution *time.Time `json:"nextExecution,omitempty"`
 }
 
 func (v V2WorkflowInstanceHistoryStage) MarshalJSON() ([]byte, error) {

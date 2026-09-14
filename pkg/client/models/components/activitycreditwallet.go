@@ -2,8 +2,11 @@
 
 package components
 
+// ActivityCreditWallet - Arguments for the activity that credits a wallet
 type ActivityCreditWallet struct {
-	ID   *string              `json:"id,omitempty"`
+	// Identifier of the wallet to credit
+	ID *string `json:"id,omitempty"`
+	// A credit to apply to a wallet
 	Data *CreditWalletRequest `json:"data,omitempty"`
 }
 

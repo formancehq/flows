@@ -2,10 +2,15 @@
 
 package components
 
+// Account - An account in the ledger, identified by its address
 type Account struct {
-	Address          string            `json:"address"`
-	Metadata         map[string]string `json:"metadata"`
-	Volumes          map[string]Volume `json:"volumes,omitempty"`
+	// The account address, a colon-separated segmented path such as users:001
+	Address string `json:"address"`
+	// Arbitrary key/value pairs attached to the account
+	Metadata map[string]string `json:"metadata"`
+	// Volumes per asset for a single account
+	Volumes map[string]Volume `json:"volumes,omitempty"`
+	// Volumes per asset for a single account
 	EffectiveVolumes map[string]Volume `json:"effectiveVolumes,omitempty"`
 }
 

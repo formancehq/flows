@@ -8,11 +8,16 @@ import (
 )
 
 type StageStatus struct {
-	Stage        float64    `json:"stage"`
-	InstanceID   string     `json:"instanceID"`
-	StartedAt    time.Time  `json:"startedAt"`
+	// Zero-based position of the stage within the workflow
+	Stage float64 `json:"stage"`
+	// Identifier of the workflow instance this stage belongs to
+	InstanceID string `json:"instanceID"`
+	// When the stage started
+	StartedAt time.Time `json:"startedAt"`
+	// When the stage finished, absent while it is still running
 	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
-	Error        *string    `json:"error,omitempty"`
+	// Why the stage failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
 }
 
 func (s StageStatus) MarshalJSON() ([]byte, error) {

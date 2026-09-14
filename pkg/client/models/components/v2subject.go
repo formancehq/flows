@@ -16,6 +16,7 @@ const (
 	V2SubjectTypeWallet  V2SubjectType = "WALLET"
 )
 
+// V2Subject - The counterparty of a wallet movement, either a ledger account or another wallet
 type V2Subject struct {
 	V2LedgerAccountSubject *V2LedgerAccountSubject
 	V2WalletSubject        *V2WalletSubject

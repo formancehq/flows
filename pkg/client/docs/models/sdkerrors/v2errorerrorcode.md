@@ -1,5 +1,7 @@
 # V2ErrorErrorCode
 
+Machine-readable error code identifying the failure
+
 
 ## Values
 

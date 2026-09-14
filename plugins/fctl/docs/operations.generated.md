@@ -23,8 +23,9 @@ Legacy fctl baseline revision: `693c58e27865f83332e6c3199d61fed81b742f41`
 | Distinct operations the legacy baseline reaches | 17 |
 | Operations reached by the legacy baseline | 17 |
 | Operations with no legacy precedent | 18 |
-| Operations carrying a blocker | 35 |
-| Operations with no recorded blocker | 0 |
+| Operations carrying a blocker | 0 |
+| Operations with no recorded blocker | 35 |
+| Operations carrying a recorded source risk | 10 |
 | Operations declaring cursor pagination | 4 |
 | Operations returning an unbounded collection | 8 |
 | Operations using a state-changing method | 15 |
@@ -34,68 +35,68 @@ Legacy fctl baseline revision: `693c58e27865f83332e6c3199d61fed81b742f41`
 
 ### instance-history (4)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `getInstanceHistory` | `getInstanceHistory` | v1 | GET | `/instances/{instanceID}/history` | `orchestration:read` | — | 200 `GetWorkflowInstanceHistoryResponse` | unbounded | `orchestration instances describe <instance-id>` | B1-generated-client-unusable, B2-unbounded-collection |
-| `getInstanceStageHistory` | `getInstanceStageHistory` | v1 | GET | `/instances/{instanceID}/stages/{number}/history` | `orchestration:read` | — | 200 `GetWorkflowInstanceHistoryStageResponse` | unbounded | `orchestration instances describe <instance-id>` | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2GetInstanceHistory` | `GetInstanceHistory` | v2 | GET | `/v2/instances/{instanceID}/history` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceHistoryResponse` | unbounded | — (no legacy precedent) | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2GetInstanceStageHistory` | `GetInstanceStageHistory` | v2 | GET | `/v2/instances/{instanceID}/stages/{number}/history` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceHistoryStageResponse` | unbounded | — (no legacy precedent) | B1-generated-client-unusable, B2-unbounded-collection |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `getInstanceHistory` | `getInstanceHistory` | v1 | GET | `/instances/{instanceID}/history` | `orchestration:read` | — | 200 `GetWorkflowInstanceHistoryResponse` | unbounded | `orchestration instances describe <instance-id>` | B2-unbounded-collection | — |
+| `getInstanceStageHistory` | `getInstanceStageHistory` | v1 | GET | `/instances/{instanceID}/stages/{number}/history` | `orchestration:read` | — | 200 `GetWorkflowInstanceHistoryStageResponse` | unbounded | `orchestration instances describe <instance-id>` | B2-unbounded-collection | — |
+| `v2GetInstanceHistory` | `GetInstanceHistory` | v2 | GET | `/v2/instances/{instanceID}/history` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceHistoryResponse` | unbounded | — (no legacy precedent) | B2-unbounded-collection | — |
+| `v2GetInstanceStageHistory` | `GetInstanceStageHistory` | v2 | GET | `/v2/instances/{instanceID}/stages/{number}/history` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceHistoryStageResponse` | unbounded | — (no legacy precedent) | B2-unbounded-collection | — |
 
 ### instances (10)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `cancelEvent` | `cancelEvent` | v1 | PUT | `/instances/{instanceID}/abort` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration instances stop <instance-id>` | B1-generated-client-unusable |
-| `getInstance` | `getInstance` | v1 | GET | `/instances/{instanceID}` | `orchestration:read` | — | 200 `GetWorkflowInstanceResponse` | — | `orchestration instances show <instance-id>` | B1-generated-client-unusable |
-| `listInstances` | `listInstances` | v1 | GET | `/instances` | `orchestration:read` | — | 200 `ListRunsResponse` | unbounded | `orchestration instances list` | B1-generated-client-unusable, B2-unbounded-collection |
-| `runWorkflow` | `runWorkflow` | v1 | POST | `/workflows/{workflowID}/instances` | `orchestration:write` | `RunWorkflowRequest` | 201 `RunWorkflowResponse` | long-running, not-replay-safe | `orchestration workflows run <id>` | B1-generated-client-unusable, B4-unbounded-blocking-wait |
-| `sendEvent` | `sendEvent` | v1 | POST | `/instances/{instanceID}/events` | `orchestration:write` | (inline object) | 204 (no body) | not-replay-safe | `orchestration instances send-event <instance-id> <event>` | B1-generated-client-unusable |
-| `v2CancelEvent` | `CancelEvent` | v2 | PUT | `/v2/instances/{instanceID}/abort` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2GetInstance` | `GetInstance` | v2 | GET | `/v2/instances/{instanceID}` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceResponse` | — | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2ListInstances` | `ListInstances` | v2 | GET | `/v2/instances` | `orchestration:read` | — | 200 `V2ListRunsResponse` | paginated | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2RunWorkflow` | `RunWorkflow` | v2 | POST | `/v2/workflows/{workflowID}/instances` | `orchestration:write` | `V2RunWorkflowRequest` | 201 `V2RunWorkflowResponse` | long-running, not-replay-safe | — (no legacy precedent) | B1-generated-client-unusable, B4-unbounded-blocking-wait |
-| `v2SendEvent` | `SendEvent` | v2 | POST | `/v2/instances/{instanceID}/events` | `orchestration:write` | (inline object) | 204 (no body) | not-replay-safe | — (no legacy precedent) | B1-generated-client-unusable |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `cancelEvent` | `cancelEvent` | v1 | PUT | `/instances/{instanceID}/abort` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration instances stop <instance-id>` | — | — |
+| `getInstance` | `getInstance` | v1 | GET | `/instances/{instanceID}` | `orchestration:read` | — | 200 `GetWorkflowInstanceResponse` | — | `orchestration instances show <instance-id>` | — | — |
+| `listInstances` | `listInstances` | v1 | GET | `/instances` | `orchestration:read` | — | 200 `ListRunsResponse` | unbounded | `orchestration instances list` | B2-unbounded-collection | — |
+| `runWorkflow` | `runWorkflow` | v1 | POST | `/workflows/{workflowID}/instances` | `orchestration:write` | `RunWorkflowRequest` | 201 `RunWorkflowResponse` | long-running, not-replay-safe | `orchestration workflows run <id>` | B4-unbounded-blocking-wait | — |
+| `sendEvent` | `sendEvent` | v1 | POST | `/instances/{instanceID}/events` | `orchestration:write` | (inline object) | 204 (no body) | not-replay-safe | `orchestration instances send-event <instance-id> <event>` | — | — |
+| `v2CancelEvent` | `CancelEvent` | v2 | PUT | `/v2/instances/{instanceID}/abort` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | — | — |
+| `v2GetInstance` | `GetInstance` | v2 | GET | `/v2/instances/{instanceID}` | `orchestration:read` | — | 200 `V2GetWorkflowInstanceResponse` | — | — (no legacy precedent) | — | — |
+| `v2ListInstances` | `ListInstances` | v2 | GET | `/v2/instances` | `orchestration:read` | — | 200 `V2ListRunsResponse` | paginated | — (no legacy precedent) | — | — |
+| `v2RunWorkflow` | `RunWorkflow` | v2 | POST | `/v2/workflows/{workflowID}/instances` | `orchestration:write` | `V2RunWorkflowRequest` | 201 `V2RunWorkflowResponse` | long-running, not-replay-safe | — (no legacy precedent) | B4-unbounded-blocking-wait | — |
+| `v2SendEvent` | `SendEvent` | v2 | POST | `/v2/instances/{instanceID}/events` | `orchestration:write` | (inline object) | 204 (no body) | not-replay-safe | — (no legacy precedent) | — | — |
 
 ### server-probe (2)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `getServerInfo` | `getServerInfo` | v1 | GET | `/_info` | `orchestration:read` | — | 200 `ServerInfo` | — | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2GetServerInfo` | `GetServerInfo` | v2 | GET | `/v2/_info` | `orchestration:read` | — | 200 `V2ServerInfo` | — | — (no legacy precedent) | B1-generated-client-unusable |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `getServerInfo` | `getServerInfo` | v1 | GET | `/_info` | `orchestration:read` | — | 200 `ServerInfo` | — | — (no legacy precedent) | — | — |
+| `v2GetServerInfo` | `GetServerInfo` | v2 | GET | `/v2/_info` | `orchestration:read` | — | 200 `V2ServerInfo` | — | — (no legacy precedent) | — | — |
 
 ### trigger-occurrences (2)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `listTriggersOccurrences` | `listTriggersOccurrences` | v1 | GET | `/triggers/{triggerID}/occurrences` | `orchestration:read` | — | 200 `ListTriggersOccurrencesResponse` | unbounded | `orchestration triggers occurrences list` | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2ListTriggersOccurrences` | `ListTriggersOccurrences` | v2 | GET | `/v2/triggers/{triggerID}/occurrences` | `orchestration:read` | — | 200 `V2ListTriggersOccurrencesResponse` | paginated | — (no legacy precedent) | B1-generated-client-unusable |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `listTriggersOccurrences` | `listTriggersOccurrences` | v1 | GET | `/triggers/{triggerID}/occurrences` | `orchestration:read` | — | 200 `ListTriggersOccurrencesResponse` | unbounded | `orchestration triggers occurrences list` | B2-unbounded-collection | — |
+| `v2ListTriggersOccurrences` | `ListTriggersOccurrences` | v2 | GET | `/v2/triggers/{triggerID}/occurrences` | `orchestration:read` | — | 200 `V2ListTriggersOccurrencesResponse` | paginated | — (no legacy precedent) | — | — |
 
 ### triggers (9)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `createTrigger` | `createTrigger` | v1 | POST | `/triggers` | `orchestration:write` | `TriggerData` | 201 `CreateTriggerResponse` | user-expressions, not-replay-safe | `orchestration triggers create <event> <workflow-id>` | B1-generated-client-unusable |
-| `deleteTrigger` | `deleteTrigger` | v1 | DELETE | `/triggers/{triggerID}` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration triggers delete <trigger-id>` | B1-generated-client-unusable |
-| `listTriggers` | `listTriggers` | v1 | GET | `/triggers` | `orchestration:read` | — | 200 `ListTriggersResponse` | user-expressions, unbounded | `orchestration triggers list` | B1-generated-client-unusable, B3-silent-truncation |
-| `readTrigger` | `readTrigger` | v1 | GET | `/triggers/{triggerID}` | `orchestration:read` | — | 200 `ReadTriggerResponse` | user-expressions | `orchestration triggers show <trigger-id>` | B1-generated-client-unusable |
-| `testTrigger` | `TestTrigger` | v2 | POST | `/v2/triggers/{triggerID}/test` | `orchestration:write` | (inline object) | 200 `V2TestTriggerResponse` | user-expressions, not-replay-safe | `orchestration triggers test <trigger-id> <event>` | B1-generated-client-unusable |
-| `v2CreateTrigger` | `CreateTrigger` | v2 | POST | `/v2/triggers` | `orchestration:write` | `V2TriggerData` | 201 `V2CreateTriggerResponse` | user-expressions, not-replay-safe | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2DeleteTrigger` | `DeleteTrigger` | v2 | DELETE | `/v2/triggers/{triggerID}` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2ListTriggers` | `ListTriggers` | v2 | GET | `/v2/triggers` | `orchestration:read` | — | 200 `V2ListTriggersResponse` | user-expressions, paginated | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2ReadTrigger` | `ReadTrigger` | v2 | GET | `/v2/triggers/{triggerID}` | `orchestration:read` | — | 200 `V2ReadTriggerResponse` | user-expressions | — (no legacy precedent) | B1-generated-client-unusable |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `createTrigger` | `createTrigger` | v1 | POST | `/triggers` | `orchestration:write` | `TriggerData` | 201 `CreateTriggerResponse` | user-expressions, not-replay-safe | `orchestration triggers create <event> <workflow-id>` | — | — |
+| `deleteTrigger` | `deleteTrigger` | v1 | DELETE | `/triggers/{triggerID}` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration triggers delete <trigger-id>` | — | — |
+| `listTriggers` | `listTriggers` | v1 | GET | `/triggers` | `orchestration:read` | — | 200 `ListTriggersResponse` | user-expressions, unbounded | `orchestration triggers list` | B3-silent-truncation | — |
+| `readTrigger` | `readTrigger` | v1 | GET | `/triggers/{triggerID}` | `orchestration:read` | — | 200 `ReadTriggerResponse` | user-expressions | `orchestration triggers show <trigger-id>` | — | — |
+| `testTrigger` | `TestTrigger` | v2 | POST | `/v2/triggers/{triggerID}/test` | `orchestration:write` | (inline object) | 200 `V2TestTriggerResponse` | user-expressions, not-replay-safe | `orchestration triggers test <trigger-id> <event>` | — | — |
+| `v2CreateTrigger` | `CreateTrigger` | v2 | POST | `/v2/triggers` | `orchestration:write` | `V2TriggerData` | 201 `V2CreateTriggerResponse` | user-expressions, not-replay-safe | — (no legacy precedent) | — | — |
+| `v2DeleteTrigger` | `DeleteTrigger` | v2 | DELETE | `/v2/triggers/{triggerID}` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | — | — |
+| `v2ListTriggers` | `ListTriggers` | v2 | GET | `/v2/triggers` | `orchestration:read` | — | 200 `V2ListTriggersResponse` | user-expressions, paginated | — (no legacy precedent) | — | — |
+| `v2ReadTrigger` | `ReadTrigger` | v2 | GET | `/v2/triggers/{triggerID}` | `orchestration:read` | — | 200 `V2ReadTriggerResponse` | user-expressions | — (no legacy precedent) | — | — |
 
 ### workflows (8)
 
-| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Blockers |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `createWorkflow` | `createWorkflow` | v1 | POST | `/workflows` | `orchestration:write` | `CreateWorkflowRequest` | 201 `CreateWorkflowResponse` | user-expressions, not-replay-safe | `orchestration workflows create <file>\|-` | B1-generated-client-unusable |
-| `deleteWorkflow` | `deleteWorkflow` | v1 | DELETE | `/workflows/{flowId}` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration workflows delete <workflow-id>` | B1-generated-client-unusable |
-| `getWorkflow` | `getWorkflow` | v1 | GET | `/workflows/{flowId}` | `orchestration:read` | — | 200 `GetWorkflowResponse` | user-expressions | `orchestration instances show <instance-id>`<br>`orchestration workflows run <id>`<br>`orchestration workflows show <id>` | B1-generated-client-unusable |
-| `listWorkflows` | `listWorkflows` | v1 | GET | `/workflows` | `orchestration:read` | — | 200 `ListWorkflowsResponse` | user-expressions, unbounded | `orchestration workflows list` | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2CreateWorkflow` | `CreateWorkflow` | v2 | POST | `/v2/workflows` | `orchestration:write` | `V2CreateWorkflowRequest` | 201 `V2CreateWorkflowResponse` | user-expressions, not-replay-safe | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2DeleteWorkflow` | `DeleteWorkflow` | v2 | DELETE | `/v2/workflows/{flowId}` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2GetWorkflow` | `GetWorkflow` | v2 | GET | `/v2/workflows/{flowId}` | `orchestration:read` | — | 200 `V2GetWorkflowResponse` | user-expressions | — (no legacy precedent) | B1-generated-client-unusable |
-| `v2ListWorkflows` | `ListWorkflows` | v2 | GET | `/v2/workflows` | `orchestration:read` | — | 200 `V2ListWorkflowsResponse` | user-expressions, paginated | — (no legacy precedent) | B1-generated-client-unusable |
+| operationId | SDK method | Major | Method | Path | Scopes | Request | Success | Risk | Legacy command(s) | Source risks | Admission blockers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `createWorkflow` | `createWorkflow` | v1 | POST | `/workflows` | `orchestration:write` | `CreateWorkflowRequest` | 201 `CreateWorkflowResponse` | user-expressions, not-replay-safe | `orchestration workflows create <file>\|-` | — | — |
+| `deleteWorkflow` | `deleteWorkflow` | v1 | DELETE | `/workflows/{flowId}` | `orchestration:write` | — | 204 (no body) | destructive | `orchestration workflows delete <workflow-id>` | — | — |
+| `getWorkflow` | `getWorkflow` | v1 | GET | `/workflows/{flowId}` | `orchestration:read` | — | 200 `GetWorkflowResponse` | user-expressions | `orchestration instances show <instance-id>`<br>`orchestration workflows run <id>`<br>`orchestration workflows show <id>` | — | — |
+| `listWorkflows` | `listWorkflows` | v1 | GET | `/workflows` | `orchestration:read` | — | 200 `ListWorkflowsResponse` | user-expressions, unbounded | `orchestration workflows list` | B2-unbounded-collection | — |
+| `v2CreateWorkflow` | `CreateWorkflow` | v2 | POST | `/v2/workflows` | `orchestration:write` | `V2CreateWorkflowRequest` | 201 `V2CreateWorkflowResponse` | user-expressions, not-replay-safe | — (no legacy precedent) | — | — |
+| `v2DeleteWorkflow` | `DeleteWorkflow` | v2 | DELETE | `/v2/workflows/{flowId}` | `orchestration:write` | — | 204 (no body) | destructive | — (no legacy precedent) | — | — |
+| `v2GetWorkflow` | `GetWorkflow` | v2 | GET | `/v2/workflows/{flowId}` | `orchestration:read` | — | 200 `V2GetWorkflowResponse` | user-expressions | — (no legacy precedent) | — | — |
+| `v2ListWorkflows` | `ListWorkflows` | v2 | GET | `/v2/workflows` | `orchestration:read` | — | 200 `V2ListWorkflowsResponse` | user-expressions, paginated | — (no legacy precedent) | — | — |
 
 ## Legacy baseline mapping
 
@@ -120,45 +121,32 @@ Legacy fctl baseline revision: `693c58e27865f83332e6c3199d61fed81b742f41`
 
 ## Operations with no legacy precedent
 
-| operationId | Major | Method | Path | Blockers |
-|---|---|---|---|---|
-| `getServerInfo` | v1 | GET | `/_info` | B1-generated-client-unusable |
-| `v2CancelEvent` | v2 | PUT | `/v2/instances/{instanceID}/abort` | B1-generated-client-unusable |
-| `v2CreateTrigger` | v2 | POST | `/v2/triggers` | B1-generated-client-unusable |
-| `v2CreateWorkflow` | v2 | POST | `/v2/workflows` | B1-generated-client-unusable |
-| `v2DeleteTrigger` | v2 | DELETE | `/v2/triggers/{triggerID}` | B1-generated-client-unusable |
-| `v2DeleteWorkflow` | v2 | DELETE | `/v2/workflows/{flowId}` | B1-generated-client-unusable |
-| `v2GetInstance` | v2 | GET | `/v2/instances/{instanceID}` | B1-generated-client-unusable |
-| `v2GetInstanceHistory` | v2 | GET | `/v2/instances/{instanceID}/history` | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2GetInstanceStageHistory` | v2 | GET | `/v2/instances/{instanceID}/stages/{number}/history` | B1-generated-client-unusable, B2-unbounded-collection |
-| `v2GetServerInfo` | v2 | GET | `/v2/_info` | B1-generated-client-unusable |
-| `v2GetWorkflow` | v2 | GET | `/v2/workflows/{flowId}` | B1-generated-client-unusable |
-| `v2ListInstances` | v2 | GET | `/v2/instances` | B1-generated-client-unusable |
-| `v2ListTriggers` | v2 | GET | `/v2/triggers` | B1-generated-client-unusable |
-| `v2ListTriggersOccurrences` | v2 | GET | `/v2/triggers/{triggerID}/occurrences` | B1-generated-client-unusable |
-| `v2ListWorkflows` | v2 | GET | `/v2/workflows` | B1-generated-client-unusable |
-| `v2ReadTrigger` | v2 | GET | `/v2/triggers/{triggerID}` | B1-generated-client-unusable |
-| `v2RunWorkflow` | v2 | POST | `/v2/workflows/{workflowID}/instances` | B1-generated-client-unusable, B4-unbounded-blocking-wait |
-| `v2SendEvent` | v2 | POST | `/v2/instances/{instanceID}/events` | B1-generated-client-unusable |
+| operationId | Major | Method | Path | Source risks | Admission blockers |
+|---|---|---|---|---|---|
+| `getServerInfo` | v1 | GET | `/_info` | — | — |
+| `v2CancelEvent` | v2 | PUT | `/v2/instances/{instanceID}/abort` | — | — |
+| `v2CreateTrigger` | v2 | POST | `/v2/triggers` | — | — |
+| `v2CreateWorkflow` | v2 | POST | `/v2/workflows` | — | — |
+| `v2DeleteTrigger` | v2 | DELETE | `/v2/triggers/{triggerID}` | — | — |
+| `v2DeleteWorkflow` | v2 | DELETE | `/v2/workflows/{flowId}` | — | — |
+| `v2GetInstance` | v2 | GET | `/v2/instances/{instanceID}` | — | — |
+| `v2GetInstanceHistory` | v2 | GET | `/v2/instances/{instanceID}/history` | B2-unbounded-collection | — |
+| `v2GetInstanceStageHistory` | v2 | GET | `/v2/instances/{instanceID}/stages/{number}/history` | B2-unbounded-collection | — |
+| `v2GetServerInfo` | v2 | GET | `/v2/_info` | — | — |
+| `v2GetWorkflow` | v2 | GET | `/v2/workflows/{flowId}` | — | — |
+| `v2ListInstances` | v2 | GET | `/v2/instances` | — | — |
+| `v2ListTriggers` | v2 | GET | `/v2/triggers` | — | — |
+| `v2ListTriggersOccurrences` | v2 | GET | `/v2/triggers/{triggerID}/occurrences` | — | — |
+| `v2ListWorkflows` | v2 | GET | `/v2/workflows` | — | — |
+| `v2ReadTrigger` | v2 | GET | `/v2/triggers/{triggerID}` | — | — |
+| `v2RunWorkflow` | v2 | POST | `/v2/workflows/{workflowID}/instances` | B4-unbounded-blocking-wait | — |
+| `v2SendEvent` | v2 | POST | `/v2/instances/{instanceID}/events` | — | — |
 
-## Blockers
-
-### B1-generated-client-unusable (35 operations)
-
-The repository's generated client does not build and cannot be imported: pkg/client/go.mod declares `module openapi` while its own sources import two different paths, and pkg/client/go.sum carries no module-content hash for any of its three dependencies. Task 10B requires the plugin to route every operation through this client and forbids hand-written DTOs, endpoints and transports, so no operation can be admitted until the client is buildable and importable under a resolvable module path.
-
-**Evidence.** pkg/client/go.mod line 2 declares `module openapi` with `go 1.20`, against `module github.com/formancehq/orchestration` and `go 1.25.10` in the root go.mod. Of the 221 Go files under pkg/client, 94 import `openapi/...` and pkg/client/formance.go imports `github.com/formancehq/flows/pkg/client/...`, so the two halves of the module disagree about its own path and neither matches the declaration. pkg/client/go.sum holds exactly three lines, all `/go.mod` hashes, and no `h1:` module-content hash. The root go.mod neither requires nor replaces the client, so nothing in this repository compiles it. The client is regenerated by `just generate-client` (speakeasy), so the module path is a generation-configuration decision — between the root module namespace and the VCS namespace — not a hand-editable typo.
-
-**Reproduce.**
-
-```sh
-cd pkg/client && go build ./...  # module declares its path as: openapi
-cd pkg/client && GOFLAGS=-mod=readonly go build ./internal/utils  # missing go.sum entry
-```
+## Recorded source risks
 
 ### B2-unbounded-collection (7 operations)
 
-These operations return a collection the caller has no declared way to bound, and the server applies no limit either, so the response size is a function of stored state. A portable component with a bounded result payload cannot admit them until the boundary either declares pagination or declares a ceiling.
+These operations return a collection the caller has no declared way to bound, and the server applies no limit either, so the response size is a function of stored state. The adapter contains this with host response limits, paginated v2 listings and a bounded number of stage-history requests.
 
 **Evidence.** openapi.yaml declares no cursor/pageSize parameter on any of the seven. For the three v1 listings the server passes a zero-valued OffsetPaginatedQuery (internal/api/v1/handler_list_workflows.go, handler_list_instances.go, handler_list_triggers_occurrences.go) and go-libs v3.6.0 bun/bunpaginate/pagination_offset.go usingOffset applies `sb.Limit(...)` only `if query.PageSize > 0`, so no SQL LIMIT is emitted. For the four history reads both majors call backend.ReadInstanceHistory / backend.ReadStageHistory with no query object at all (internal/api/v1/handler_read_instance_history.go, handler_read_stage_history.go and their identical v2 counterparts) and render the whole array. The v2 listings are not in this list: they declare cursor + pageSize and render the cursor back through sharedapi.RenderCursor.
 
@@ -170,9 +158,13 @@ v1 GET /triggers returns at most 15 triggers and says nothing about it. The serv
 
 ### B4-unbounded-blocking-wait (2 operations)
 
-With `wait=true` these operations block until the Temporal workflow terminates, with no server-side deadline. The legacy command exposed exactly this as `--wait`. A portable component executes under a host-owned deadline and cancellation contract that is not frozen yet, so the waiting form cannot be admitted until the host's cancellation and timeout semantics are decided.
+With `wait=true` these operations block until the Temporal workflow terminates, with no server-side deadline. The legacy command exposed exactly this as `--wait`. The portable component contains the source behavior through the host-owned execution deadline and cancellation contract.
 
 **Evidence.** openapi.yaml declares `wait` (query, boolean) on POST /workflows/{workflowID}/instances and its /v2 form. internal/api/v1/handler_run_workflow.go and internal/api/v2/handler_run_workflow.go call backend.Wait(r.Context(), instance.ID) before responding when the parameter is true or 1, with no timeout applied. At legacy fctl 693c58e27865f83332e6c3199d61fed81b742f41, cmd/orchestration/workflows/run.go declares the `--wait` bool flag and forwards it as RunWorkflowRequest.Wait. The non-waiting form of both operations is not blocked.
+
+## Current admission blockers
+
+None. The admitted v2 catalogue contains each recorded source constraint.
 
 ## Spec-versus-server divergences
 
