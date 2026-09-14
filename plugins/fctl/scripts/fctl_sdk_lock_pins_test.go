@@ -235,10 +235,12 @@ func readLock(t *testing.T) sdkLock {
 	if err != nil {
 		t.Fatalf("open lock: %v", err)
 	}
-	defer f.Close()
 	lock, err := decodeLock(f)
 	if err != nil {
 		t.Fatalf("decode lock: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("close lock: %v", err)
 	}
 	return lock
 }
