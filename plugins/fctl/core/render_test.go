@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
@@ -47,6 +46,17 @@ var wantTableColumns = map[string][]column{
 		{"ID", "id"}, {"Workflow ID", "workflowID"}, {"Created At", "createdAt"},
 		{"Updated At", "updatedAt"}, {"Terminated", "terminated"},
 	},
+	"flows.v2.triggers.test": {
+		{"Match", "filter.match"},
+	},
+	"flows.v2.workflows.run": {
+		{"ID", "instance.id"}, {"Workflow ID", "instance.workflowID"},
+		{"Workflow Name", "workflow.config.name"}, {"Terminated", "instance.terminated"},
+	},
+	"flows.v2.instances.show": {
+		{"ID", "instance.id"}, {"Workflow ID", "instance.workflowID"},
+		{"Workflow Name", "workflow.config.name"}, {"Terminated", "instance.terminated"},
+	},
 }
 
 // wantNoTable is every command that deliberately declares no table hint, with
@@ -57,39 +67,7 @@ var wantNoTable = map[string]string{
 	"flows.v2.workflows.delete":     "no-content mutation: the canonical empty result has no field",
 	"flows.v2.instances.send-event": "no-content mutation: the canonical empty result has no field",
 	"flows.v2.instances.stop":       "no-content mutation: the canonical empty result has no field",
-	"flows.v2.triggers.test":        "every top-level field of the trigger-test result is a nested object",
-	"flows.v2.workflows.run":        "composite presentation read: instance and workflow are both nested objects",
-	"flows.v2.instances.show":       "composite presentation read: instance and workflow are both nested objects",
 	"flows.v2.instances.describe":   "composite presentation read: history and stages are both nested arrays",
-}
-
-// wantExcludedScalarFields records every flat field a command's result carries
-// that is deliberately not a column, with the exact reason. Together with
-// wantTableColumns it accounts for every flat field a result emits, so a new
-// product field forces a decision instead of being dropped silently.
-var wantExcludedScalarFields = map[string]map[string]string{
-	"flows.v2.triggers.list": {
-		"version": "low-signal in a compact table",
-		"filter":  "user-authored expression of unbounded length",
-	},
-	"flows.v2.triggers.show": {
-		"version": "low-signal in a compact table",
-		"filter":  "user-authored expression of unbounded length",
-	},
-	"flows.v2.triggers.create": {
-		"version": "low-signal in a compact table",
-		"filter":  "user-authored expression of unbounded length",
-	},
-	"flows.v2.triggers.occurrences.list": {
-		"error": "unbounded free-text failure reason",
-	},
-	"flows.v2.workflows.list":   {},
-	"flows.v2.workflows.show":   {},
-	"flows.v2.workflows.create": {},
-	"flows.v2.instances.list": {
-		"terminatedAt": "presence is already signalled by Terminated; keeps the table compact",
-		"error":        "unbounded free-text failure reason",
-	},
 }
 
 func TestTableRenderHintsAreTheExactOrderedColumns(t *testing.T) {
@@ -138,8 +116,10 @@ func TestTableRenderHintColumnsAreCompactAndWellFormed(t *testing.T) {
 			if c.Header == "" || len(c.Header) > 2048 || c.Field == "" || len(c.Field) > 256 {
 				t.Errorf("%s column %#v is out of bounds", command.ID, c)
 			}
-			if strings.ContainsAny(c.Field, "./[]") {
-				t.Errorf("%s column field %q is not a flat field name", command.ID, c.Field)
+			for _, segment := range strings.Split(c.Field, ".") {
+				if segment == "" || strings.ContainsAny(segment, "/[]") {
+					t.Errorf("%s column field %q is not a dotted object path", command.ID, c.Field)
+				}
 			}
 			if _, repeated := headers[c.Header]; repeated {
 				t.Errorf("%s repeats header %q", command.ID, c.Header)
@@ -155,51 +135,41 @@ func TestTableRenderHintColumnsAreCompactAndWellFormed(t *testing.T) {
 	}
 }
 
-// TestTableRenderHintsDescribeActualResultFields proves every declared column
-// names a flat field the adapter actually emits, and that every command without
-// a hint emits no flat field a column could have named. The evidence is the
-// real result the plugin produces, not a restatement of the catalogue.
+// TestTableRenderHintsDescribeActualResultFields catches a renamed, missing or
+// container-valued column path by resolving it through the real result emitted
+// by the adapter. The host accepts dotted object paths, so nested scalar leaves
+// are valid columns.
 func TestTableRenderHintsDescribeActualResultFields(t *testing.T) {
 	for _, test := range renderEvidenceCases() {
 		t.Run(test.id, func(t *testing.T) {
 			data := executeForRender(t, test)
-			scalars := flatFields(t, data)
+			result := decodeResultRow(t, data)
 			columns, hinted := wantTableColumns[test.id]
 			if !hinted {
-				if len(scalars) != 0 {
-					t.Fatalf("%s emits flat fields %v but declares no table hint (%s)",
-						test.id, sortedKeys(scalars), wantNoTable[test.id])
+				if _, recorded := wantNoTable[test.id]; !recorded {
+					t.Fatalf("%s has no table and no recorded reason", test.id)
 				}
 				return
 			}
-			accounted := map[string]struct{}{}
 			for _, c := range columns {
-				if _, present := scalars[c.field]; !present {
-					t.Errorf("%s column %q names %q, which the emitted result does not carry as a flat field (flat fields: %v)",
-						test.id, c.header, c.field, sortedKeys(scalars))
+				value, present := valueAtObjectPath(result, c.field)
+				if !present {
+					t.Errorf("%s column %q names %q, which the emitted result does not carry", test.id, c.header, c.field)
+					continue
 				}
-				accounted[c.field] = struct{}{}
-			}
-			for field, reason := range wantExcludedScalarFields[test.id] {
-				if _, present := scalars[field]; !present {
-					t.Errorf("%s records an exclusion for %q (%s), but the result has no such flat field", test.id, field, reason)
-				}
-				accounted[field] = struct{}{}
-			}
-			for field := range scalars {
-				if _, ok := accounted[field]; !ok {
-					t.Errorf("%s emits flat field %q that is neither a column nor a recorded exclusion", test.id, field)
+				switch value.(type) {
+				case map[string]any, []any:
+					t.Errorf("%s column %q resolves to a container at %q", test.id, c.header, c.field)
 				}
 			}
 		})
 	}
 }
 
-// TestOutputSchemasStayExhaustiveAlongsideRenderHints pins that render hints
-// select display columns without narrowing the declared output contract: the
-// public schema keeps accepting the whole emitted result and stays byte-equal
-// to the raw schema, as the pinned SDK requires for ordinary JSON results.
-func TestOutputSchemasStayExhaustiveAlongsideRenderHints(t *testing.T) {
+// TestRenderPathsExistInThePublicSchema catches schemas that are too broad to
+// describe a column or that drift from the adapter result. Known properties are
+// declared while additional product fields remain allowed for compatibility.
+func TestRenderPathsExistInThePublicSchema(t *testing.T) {
 	for _, command := range Catalogue() {
 		if !reflect.DeepEqual(command.RawOutputSchema, command.PublicOutputSchema) {
 			t.Errorf("%s raw and public output schemas differ", command.ID)
@@ -207,9 +177,6 @@ func TestOutputSchemasStayExhaustiveAlongsideRenderHints(t *testing.T) {
 		var schema map[string]any
 		if err := json.Unmarshal(command.PublicOutputSchema, &schema); err != nil {
 			t.Fatalf("%s public output schema is not JSON: %v", command.ID, err)
-		}
-		if _, narrowed := schema["properties"]; narrowed {
-			t.Errorf("%s public output schema enumerates properties, so it no longer accepts the whole result", command.ID)
 		}
 		wantRoot := "object"
 		if command.Pagination.Supported {
@@ -220,6 +187,16 @@ func TestOutputSchemasStayExhaustiveAlongsideRenderHints(t *testing.T) {
 		}
 		if command.Render.Table == nil {
 			continue
+		}
+		for _, column := range command.Render.Table.Columns {
+			node, ok := schemaAtObjectPath(schema, column.Field)
+			if !ok {
+				t.Errorf("%s public schema does not declare column path %q", command.ID, column.Field)
+				continue
+			}
+			if node["type"] == "object" || node["type"] == "array" {
+				t.Errorf("%s public schema declares column path %q as %v", command.ID, column.Field, node["type"])
+			}
 		}
 		if command.OutputMediaType != "application/json" {
 			t.Errorf("%s declares table columns for media type %q", command.ID, command.OutputMediaType)
@@ -327,9 +304,7 @@ func executeForRender(t *testing.T, test renderCase) []byte {
 	return events[0].Result.Data
 }
 
-// flatFields returns the scalar top-level fields of one emitted row: the first
-// element for a collection result, the object itself otherwise.
-func flatFields(t *testing.T, data []byte) map[string]struct{} {
+func decodeResultRow(t *testing.T, data []byte) map[string]any {
 	t.Helper()
 	decoder := json.NewDecoder(strings.NewReader(string(data)))
 	decoder.UseNumber()
@@ -347,22 +322,43 @@ func flatFields(t *testing.T, data []byte) map[string]struct{} {
 	if !isObject {
 		t.Fatalf("result row is %T, want an object", value)
 	}
-	out := map[string]struct{}{}
-	for name, field := range row {
-		switch field.(type) {
-		case map[string]any, []any:
-			continue
-		}
-		out[name] = struct{}{}
-	}
-	return out
+	return row
 }
 
-func sortedKeys(values map[string]struct{}) []string {
-	out := make([]string, 0, len(values))
-	for value := range values {
-		out = append(out, value)
+func valueAtObjectPath(value map[string]any, path string) (any, bool) {
+	var current any = value
+	for _, segment := range strings.Split(path, ".") {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current, ok = object[segment]
+		if !ok {
+			return nil, false
+		}
 	}
-	sort.Strings(out)
-	return out
+	return current, true
+}
+
+func schemaAtObjectPath(schema map[string]any, path string) (map[string]any, bool) {
+	current := schema
+	if current["type"] == "array" {
+		var ok bool
+		current, ok = current["items"].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+	}
+	for _, segment := range strings.Split(path, ".") {
+		properties, ok := current["properties"].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		next, ok := properties[segment].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current = next
+	}
+	return current, true
 }

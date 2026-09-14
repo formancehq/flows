@@ -61,24 +61,30 @@ func catalogueSpecs() []spec {
 }
 
 // tableColumns are the compact display columns the host may render for a
-// command. A column names one flat field the adapter actually emits; nested,
-// unbounded and low-signal fields are deliberately left out, and a command
-// whose result carries no flat field declares no table at all. The exhaustive
+// command. A column names one scalar field the adapter actually emits, using a
+// dotted object path where the useful value is nested. Unbounded and low-signal
+// fields are deliberately left out, and a command whose result carries no
+// stable scalar leaf declares no table at all. The exhaustive
 // result contract stays in PublicOutputSchema, which these hints do not narrow.
 var tableColumns = map[string][]sdk.TableColumn{
 	"triggers.list":             triggerColumns,
 	"triggers.show":             triggerColumns,
 	"triggers.create":           triggerColumns,
+	"triggers.test":             {{Header: "Match", Field: "filter.match"}},
 	"triggers.occurrences.list": {{Header: "Date", Field: "date"}, {Header: "Trigger ID", Field: "triggerID"}, {Header: "Instance ID", Field: "workflowInstanceID"}},
 	"workflows.list":            workflowColumns,
 	"workflows.show":            workflowColumns,
 	"workflows.create":          workflowColumns,
+	"workflows.run":             compositeInstanceColumns,
 	"instances.list":            {{Header: "ID", Field: "id"}, {Header: "Workflow ID", Field: "workflowID"}, {Header: "Created At", Field: "createdAt"}, {Header: "Updated At", Field: "updatedAt"}, {Header: "Terminated", Field: "terminated"}},
+	"instances.show":            compositeInstanceColumns,
 }
 
 var triggerColumns = []sdk.TableColumn{{Header: "ID", Field: "id"}, {Header: "Name", Field: "name"}, {Header: "Event", Field: "event"}, {Header: "Workflow ID", Field: "workflowID"}, {Header: "Created At", Field: "createdAt"}}
 
 var workflowColumns = []sdk.TableColumn{{Header: "ID", Field: "id"}, {Header: "Created At", Field: "createdAt"}, {Header: "Updated At", Field: "updatedAt"}}
+
+var compositeInstanceColumns = []sdk.TableColumn{{Header: "ID", Field: "instance.id"}, {Header: "Workflow ID", Field: "instance.workflowID"}, {Header: "Workflow Name", Field: "workflow.config.name"}, {Header: "Terminated", Field: "instance.terminated"}}
 
 func renderHints(path string) sdk.RenderHints {
 	columns, ok := tableColumns[path]
@@ -104,13 +110,12 @@ func (s spec) command() sdk.Command {
 	for _, op := range ops {
 		policies = append(policies, op.policy(s.mutation))
 	}
-	shape := objectSchema
+	path := strings.Join(s.path, ".")
+	shape := outputSchema(path)
 	max := uint32(len(ops))
 	if s.paginated {
-		shape = collectionSchema
 		max = sdk.DefaultAllPagesMaxPages
 	}
-	path := strings.Join(s.path, ".")
 	if path == "instances.describe" {
 		max = sdk.PortableMaxHostRequests
 	}

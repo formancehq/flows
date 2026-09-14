@@ -282,10 +282,12 @@ Implemented locally here:
 - a 16-command v2 catalogue with exact operations and scopes;
 - a generated-client adapter over `producthttp`, portable lifecycle, WIT and deterministic
   two-lane build recipe;
-- compact table render hints on the eight commands whose results carry a flat
-  field, each column proved against a real emitted result, with the eight
-  commands that declare none and every excluded flat field recorded with a
-  reason;
+- compact table render hints on eleven commands, including dotted object paths
+  for the trigger-test verdict and the two composite instance presentations;
+  the four empty mutations and array-only instance history are the five
+  commands that truthfully declare none;
+- command-specific public output schemas that declare every hinted scalar path
+  and collection item shape while preserving API extensibility;
 - focused catalogue, adapter, pagination, render-hint, lock-agreement and
   lifecycle tests, plus two deliberately separate product-HTTP-failure tests:
   the adapter-local one pins the typed code, the `httpStatus` details and the
