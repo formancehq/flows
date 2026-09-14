@@ -39,13 +39,27 @@ resolved="$("$materializer" "$repository" "$pinned_commit" "$cache")"
 git -C "$cache" cat-file -e "$pinned_commit^{commit}" || fail 'cache omits pinned commit'
 [[ "$(git -C "$cache" remote get-url origin)" == "$repository" ]] || fail 'cache origin drifted'
 
+# CI authenticates private github.com repositories through url.*.insteadOf.
+# That rewrite must affect transport without changing the stored repository
+# identity or making the materializer reject its own cache.
+git_config="$test_root/gitconfig"
+git config --file "$git_config" url.https://credential@example.invalid/.insteadOf "$repository"
+rewritten="$(GIT_CONFIG_GLOBAL="$git_config" git -C "$cache" remote get-url origin)"
+[[ "$rewritten" != "$repository" ]] || fail 'test did not exercise Git URL rewriting'
+GIT_CONFIG_GLOBAL="$git_config" "$materializer" "$repository" "$pinned_commit" "$cache" >/dev/null
+
 # Replaying the same intent converges from cache without its source repository.
 mv "$upstream" "$test_root/upstream-offline"
 [[ "$("$materializer" "$repository" "$pinned_commit" "$cache")" == "$cache" ]] || fail 'cache replay failed'
 
-wrong_cache="$test_root/wrong-cache"
-git init --quiet --bare "$wrong_cache"
-git -C "$wrong_cache" remote add origin https://example.invalid/other.git
-expect_failure 'cache origin mismatch' "$materializer" "$repository" "$pinned_commit" "$wrong_cache"
+wrong_host_cache="$test_root/wrong-host-cache"
+git init --quiet --bare "$wrong_host_cache"
+git -C "$wrong_host_cache" remote add origin https://example.invalid/formancehq/fctl-v2-poc.git
+expect_failure 'cache origin mismatch' "$materializer" "$repository" "$pinned_commit" "$wrong_host_cache"
+
+wrong_path_cache="$test_root/wrong-path-cache"
+git init --quiet --bare "$wrong_path_cache"
+git -C "$wrong_path_cache" remote add origin "file://$test_root/other-upstream"
+expect_failure 'cache origin mismatch' "$materializer" "$repository" "$pinned_commit" "$wrong_path_cache"
 
 printf 'fctl SDK materialization contract: ok\n'

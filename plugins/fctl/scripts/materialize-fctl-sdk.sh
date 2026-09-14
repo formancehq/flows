@@ -21,7 +21,7 @@ command -v git >/dev/null || { printf 'git is required to materialize the fctl S
 mkdir -p "$cache"
 git -C "$cache" init --bare --quiet >&2
 
-if existing_origin="$(git -C "$cache" remote get-url origin 2>/dev/null)"; then
+if existing_origin="$(git -C "$cache" config --get remote.origin.url 2>/dev/null)"; then
   if [[ "$existing_origin" != "$repository" ]]; then
     printf 'fctl SDK cache origin mismatch: got %s, want %s\n' "$existing_origin" "$repository" >&2
     exit 1

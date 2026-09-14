@@ -86,6 +86,10 @@ case "$3" in
   cat-file)
     [[ "$4" == '-e' && "$5" == "${FAKE_GIT_HEAD:?}^{commit}" ]] || exit 98
     ;;
+  config)
+    [[ "$4" == '--get' && "$5" == 'remote.origin.url' ]] || exit 98
+    printf '%s\n' "${FAKE_GIT_REMOTE:?}"
+    ;;
   fetch)
     printf 'the fake cache already contains the pinned commit\n' >&2
     exit 98
