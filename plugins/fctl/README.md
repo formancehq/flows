@@ -123,22 +123,22 @@ with their reason in that test.
 
 ## Validate
 
-From this directory, enter the repository's pinned development shell and name
-an explicit fctl source root:
+From this directory, enter the repository's pinned development shell:
 
 ```sh
 nix develop ../..
-export FCTL_SDK_ROOT=/path/to/fctl-v2-poc
 just test
 ```
 
-The SDK wrapper validates the module path and locked content hashes. When the
-source includes Git metadata, it also requires the locked commit and origin,
-then projects the SDK and WIT paths from that exact commit. Ignored or modified
-working-tree files therefore cannot affect the command. It creates an
-ephemeral Go workspace, runs the requested command against the validated
-projection, and removes the whole projection afterward. No workstation path or
-Nix store path is tracked.
+The SDK wrapper materializes the exact locked commit in the user cache when no
+checkout is supplied. Set `FCTL_SDK_ROOT=/path/to/fctl-v2-poc` to use an
+existing checkout instead. In both cases it validates the module path and
+locked content hashes. When the source includes Git metadata, it also requires
+the locked commit and origin, then projects the SDK and WIT paths from that
+exact commit. Ignored or modified working-tree files therefore cannot affect
+the command. It creates an ephemeral Go workspace, runs the requested command
+against the validated projection, and removes the whole projection afterward.
+No workstation path or Nix store path is tracked.
 
 The component build needs the fctl authoring tools plus Binaryen. They are
 declared by the repository development shell used above:

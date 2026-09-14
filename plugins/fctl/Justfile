@@ -2,6 +2,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 validate-sdk:
     GOWORK=off go test ./scripts
+    ./scripts/test-materialize-fctl-sdk.sh
     ./scripts/test-fctl-sdk-contract.sh
     ./scripts/test-tidy-with-fctl-sdk.sh
     ./scripts/with-fctl-sdk.sh true

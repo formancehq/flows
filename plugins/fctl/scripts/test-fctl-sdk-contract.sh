@@ -66,21 +66,37 @@ chmod +x "$fake_bin/nix"
 cat >"$fake_bin/git" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "$3" == 'rev-parse' && "$4" == 'HEAD' ]]; then
-  printf '%s\n' "${FAKE_GIT_HEAD:?}"
-elif [[ "$3" == 'remote' && "$4" == 'get-url' && "$5" == 'origin' ]]; then
-  printf '%s\n' "${FAKE_GIT_REMOTE:?}"
-elif [[ "$3" == 'archive' ]]; then
-  [[ "$4" == "${FAKE_GIT_HEAD:?}" ]] || { printf 'archived wrong commit: %s\n' "$4" >&2; exit 98; }
-  [[ "$5" == 'pkg/plugin' && "$6" == 'wit/formance/fctl/plugin/v1/plugin.wit' ]] || {
-    printf 'archived wrong paths: %s %s\n' "$5" "$6" >&2
+[[ "$1" == '-C' ]] || { printf 'unexpected git arguments: %s\n' "$*" >&2; exit 98; }
+directory="$2"
+case "$3" in
+  rev-parse)
+    [[ "$4" == 'HEAD' ]] || { printf 'unexpected git arguments: %s\n' "$*" >&2; exit 98; }
+    printf '%s\n' "${FAKE_GIT_HEAD:?}"
+    ;;
+  remote)
+    case "$4" in
+      get-url) [[ "$5" == 'origin' ]] || exit 98; printf '%s\n' "${FAKE_GIT_REMOTE:?}" ;;
+      add) [[ "$5" == 'origin' ]] || exit 98 ;;
+      *) printf 'unexpected git arguments: %s\n' "$*" >&2; exit 98 ;;
+    esac
+    ;;
+  init)
+    [[ -d "$directory" ]] || { printf 'git init on a missing directory: %s\n' "$directory" >&2; exit 98; }
+    ;;
+  cat-file)
+    [[ "$4" == '-e' && "$5" == "${FAKE_GIT_HEAD:?}^{commit}" ]] || exit 98
+    ;;
+  fetch)
+    printf 'the fake cache already contains the pinned commit\n' >&2
     exit 98
-  }
-  tar -C "${FAKE_GIT_ARCHIVE_SOURCE:?}" -cf - "$5" "$6"
-else
-  printf 'unexpected git arguments: %s\n' "$*" >&2
-  exit 98
-fi
+    ;;
+  archive)
+    [[ "$4" == "${FAKE_GIT_HEAD:?}" ]] || { printf 'archived wrong commit: %s\n' "$4" >&2; exit 98; }
+    [[ "$5" == 'pkg/plugin' && "$6" == 'wit/formance/fctl/plugin/v1/plugin.wit' ]] || exit 98
+    tar -C "${FAKE_GIT_ARCHIVE_SOURCE:?}" -cf - "$5" "$6"
+    ;;
+  *) printf 'unexpected git arguments: %s\n' "$*" >&2; exit 98 ;;
+esac
 EOF
 chmod +x "$fake_bin/git"
 
@@ -120,8 +136,24 @@ chmod +x "$test_root/signal-wrapper.sh"
 
 [[ -x "$wrapper" ]] || fail "wrapper is missing or not executable: $wrapper"
 
-expect_failure 'FCTL_SDK_ROOT is required' env -u FCTL_SDK_ROOT \
-  PATH="$fake_bin:$PATH" FAKE_NAR_HASH="$expected_nar_hash" "$wrapper" true
+# Ordinary CI supplies no checkout. The wrapper must obtain the exact locked
+# commit itself, project it, and validate the same hashes as a local override.
+bootstrap_cache="$test_root/sdk-cache"
+env -u FCTL_SDK_ROOT PATH="$fake_bin:$PATH" FAKE_NAR_HASH="$expected_nar_hash" \
+  FAKE_GIT_HEAD="$expected_commit" FAKE_GIT_REMOTE="$expected_repository" \
+  FAKE_GIT_ARCHIVE_SOURCE="$archive_root" FCTL_SDK_CACHE_DIR="$bootstrap_cache" \
+  "$wrapper" true
+[[ -d "$bootstrap_cache" ]] || fail 'bootstrap did not create the fctl SDK cache directory'
+
+expect_failure 'fctl SDK content hash mismatch' env -u FCTL_SDK_ROOT \
+  PATH="$fake_bin:$PATH" FAKE_NAR_HASH='sha256-wrong' \
+  FAKE_GIT_HEAD="$expected_commit" FAKE_GIT_REMOTE="$expected_repository" \
+  FAKE_GIT_ARCHIVE_SOURCE="$archive_root" FCTL_SDK_CACHE_DIR="$test_root/sdk-cache-bad-hash" \
+  "$wrapper" true
+
+expect_failure 'FCTL_SDK_ROOT is not a directory' env \
+  PATH="$fake_bin:$PATH" FCTL_SDK_ROOT="$test_root/absent" FAKE_NAR_HASH="$expected_nar_hash" \
+  "$wrapper" true
 
 expect_failure 'fctl SDK content hash mismatch' env \
   PATH="$fake_bin:$PATH" FCTL_SDK_ROOT="$sdk_root" FAKE_NAR_HASH='sha256-wrong' "$wrapper" true
