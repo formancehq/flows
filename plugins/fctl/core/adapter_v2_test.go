@@ -315,3 +315,46 @@ func TestMalformedProductResultsFailClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestProductHTTPErrorsReachTheHostTyped pins the failure the adapter surfaces
+// for a non-2xx product response. The shared bridge classifies it, so the
+// adapter must forward the typed code, the HTTP status and the retryability
+// verdict unchanged instead of flattening them into its own diagnostic.
+func TestProductHTTPErrorsReachTheHostTyped(t *testing.T) {
+	for _, test := range []struct {
+		status        int32
+		wantRetryable bool
+	}{
+		{404, false},
+		{409, false},
+		{503, true},
+	} {
+		host := sdk.NewMemoryHost(func(context.Context, sdk.Request) (sdk.Responses, error) {
+			return sdk.NewResponseStream(sdk.Response{Status: test.status, ContentType: "application/json", Body: []byte(`{"errorCode":"NOT_FOUND"}`)}), nil
+		})
+
+		err := (Plugin{}).Execute(context.Background(), executeRequest("flows.v2.workflows.show", []string{"wf"}), host)
+		var failure sdk.Failure
+		if !errors.As(err, &failure) {
+			t.Errorf("HTTP %d produced %v, want an sdk.Failure", test.status, err)
+			continue
+		}
+		if failure.Code != string(sdk.FailureProductHTTPError) {
+			t.Errorf("HTTP %d failed with code %q, want %q", test.status, failure.Code, sdk.FailureProductHTTPError)
+		}
+		if failure.Retryable != test.wantRetryable {
+			t.Errorf("HTTP %d retryable=%t, want %t", test.status, failure.Retryable, test.wantRetryable)
+		}
+
+		var details struct {
+			HTTPStatus int32 `json:"httpStatus"`
+		}
+		if err := json.Unmarshal(failure.Details, &details); err != nil {
+			t.Errorf("HTTP %d details are not JSON: %v", test.status, err)
+			continue
+		}
+		if details.HTTPStatus != test.status {
+			t.Errorf("failure details report status %d, want %d", details.HTTPStatus, test.status)
+		}
+	}
+}

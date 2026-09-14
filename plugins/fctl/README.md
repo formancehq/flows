@@ -51,13 +51,19 @@ client without float64 rounding.
 The adapter imports the product's generated `pkg/client` as a nested module and
 supplies `producthttp` as its HTTP client. It does not configure generated
 security or retries: endpoint, credentials, request admission and retry policy
-remain host-owned. Nix pins the exact Speakeasy CLI version recorded in the
-client lock. `just generate-client` regenerates with that pin and checks the
-nested module; `just generated-client-regeneration-check` regenerates in an
-isolated copy and requires a byte-for-byte null diff plus `go list` and `go vet`.
+remain host-owned. A non-2xx product response is classified by that bridge, so
+the adapter forwards the typed `product_http_error` failure, its HTTP status and
+its retryability verdict without reinterpreting them. Nix pins the exact
+Speakeasy CLI version recorded in the client lock. `just generate-client`
+regenerates with that pin and checks the nested module;
+`just generated-client-regeneration-check` regenerates in an isolated copy and
+requires a byte-for-byte null diff plus `go list` and `go vet`.
 The plugin SDK contract is recorded in `fctl-sdk.lock.json` at fctl revision
-`545521bfa222250af6b4419b194c7967cded0379`, with exact SDK content and
-canonical WIT hashes.
+`e9b1395f46f3100b381dbe00f5213de28e6df0e1` of
+`https://github.com/formancehq/fctl-v2-poc.git`, with exact SDK content and
+canonical WIT hashes. The lock is the only source of that contract: the Nix tool
+pin, the wrapper contract test and both documents restate parts of it, and
+`TestEveryRestatedSDKFactMatchesTheLock` fails when any of them disagrees.
 
 ## Validate
 

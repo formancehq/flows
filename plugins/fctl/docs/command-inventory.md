@@ -14,7 +14,7 @@ Every count quoted below is derived by `plugins/fctl/audit` and pinned by
 |---|---|
 | Orchestration (this repository, `origin/main`) | `9dc85b316cbfc2485dd8e176b7caa17b73e04e0d` |
 | Legacy fctl baseline | `693c58e27865f83332e6c3199d61fed81b742f41` |
-| fctl plugin SDK | `545521bfa222250af6b4419b194c7967cded0379` (`../fctl-sdk.lock.json`) |
+| fctl plugin SDK | `e9b1395f46f3100b381dbe00f5213de28e6df0e1` (`../fctl-sdk.lock.json`) |
 
 The repository's root module is `github.com/formancehq/orchestration` while its
 VCS name is `formancehq/flows`. Both names appear below and they are not
@@ -270,7 +270,8 @@ Implemented locally here:
 - a 16-command v2 catalogue with exact operations and scopes;
 - a generated-client adapter over `producthttp`, portable lifecycle, WIT and deterministic
   two-lane build recipe;
-- focused catalogue, adapter, pagination and lifecycle tests.
+- focused catalogue, adapter, pagination, typed product-HTTP-failure and
+  lifecycle tests.
 
 Release acceptance also still needs a built artifact receipt, OCI installation,
 dual-host execution and live-service read/mutation evidence. The `name` filter
