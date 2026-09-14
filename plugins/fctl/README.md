@@ -51,8 +51,9 @@ real emitted result and the command's public output schema:
 | `workflows run`, `instances show` | ID, Workflow ID, Workflow Name, Terminated |
 | `instances list` | ID, Workflow ID, Created At, Updated At, Terminated |
 
-`Name`, `Instance ID` and the composite commands' `Workflow Name` name optional
-product fields, so a row where the product omits them has no value to render.
+`Name`, `Instance ID`, `Match` and the composite commands' `Workflow Name` name
+optional product fields, so a row where the product omits them has no value to
+render. The absence fixtures and public schemas keep those paths optional.
 `Workflow Name` is nevertheless useful and stable: both composite commands
 already fetch the workflow for presentation, and the hint reads its optional
 `workflow.config.name` leaf without exposing the workflow definition.

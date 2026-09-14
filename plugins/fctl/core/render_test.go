@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -60,14 +61,31 @@ var wantTableColumns = map[string][]column{
 }
 
 // wantNoTable is every command that deliberately declares no table hint, with
-// the exact reason. Nothing is invented for these: their results carry no flat
-// field a stable column could name.
+// the exact reason. Nothing is invented for these: their results carry no
+// scalar object path a stable column could name.
 var wantNoTable = map[string]string{
 	"flows.v2.triggers.delete":      "no-content mutation: the canonical empty result has no field",
 	"flows.v2.workflows.delete":     "no-content mutation: the canonical empty result has no field",
 	"flows.v2.instances.send-event": "no-content mutation: the canonical empty result has no field",
 	"flows.v2.instances.stop":       "no-content mutation: the canonical empty result has no field",
 	"flows.v2.instances.describe":   "composite presentation read: history and stages are both nested arrays",
+}
+
+// wantOptionalTableFields records table paths whose product fields are
+// optional. Their absence must remain a valid result and must not be turned
+// into a required public-schema property by a later schema refactor.
+var wantOptionalTableFields = map[string][]string{
+	"flows.v2.triggers.list":             {"name"},
+	"flows.v2.triggers.show":             {"name"},
+	"flows.v2.triggers.create":           {"name"},
+	"flows.v2.triggers.test":             {"filter.match"},
+	"flows.v2.triggers.occurrences.list": {"workflowInstanceID"},
+	"flows.v2.workflows.run":             {"workflow.config.name"},
+	"flows.v2.instances.show":            {"workflow.config.name"},
+}
+
+var wantOptionalSchemaParents = map[string][]string{
+	"flows.v2.triggers.test": {"filter"},
 }
 
 func TestTableRenderHintsAreTheExactOrderedColumns(t *testing.T) {
@@ -146,8 +164,12 @@ func TestTableRenderHintsDescribeActualResultFields(t *testing.T) {
 			result := decodeResultRow(t, data)
 			columns, hinted := wantTableColumns[test.id]
 			if !hinted {
-				if _, recorded := wantNoTable[test.id]; !recorded {
+				reason, recorded := wantNoTable[test.id]
+				if !recorded {
 					t.Fatalf("%s has no table and no recorded reason", test.id)
+				}
+				if paths := scalarObjectPaths(result); len(paths) != 0 {
+					t.Fatalf("%s emits scalar object paths %v but declares no table (%s)", test.id, paths, reason)
 				}
 				return
 			}
@@ -160,6 +182,52 @@ func TestTableRenderHintsDescribeActualResultFields(t *testing.T) {
 				switch value.(type) {
 				case map[string]any, []any:
 					t.Errorf("%s column %q resolves to a container at %q", test.id, c.header, c.field)
+				}
+			}
+		})
+	}
+}
+
+func TestOptionalRenderPathsMayBeAbsent(t *testing.T) {
+	for _, test := range renderEvidenceCases() {
+		optionalPaths := wantOptionalTableFields[test.id]
+		if len(optionalPaths) == 0 {
+			continue
+		}
+		t.Run(test.id, func(t *testing.T) {
+			result := decodeResultRow(t, executeForRenderWithFixture(t, test, renderFixtureWithoutOptionalFields))
+			optional := make(map[string]struct{}, len(optionalPaths))
+			for _, path := range optionalPaths {
+				optional[path] = struct{}{}
+				if _, present := valueAtObjectPath(result, path); present {
+					t.Errorf("optional render path %q is present in the absence fixture", path)
+				}
+			}
+			for _, column := range wantTableColumns[test.id] {
+				if _, isOptional := optional[column.field]; isOptional {
+					continue
+				}
+				if value, present := valueAtObjectPath(result, column.field); !present {
+					t.Errorf("required render path %q disappeared with optional fields", column.field)
+				} else if _, container := value.(map[string]any); container {
+					t.Errorf("required render path %q resolves to an object", column.field)
+				} else if _, container := value.([]any); container {
+					t.Errorf("required render path %q resolves to an array", column.field)
+				}
+			}
+
+			command, ok := commandByID(test.id)
+			if !ok {
+				t.Fatalf("catalogue has no command %s", test.id)
+			}
+			var schema map[string]any
+			if err := json.Unmarshal(command.PublicOutputSchema, &schema); err != nil {
+				t.Fatalf("decode public schema: %v", err)
+			}
+			schemaOptionalPaths := append(append([]string(nil), optionalPaths...), wantOptionalSchemaParents[test.id]...)
+			for _, path := range schemaOptionalPaths {
+				if schemaRequiresProperty(schema, path) {
+					t.Errorf("public schema makes optional render path %q required", path)
 				}
 			}
 		})
@@ -285,10 +353,42 @@ func renderFixture(operation string) (int32, string) {
 	}
 }
 
+func renderFixtureWithoutOptionalFields(operation string) (int32, string) {
+	page := func(item string) string {
+		return `{"cursor":{"pageSize":1,"hasMore":false,"data":[` + item + `]}}`
+	}
+	const trigger = `{"id":"trg-1","event":"payments.saved","workflowID":"wf-1","createdAt":"2026-01-01T00:00:00Z"}`
+	const workflow = `{"id":"wf-1","createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-02T00:00:00Z","config":{"stages":[]}}`
+	const instance = `{"id":"inst-1","workflowID":"wf-1","createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-02T00:00:00Z","terminated":false}`
+	const occurrence = `{"date":"2026-01-01T00:00:00Z","triggerID":"trg-1","event":{}}`
+	switch operation {
+	case "v2ListTriggers":
+		return 200, page(trigger)
+	case "v2ReadTrigger", "v2CreateTrigger":
+		return map[string]int32{"v2ReadTrigger": 200, "v2CreateTrigger": 201}[operation], `{"data":` + trigger + `}`
+	case "testTrigger":
+		return 200, `{"data":{}}`
+	case "v2ListTriggersOccurrences":
+		return 200, page(occurrence)
+	case "v2RunWorkflow":
+		return 201, `{"data":` + instance + `}`
+	case "v2GetInstance":
+		return 200, `{"data":` + instance + `}`
+	case "v2GetWorkflow":
+		return 200, `{"data":` + workflow + `}`
+	default:
+		return renderFixture(operation)
+	}
+}
+
 func executeForRender(t *testing.T, test renderCase) []byte {
+	return executeForRenderWithFixture(t, test, renderFixture)
+}
+
+func executeForRenderWithFixture(t *testing.T, test renderCase, fixture func(string) (int32, string)) []byte {
 	t.Helper()
 	host := sdk.NewMemoryHost(func(_ context.Context, request sdk.Request) (sdk.Responses, error) {
-		status, body := renderFixture(request.Operation)
+		status, body := fixture(request.Operation)
 		if status == 204 {
 			return sdk.NewResponseStream(sdk.Response{Status: 204}), nil
 		}
@@ -302,6 +402,31 @@ func executeForRender(t *testing.T, test renderCase) []byte {
 		t.Fatalf("%s emitted %#v", test.id, events)
 	}
 	return events[0].Result.Data
+}
+
+func scalarObjectPaths(value map[string]any) []string {
+	paths := make([]string, 0)
+	var visit func(string, map[string]any)
+	visit = func(prefix string, object map[string]any) {
+		for name, value := range object {
+			path := name
+			if prefix != "" {
+				path = prefix + "." + name
+			}
+			switch nested := value.(type) {
+			case map[string]any:
+				visit(path, nested)
+			case []any, nil:
+				// Table paths address object members, not array elements, and
+				// null is not a scalar value the host can render truthfully.
+			default:
+				paths = append(paths, path)
+			}
+		}
+	}
+	visit("", value)
+	sort.Strings(paths)
+	return paths
 }
 
 func decodeResultRow(t *testing.T, data []byte) map[string]any {
@@ -361,4 +486,34 @@ func schemaAtObjectPath(schema map[string]any, path string) (map[string]any, boo
 		current = next
 	}
 	return current, true
+}
+
+func schemaRequiresProperty(schema map[string]any, path string) bool {
+	current := schema
+	if current["type"] == "array" {
+		var ok bool
+		current, ok = current["items"].(map[string]any)
+		if !ok {
+			return false
+		}
+	}
+	segments := strings.Split(path, ".")
+	for _, segment := range segments[:len(segments)-1] {
+		properties, ok := current["properties"].(map[string]any)
+		if !ok {
+			return false
+		}
+		next, ok := properties[segment].(map[string]any)
+		if !ok {
+			return false
+		}
+		current = next
+	}
+	required, _ := current["required"].([]any)
+	for _, name := range required {
+		if name == segments[len(segments)-1] {
+			return true
+		}
+	}
+	return false
 }
