@@ -61,9 +61,20 @@ requires a byte-for-byte null diff plus `go list` and `go vet`.
 The plugin SDK contract is recorded in `fctl-sdk.lock.json` at fctl revision
 `e9b1395f46f3100b381dbe00f5213de28e6df0e1` of
 `https://github.com/formancehq/fctl-v2-poc.git`, with exact SDK content and
-canonical WIT hashes. The lock is the only source of that contract: the Nix tool
-pin, the wrapper contract test and both documents restate parts of it, and
-`TestEveryRestatedSDKFactMatchesTheLock` fails when any of them disagrees.
+canonical WIT hashes. That revision is reachable from the SDK's
+`codex/mvp5-integration` branch and not from its default branch, and the lock
+carries no reason field recording why it was selected.
+
+The lock is the only source of that contract. Four other tracked files restate
+part of it at eight anchored sites: the Nix tool pin, the wrapper contract test,
+this file and `docs/command-inventory.md`.
+`TestEveryRestatedSDKFactMatchesTheLock` fails when an anchored site disagrees
+with the lock. `TestNoSupersededSDKValueSurvivesInATrackedFile` is its
+complement: it fails when any of those four files, or the lock itself, carries a
+revision, canonical WIT hash, SDK content hash, SDK remote owner or SDK module
+path the lock does not pin, in any phrasing and at any position. The few
+unrelated revisions and content hashes those files legitimately carry are listed
+with their reason in that test.
 
 ## Validate
 

@@ -16,6 +16,18 @@ Every count quoted below is derived by `plugins/fctl/audit` and pinned by
 | Legacy fctl baseline | `693c58e27865f83332e6c3199d61fed81b742f41` |
 | fctl plugin SDK | `e9b1395f46f3100b381dbe00f5213de28e6df0e1` (`../fctl-sdk.lock.json`) |
 
+The pinned fctl SDK revision is reachable from the SDK's
+`codex/mvp5-integration` branch, not from its default branch, and the lock has
+no field recording why it was selected. Its predecessor was off the default
+branch too, so this is continuity rather than a change; it is written down here
+because a force-push or rebase of that branch would make the pinned revision
+unfetchable.
+
+`../../nix/fctl-component-tools.nix` copies four tool derivations and one patch
+from the SDK's authoring toolchain at that revision. Every copied definition was
+compared by hand against the SDK and is identical; nothing gates that equality,
+which is why it is recorded as an open gate below rather than as a guarantee.
+
 The repository's root module is `github.com/formancehq/orchestration` while its
 VCS name is `formancehq/flows`. Both names appear below and they are not
 interchangeable; §6 records what that costs.
@@ -270,10 +282,13 @@ Implemented locally here:
 - a 16-command v2 catalogue with exact operations and scopes;
 - a generated-client adapter over `producthttp`, portable lifecycle, WIT and deterministic
   two-lane build recipe;
-- focused catalogue, adapter, pagination, typed product-HTTP-failure and
-  lifecycle tests.
+- focused catalogue, adapter, pagination, lock-agreement, typed
+  product-HTTP-failure and lifecycle tests.
 
 Release acceptance also still needs a built artifact receipt, OCI installation,
-dual-host execution and live-service read/mutation evidence. The `name` filter
-divergence remains server-owned and must be considered before relying on it in
-production.
+dual-host execution and live-service read/mutation evidence. Nothing yet gates
+`../../nix/fctl-component-tools.nix` against the SDK's authoring toolchain at
+the locked revision, so that copy can drift silently; closing it needs the lock
+to project the toolchain file and its patch, which is a lock-schema decision.
+The `name` filter divergence remains server-owned and must be considered before
+relying on it in production.
