@@ -60,6 +60,35 @@ func catalogueSpecs() []spec {
 	}
 }
 
+// tableColumns are the compact display columns the host may render for a
+// command. A column names one flat field the adapter actually emits; nested,
+// unbounded and low-signal fields are deliberately left out, and a command
+// whose result carries no flat field declares no table at all. The exhaustive
+// result contract stays in PublicOutputSchema, which these hints do not narrow.
+var tableColumns = map[string][]sdk.TableColumn{
+	"triggers.list":             triggerColumns,
+	"triggers.show":             triggerColumns,
+	"triggers.create":           triggerColumns,
+	"triggers.occurrences.list": {{Header: "Date", Field: "date"}, {Header: "Trigger ID", Field: "triggerID"}, {Header: "Instance ID", Field: "workflowInstanceID"}},
+	"workflows.list":            workflowColumns,
+	"workflows.show":            workflowColumns,
+	"workflows.create":          workflowColumns,
+	"instances.list":            {{Header: "ID", Field: "id"}, {Header: "Workflow ID", Field: "workflowID"}, {Header: "Created At", Field: "createdAt"}, {Header: "Updated At", Field: "updatedAt"}, {Header: "Terminated", Field: "terminated"}},
+}
+
+var triggerColumns = []sdk.TableColumn{{Header: "ID", Field: "id"}, {Header: "Name", Field: "name"}, {Header: "Event", Field: "event"}, {Header: "Workflow ID", Field: "workflowID"}, {Header: "Created At", Field: "createdAt"}}
+
+var workflowColumns = []sdk.TableColumn{{Header: "ID", Field: "id"}, {Header: "Created At", Field: "createdAt"}, {Header: "Updated At", Field: "updatedAt"}}
+
+func renderHints(path string) sdk.RenderHints {
+	columns, ok := tableColumns[path]
+	if !ok {
+		return sdk.RenderHints{}
+	}
+	// Copied so a descriptor consumer cannot mutate the shared declaration.
+	return sdk.RenderHints{Table: &sdk.TableRenderHint{Columns: append([]sdk.TableColumn(nil), columns...)}}
+}
+
 func Catalogue() []sdk.Command {
 	specs := catalogueSpecs()
 	out := make([]sdk.Command, 0, len(specs))
@@ -81,14 +110,15 @@ func (s spec) command() sdk.Command {
 		shape = collectionSchema
 		max = sdk.DefaultAllPagesMaxPages
 	}
-	if strings.Join(s.path, ".") == "instances.describe" {
+	path := strings.Join(s.path, ".")
+	if path == "instances.describe" {
 		max = sdk.PortableMaxHostRequests
 	}
 	risk := sdk.RiskRead
 	if s.mutation {
 		risk = sdk.RiskMutation
 	}
-	return sdk.Command{ID: "flows.v2." + strings.Join(s.path, "."), ExecutionKind: sdk.ExecutionKindService, AuthMode: sdk.AuthModeCapability, Path: s.path, Target: sdk.TargetRequirement{Kind: sdk.TargetStack}, Summary: s.summary, Long: s.summary + ". Endpoint, authentication and transport are host-owned.", Example: strings.Join(s.path, " ") + " --help", Arguments: s.args, Flags: s.flags, Auth: []sdk.AuthRequirement{{Capability: "auth.stack"}}, Operations: policies, Compatibility: []sdk.ServiceCompatibility{{Service: sdk.ServiceFlows, Majors: []uint32{productMajor}}}, Risk: risk, InputSchema: inputSchema(s.args, s.flags), RawOutputSchema: shape, PublicOutputSchema: shape, Pagination: sdk.PaginationSpec{Supported: s.paginated}, OutputMediaType: "application/json", ExecutionPolicy: &sdk.CommandExecutionPolicy{MaxHostRequests: max}}
+	return sdk.Command{ID: "flows.v2." + strings.Join(s.path, "."), ExecutionKind: sdk.ExecutionKindService, AuthMode: sdk.AuthModeCapability, Path: s.path, Target: sdk.TargetRequirement{Kind: sdk.TargetStack}, Summary: s.summary, Long: s.summary + ". Endpoint, authentication and transport are host-owned.", Example: strings.Join(s.path, " ") + " --help", Arguments: s.args, Flags: s.flags, Auth: []sdk.AuthRequirement{{Capability: "auth.stack"}}, Operations: policies, Compatibility: []sdk.ServiceCompatibility{{Service: sdk.ServiceFlows, Majors: []uint32{productMajor}}}, Risk: risk, InputSchema: inputSchema(s.args, s.flags), RawOutputSchema: shape, PublicOutputSchema: shape, Pagination: sdk.PaginationSpec{Supported: s.paginated}, OutputMediaType: "application/json", Render: renderHints(path), ExecutionPolicy: &sdk.CommandExecutionPolicy{MaxHostRequests: max}}
 }
 func (op operation) policy(_ bool) sdk.OperationPolicy {
 	scope := "orchestration:read"

@@ -282,12 +282,16 @@ Implemented locally here:
 - a 16-command v2 catalogue with exact operations and scopes;
 - a generated-client adapter over `producthttp`, portable lifecycle, WIT and deterministic
   two-lane build recipe;
-- focused catalogue, adapter, pagination, lock-agreement and lifecycle tests,
-  plus two deliberately separate product-HTTP-failure tests: the adapter-local
-  one pins the typed code, the `httpStatus` details and the retryability verdict
-  the adapter returns, and the portable one pins what a host actually observes,
-  which is the failure code alone — the pinned SDK's terminal frame carries no
-  other field.
+- compact table render hints on the eight commands whose results carry a flat
+  field, each column proved against a real emitted result, with the eight
+  commands that declare none and every excluded flat field recorded with a
+  reason;
+- focused catalogue, adapter, pagination, render-hint, lock-agreement and
+  lifecycle tests, plus two deliberately separate product-HTTP-failure tests:
+  the adapter-local one pins the typed code, the `httpStatus` details and the
+  retryability verdict the adapter returns, and the portable one pins what a
+  host actually observes, which is the failure code alone — the pinned SDK's
+  terminal frame carries no other field.
 
 Release acceptance also still needs a built artifact receipt, OCI installation,
 dual-host execution and live-service read/mutation evidence. Nothing yet gates

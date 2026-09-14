@@ -35,6 +35,41 @@ Arbitrary trigger `vars` and test-event JSON is decoded with `UseNumber`, so
 integers larger than JavaScript's 53-bit exact range traverse the generated
 client without float64 rounding.
 
+## Table render hints
+
+Eight commands declare a compact, ordered table the host may render. Each column
+names one flat field of the result the adapter emits, proved against a real
+emitted result by `TestTableRenderHintsDescribeActualResultFields`:
+
+| Command | Columns |
+|---|---|
+| `triggers list`, `show`, `create` | ID, Name, Event, Workflow ID, Created At |
+| `triggers occurrences list` | Date, Trigger ID, Instance ID |
+| `workflows list`, `show`, `create` | ID, Created At, Updated At |
+| `instances list` | ID, Workflow ID, Created At, Updated At, Terminated |
+
+`Name` and `Instance ID` name optional product fields, so a row where the
+product omits them has no value to render.
+
+The other eight commands declare no table, and nothing is invented for them. The
+four no-content mutations (`triggers delete`, `workflows delete`,
+`instances send-event`, `instances stop`) emit the canonical empty result, and
+`triggers test`, `workflows run`, `instances show` and `instances describe` emit
+only nested objects or arrays, which no stable flat column can name.
+
+Nested, unbounded and low-signal fields are left out on purpose: trigger `vars`,
+`filter` and `version`, the occurrence and instance `error` reasons, the
+instance `terminatedAt`, the workflow `config`, and the composite reads'
+members. Every flat field a result does emit is either a column or an exclusion
+with a recorded reason, so a new product field forces a decision instead of
+disappearing.
+
+Render hints select what is displayed; they do not narrow the declared contract.
+`PublicOutputSchema` stays the exhaustive, unnarrowed result schema and stays
+byte-equal to `RawOutputSchema`, which is what the pinned SDK requires for an
+ordinary JSON result. The host owns rendering; this repository declares the
+hints and changes no renderer.
+
 ## Layout
 
 | Path | Purpose |
