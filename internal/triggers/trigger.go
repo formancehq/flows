@@ -112,9 +112,11 @@ type Occurrence struct {
 	Error              *string              `json:"error,omitempty" bun:"error"`
 }
 
-func NewTriggerOccurrence(triggerID string, event publish.EventMessage, at time.Time) Occurrence {
+func NewTriggerOccurrence(workflowId string, runId string, triggerID string, event publish.EventMessage, at time.Time) Occurrence {
+	// We want the id to be deterministic and unique per execution.
+	id := workflowId + "/" + runId
 	return Occurrence{
-		ID:        uuid.NewString(),
+		ID:        id,
 		TriggerID: triggerID,
 		Date:      at,
 		Event:     event,

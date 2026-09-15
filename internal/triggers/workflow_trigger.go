@@ -68,7 +68,10 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req ProcessEventRequest, trigger Trigger) error {
 
 	vars := make(map[string]string)
-	occurrence := NewTriggerOccurrence(trigger.ID, req.Event, temporalworkflow.Now(ctx))
+	execution := temporalworkflow.GetInfo(ctx).WorkflowExecution
+	occurrence := NewTriggerOccurrence(
+		execution.ID, execution.RunID,
+		trigger.ID, req.Event, temporalworkflow.Now(ctx))
 	err := temporalworkflow.ExecuteActivity(
 		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
