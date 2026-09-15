@@ -69,7 +69,12 @@ func newServeCommand() *cobra.Command {
 			}
 			worker, _ := cmd.Flags().GetBool(workerFlag)
 			if worker {
-				options = append(options, workerOptions(cmd))
+				workerOptions, err := workerOptions(cmd)
+				if err != nil {
+					return err
+				}
+
+				options = append(options, workerOptions)
 			}
 
 			return service.New(cmd.OutOrStdout(), options...).Run(cmd)
