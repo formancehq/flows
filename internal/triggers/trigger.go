@@ -113,11 +113,11 @@ type Occurrence struct {
 }
 
 // NewTriggerOccurrence builds an occurrence with a caller-provided id. When called
-// from workflow code the id must be deterministic (e.g. the workflow execution id)
-// so that it stays stable across Temporal replays: a random uuid generated there
-// would yield a different occurrence id on every replay, and the id published in
-// the SUCCEEDED_TRIGGER/FAILED_TRIGGER event could then reference a row that does
-// not exist.
+// from workflow code the id must be both deterministic and unique per execution
+// (workflow id + run id) so that it stays stable across Temporal replays: a random
+// uuid generated there would yield a different occurrence id on every replay, and
+// the id published in the SUCCEEDED_TRIGGER/FAILED_TRIGGER event could then
+// reference a row that does not exist.
 func NewTriggerOccurrence(id, triggerID string, event publish.EventMessage, at time.Time) Occurrence {
 	return Occurrence{
 		ID:        id,
