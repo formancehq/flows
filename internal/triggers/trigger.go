@@ -112,13 +112,9 @@ type Occurrence struct {
 	Error              *string              `json:"error,omitempty" bun:"error"`
 }
 
-// NewTriggerOccurrence builds an occurrence with a caller-provided id. When called
-// from workflow code the id must be both deterministic and unique per execution
-// (workflow id + run id) so that it stays stable across Temporal replays: a random
-// uuid generated there would yield a different occurrence id on every replay, and
-// the id published in the SUCCEEDED_TRIGGER/FAILED_TRIGGER event could then
-// reference a row that does not exist.
-func NewTriggerOccurrence(id, triggerID string, event publish.EventMessage, at time.Time) Occurrence {
+func NewTriggerOccurrence(workflowId string, runId string, triggerID string, event publish.EventMessage, at time.Time) Occurrence {
+	// We want the id to be deterministic and unique per execution.
+	id := workflowId + "/" + runId
 	return Occurrence{
 		ID:        id,
 		TriggerID: triggerID,

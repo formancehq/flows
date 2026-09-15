@@ -21,7 +21,7 @@ func TestInsertTriggerOccurrenceIsIdempotent(t *testing.T) {
 	trigger := insertTrigger(t, db, w.ID, "NEW_TRANSACTION", nil, nil)
 
 	activities := NewActivities(db, nil, NewDefaultExpressionEvaluator(), publish.NoOpPublisher)
-	occurrence := NewTriggerOccurrence("test-workflow-execution-id", trigger.ID, publish.EventMessage{
+	occurrence := NewTriggerOccurrence("test-workflow-id", "run-id", trigger.ID, publish.EventMessage{
 		Type:    "NEW_TRANSACTION",
 		Version: "v1",
 		Payload: map[string]any{},
@@ -48,8 +48,8 @@ func TestInsertTriggerOccurrenceDistinctIDsAreSeparateRows(t *testing.T) {
 	trigger := insertTrigger(t, db, w.ID, "NEW_TRANSACTION", nil, nil)
 
 	activities := NewActivities(db, nil, NewDefaultExpressionEvaluator(), publish.NoOpPublisher)
-	newOccurrence := func(id string) Occurrence {
-		return NewTriggerOccurrence(id, trigger.ID, publish.EventMessage{
+	newOccurrence := func(workflowId string, runId string) Occurrence {
+		return NewTriggerOccurrence(workflowId, runId, trigger.ID, publish.EventMessage{
 			Type:    "NEW_TRANSACTION",
 			Version: "v1",
 			Payload: map[string]any{},
@@ -57,8 +57,8 @@ func TestInsertTriggerOccurrenceDistinctIDsAreSeparateRows(t *testing.T) {
 	}
 
 	// Same workflow id, different run id: two runs of the same logical workflow.
-	require.NoError(t, activities.InsertTriggerOccurrence(ctx, newOccurrence("workflow-id/run-id-1")))
-	require.NoError(t, activities.InsertTriggerOccurrence(ctx, newOccurrence("workflow-id/run-id-2")))
+	require.NoError(t, activities.InsertTriggerOccurrence(ctx, newOccurrence("workflow-id", "run-id-1")))
+	require.NoError(t, activities.InsertTriggerOccurrence(ctx, newOccurrence("workflow-id", "run-id-2")))
 
 	count, err := db.NewSelect().Model((*Occurrence)(nil)).Count(ctx)
 	require.NoError(t, err)

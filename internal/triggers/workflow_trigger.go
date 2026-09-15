@@ -68,11 +68,9 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req ProcessEventRequest, trigger Trigger) error {
 
 	vars := make(map[string]string)
-	// Workflow id + run id is deterministic and replay-stable, unlike a uuid
-	// generated here in workflow code.
 	execution := temporalworkflow.GetInfo(ctx).WorkflowExecution
 	occurrence := NewTriggerOccurrence(
-		execution.ID+"/"+execution.RunID,
+		execution.ID, execution.RunID,
 		trigger.ID, req.Event, temporalworkflow.Now(ctx))
 	err := temporalworkflow.ExecuteActivity(
 		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
