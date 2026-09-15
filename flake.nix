@@ -12,7 +12,7 @@
 
   outputs = { self, nixpkgs, nur }:
     let
-      goVersion = 25;
+      goVersion = 26;
 
       supportedSystems = [
         "x86_64-linux"

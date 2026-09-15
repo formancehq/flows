@@ -12,6 +12,8 @@ const (
 	ErrorCodeConflict          = "CONFLICT"
 	ErrorCodeNoScript          = "NO_SCRIPT"
 	ErrorCodeCompilationFailed = "COMPILATION_FAILED"
+	// Singular, matching ledger.V2ErrorsEnumInsufficientFund and wallets.ErrorCodeInsufficientFund.
+	ErrorCodeInsufficientFund = "INSUFFICIENT_FUND"
 )
 
 // commonNonRetryableErrorCodes are the error codes both retry contexts below treat as
@@ -31,8 +33,11 @@ func InfiniteRetryContext(ctx workflow.Context) workflow.Context {
 			MaximumInterval:    100 * time.Second,
 			// NO_SCRIPT/COMPILATION_FAILED are Numscript compile-time errors that only
 			// CreateTransaction (a ledger operation this context guards) can return.
+			// INSUFFICIENT_FUND is a settled business outcome from CreateTransaction or
+			// DebitWallet - nothing between attempts changes the source balance, and this
+			// context sets no MaximumAttempts, so retrying it loops forever.
 			NonRetryableErrorTypes: append(append([]string{}, commonNonRetryableErrorCodes...),
-				ErrorCodeNoScript, ErrorCodeCompilationFailed),
+				ErrorCodeNoScript, ErrorCodeCompilationFailed, ErrorCodeInsufficientFund),
 		},
 	})
 }
