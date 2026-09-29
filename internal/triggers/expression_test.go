@@ -1,7 +1,6 @@
 package triggers
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,52 +25,12 @@ func savedPaymentInitiationAdjustmentPayload() map[string]any {
 
 const payoutCycleExpression = `get(event.transactions[0].metadata, "payout_cycle") ?? ""`
 
-func requireApplicationError(t *testing.T, err error) *temporal.ApplicationError {
+func requireApplicationError(t *testing.T, err error, errType string, nonRetryable bool) {
 	t.Helper()
-	require.Error(t, err)
 	var appErr *temporal.ApplicationError
-	require.True(t, errors.As(err, &appErr), "expected *temporal.ApplicationError, got %T: %v", err, err)
-	return appErr
-}
-
-func TestEvalRuntimeErrorIsNonRetryable(t *testing.T) {
-	t.Parallel()
-
-	e := NewDefaultExpressionEvaluator()
-	_, err := e.evalVariables(savedPaymentInitiationAdjustmentPayload(), map[string]string{
-		"payout_cycle": payoutCycleExpression,
-	})
-
-	appErr := requireApplicationError(t, err)
-	require.True(t, appErr.NonRetryable())
-	require.Equal(t, ExpressionEvaluationErrorType, appErr.Type())
-	require.Contains(t, err.Error(), "cannot fetch 0 from <nil> (1:23)")
-}
-
-func TestEvalCompileErrorIsNonRetryable(t *testing.T) {
-	t.Parallel()
-
-	e := NewDefaultExpressionEvaluator()
-	_, err := e.evalVariable(map[string]any{}, `event.foo +`)
-
-	appErr := requireApplicationError(t, err)
-	require.True(t, appErr.NonRetryable())
-	require.Equal(t, ExpressionEvaluationErrorType, appErr.Type())
-	require.Contains(t, err.Error(), "compiling expression")
-}
-
-// Deterministic errors expr raises with an error value (here an invalid regexp)
-// are wrapped by expr the same way as custom function errors; they must not be
-// mistaken for link() errors.
-func TestEvalEngineWrappedErrorIsNonRetryable(t *testing.T) {
-	t.Parallel()
-
-	e := NewDefaultExpressionEvaluator()
-	_, err := e.evalVariable(map[string]any{"foo": "bar", "re": "("}, `event.foo matches event.re`)
-
-	appErr := requireApplicationError(t, err)
-	require.True(t, appErr.NonRetryable())
-	require.Equal(t, ExpressionEvaluationErrorType, appErr.Type())
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, errType, appErr.Type())
+	require.Equal(t, nonRetryable, appErr.NonRetryable())
 }
 
 func linkPayload(uri string) map[string]any {
@@ -80,6 +39,50 @@ func linkPayload(uri string) map[string]any {
 			"name": "source_account",
 			"uri":  uri,
 		}},
+	}
+}
+
+func TestEvalDeterministicErrorsAreNonRetryable(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		payload map[string]any
+		expr    string
+		errType string
+		message string
+	}{
+		"runtime error": {
+			savedPaymentInitiationAdjustmentPayload(), payoutCycleExpression,
+			ExpressionEvaluationErrorType, "cannot fetch 0 from <nil> (1:23)",
+		},
+		"compile error": {
+			map[string]any{}, `event.foo +`,
+			ExpressionEvaluationErrorType, "unexpected token",
+		},
+		// expr wraps this engine error like a custom function error; it must not pass as a link() error.
+		"invalid regexp": {
+			map[string]any{"foo": "bar", "re": "("}, `event.foo matches event.re`,
+			ExpressionEvaluationErrorType, "missing closing )",
+		},
+		"unknown link": {
+			linkPayload("http://localhost"), `link(event, "unknown").role`,
+			"APPLICATION", "link 'unknown' not defined for object",
+		},
+		"invalid link argument": {
+			linkPayload("http://localhost"), `link(event, 1).role`,
+			"APPLICATION", "second parameter must be a string",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			a := NewActivities(nil, nil, NewDefaultExpressionEvaluator(), publish.NoOpPublisher)
+			_, err := a.EvalTriggerVariables(t.Context(), Trigger{
+				TriggerData: TriggerData{Vars: map[string]string{"v": tc.expr}},
+			}, ProcessEventRequest{Event: publish.EventMessage{Payload: tc.payload}})
+			requireApplicationError(t, err, tc.errType, true)
+			require.Contains(t, err.Error(), tc.message)
+		})
 	}
 }
 
@@ -111,28 +114,11 @@ func TestEvalLinkTransientErrorsStayRetryable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			e := NewExpressionEvaluator(http.DefaultClient)
-			_, err := e.evalVariable(linkPayload(tc.uri), `link(event, "source_account").role`)
-			require.Error(t, err)
+			_, err := NewDefaultExpressionEvaluator().evalVariable(linkPayload(tc.uri), `link(event, "source_account").role`)
+			requireApplicationError(t, err, "LINK", false)
 			require.Contains(t, err.Error(), tc.message)
-
-			var appErr *temporal.ApplicationError
-			require.False(t, errors.As(err, &appErr),
-				"transient link error must be returned as a plain (retryable) error, got %v", err)
 		})
 	}
-}
-
-func TestEvalLinkNonRetryableErrorIsPreserved(t *testing.T) {
-	t.Parallel()
-
-	e := NewDefaultExpressionEvaluator()
-	_, err := e.evalVariable(linkPayload("http://localhost"), `link(event, "unknown").role`)
-
-	appErr := requireApplicationError(t, err)
-	require.True(t, appErr.NonRetryable())
-	require.Equal(t, "APPLICATION", appErr.Type())
-	require.Contains(t, err.Error(), "link 'unknown' not defined for object")
 }
 
 // Filter errors are swallowed into a non-match; the non-retryable wrapping must

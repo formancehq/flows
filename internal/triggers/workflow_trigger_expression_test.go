@@ -12,7 +12,6 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/testsuite"
-	"go.temporal.io/sdk/workflow"
 )
 
 // An expression that fails deterministically against the event payload must not
@@ -25,10 +24,10 @@ func TestExecuteTriggerRecordsExpressionEvaluationFailure(t *testing.T) {
 	env.SetTestTimeout(30 * time.Second)
 
 	w := NewWorkflow("test", "default", false)
-	env.RegisterWorkflowWithOptions(w.ExecuteTrigger, workflow.RegisterOptions{Name: "ExecuteTrigger"})
-
 	activities := NewActivities(nil, nil, NewDefaultExpressionEvaluator(), publish.NoOpPublisher)
-	env.RegisterActivityWithOptions(activities.EvalTriggerVariables, activity.RegisterOptions{Name: "EvalTriggerVariables"})
+	for _, def := range activities.DefinitionSet() {
+		env.RegisterActivityWithOptions(def.Func, activity.RegisterOptions{Name: def.Name})
+	}
 
 	var evalCalls atomic.Int32
 	env.SetOnActivityStartedListener(func(info *activity.Info, _ context.Context, _ converter.EncodedValues) {
@@ -65,7 +64,7 @@ func TestExecuteTriggerRecordsExpressionEvaluationFailure(t *testing.T) {
 		},
 	}
 
-	env.ExecuteWorkflow("ExecuteTrigger", req, trigger)
+	env.ExecuteWorkflow(w.ExecuteTrigger, req, trigger)
 
 	require.True(t, env.IsWorkflowCompleted())
 	require.NoError(t, env.GetWorkflowError())

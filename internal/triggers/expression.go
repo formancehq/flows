@@ -18,13 +18,20 @@ type expressionEvaluator struct {
 	httpClient *http.Client
 }
 
+func nonRetryableLinkError(format string, args ...any) error {
+	msg := fmt.Sprintf(format, args...)
+	return temporal.NewNonRetryableApplicationError(msg, "APPLICATION", errors.New(msg))
+}
+
+// retryableLinkError flags transient link() failures (network, status, body) so eval
+// does not treat them as deterministic expression errors.
+func retryableLinkError(err error) error {
+	return temporal.NewApplicationError(err.Error(), "LINK")
+}
+
 func (h *expressionEvaluator) link(params ...any) (any, error) {
 	if len(params) != 2 {
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("expect two arguments, got %d", len(params)),
-			"APPLICATION",
-			fmt.Errorf("expect two arguments, got %d", len(params)),
-		)
+		return nil, nonRetryableLinkError("expect two arguments, got %d", len(params))
 	}
 
 	data, _ := json.Marshal(params[0])
@@ -34,12 +41,12 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 	}
 	o := &object{}
 	if err := json.Unmarshal(data, o); err != nil {
-		return nil, err
+		return nil, nonRetryableLinkError("reading links: %s", err)
 	}
 
 	rel, ok := params[1].(string)
 	if !ok {
-		return nil, errors.New("second parameter must be a string")
+		return nil, nonRetryableLinkError("second parameter must be a string")
 	}
 
 	filteredLinks := collectionutils.Filter(o.Links, func(link api.Link) bool {
@@ -48,88 +55,41 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 
 	switch len(filteredLinks) {
 	case 0:
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("link '%s' not defined for object", rel),
-			"APPLICATION",
-			fmt.Errorf("link '%s' not defined for object", rel),
-		)
+		return nil, nonRetryableLinkError("link '%s' not defined for object", rel)
 	case 1:
 		rsp, err := h.httpClient.Get(filteredLinks[0].URI)
 		if err != nil {
-			return nil, errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI)
+			return nil, retryableLinkError(errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI))
 		}
 		if rsp.StatusCode >= 400 {
-			return nil, fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode)
+			return nil, retryableLinkError(fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode))
 		}
 
 		apiResponse := api.BaseResponse[map[string]any]{}
 		if err := json.NewDecoder(rsp.Body).Decode(&apiResponse); err != nil {
-			return nil, errors.Wrap(err, "decoding response")
+			return nil, retryableLinkError(errors.Wrap(err, "decoding response"))
 		}
 
 		return apiResponse.Data, nil
 	default:
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("multiple link '%s' found for object", rel),
-			"APPLICATION",
-			fmt.Errorf("multiple link '%s' found for object", rel),
-		)
+		return nil, nonRetryableLinkError("multiple link '%s' found for object", rel)
 	}
-}
-
-// ExpressionEvaluationErrorType is the Temporal ApplicationError type used for
-// errors raised by the expression engine itself (compile errors, runtime errors
-// such as fetching a field on nil). Those errors are deterministic: evaluating
-// the same expression against the same payload always fails the same way, so
-// they are returned as non-retryable to avoid wedging the calling workflow.
-const ExpressionEvaluationErrorType = "EXPRESSION_EVALUATION"
-
-// linkFunctionError marks an error returned by the link() custom function so
-// eval can tell it apart from errors produced by the expression engine. expr
-// wraps (via *file.Error.Unwrap) any error returned by a custom function, but
-// also some of its own deterministic errors (e.g. invalid regexp), so the
-// marker is the only reliable way to identify link() errors.
-type linkFunctionError struct {
-	err error
-}
-
-func (e *linkFunctionError) Error() string { return e.err.Error() }
-func (e *linkFunctionError) Unwrap() error { return e.err }
-
-func (h *expressionEvaluator) linkFunction(params ...any) (any, error) {
-	ret, err := h.link(params...)
-	if err != nil {
-		return nil, &linkFunctionError{err: err}
-	}
-	return ret, nil
 }
 
 func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
-	p, err := expr.Compile(e, expr.Function("link", h.linkFunction))
+	p, err := expr.Compile(e, expr.Function("link", h.link))
 	if err != nil {
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("compiling expression: %s", err),
-			ExpressionEvaluationErrorType,
-			nil,
-		)
+		return "", err
 	}
 
 	ret, err := expr.Run(p, map[string]any{
 		"event": rawObject,
 	})
 	if err != nil {
-		// Errors from link() are returned as is: transient ones (HTTP failure,
-		// bad status, decoding) stay retryable, while link() already returns
-		// non-retryable ApplicationErrors for deterministic cases.
-		var linkErr *linkFunctionError
-		if errors.As(err, &linkErr) {
-			return nil, linkErr.err
+		if err := errors.Unwrap(err); err != nil {
+			return nil, err
 		}
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("evaluating expression: %s", err),
-			ExpressionEvaluationErrorType,
-			nil,
-		)
+		return nil, err
 	}
 
 	return ret, nil
