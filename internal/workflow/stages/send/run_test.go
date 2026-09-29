@@ -810,11 +810,42 @@ var (
 					"account had insufficient funds", internal.ErrorCodeInsufficientFund, "")},
 			},
 		},
-		// The single call is the point: InfiniteRetryContext sets no MaximumAttempts, so before
-		// INSUFFICIENT_FUND joined its NonRetryableErrorTypes this stage re-ran CreateTransaction
-		// against an unchanged balance for the life of the workflow.
+		// The single call is the point: INSUFFICIENT_FUND is in LedgerRetryContext's
+		// NonRetryableErrorTypes, so the stage fails on the first attempt rather than re-running
+		// CreateTransaction against an unchanged balance until the attempt budget runs out.
 		ExpectedErrorCode:     internal.ErrorCodeInsufficientFund,
 		ExpectedActivityCalls: map[string]int{"CreateTransaction": 1},
+	}
+
+	accountToAccountLedgerKeepsFailing = stagestesting.WorkflowTestCase[Send]{
+		Name: "account to account with ledger failing on every attempt",
+		Stage: Send{
+			Source: NewSource().WithAccount(&LedgerAccountSource{
+				ID:     "foo",
+				Ledger: "default",
+			}),
+			Destination: NewDestination().WithAccount(&LedgerAccountDestination{
+				ID:     "bar",
+				Ledger: "default",
+			}),
+			Amount: &wallets.Monetary{
+				Amount: big.NewInt(100),
+				Asset:  "USD",
+			},
+		},
+		MockedActivities: []stagestesting.MockedActivity{
+			{
+				Activity: activities.CreateTransactionActivity,
+				Args:     []any{mock.Anything, mock.Anything},
+				Returns: []any{nil, temporal.NewApplicationError(
+					"ledger unavailable", "LEDGER_UNAVAILABLE")},
+			},
+		},
+		// A retryable error is retried, but only up to LedgerRetryContext's MaximumAttempts:
+		// the stage then fails with the last error instead of retrying for the life of the
+		// workflow.
+		ExpectedErrorCode:     "LEDGER_UNAVAILABLE",
+		ExpectedActivityCalls: map[string]int{"CreateTransaction": 15},
 	}
 
 	accountToAccount = stagestesting.WorkflowTestCase[Send]{
@@ -2308,6 +2339,8 @@ var testCases = []stagestesting.WorkflowTestCase[Send]{
 	accountToAccountMixedLedgerWithOverdraft,
 	// non-retryable error tests
 	accountToAccountInsufficientFund,
+	// bounded retry tests
+	accountToAccountLedgerKeepsFailing,
 }
 
 func TestSend(t *testing.T) {
