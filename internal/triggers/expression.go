@@ -77,20 +77,59 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 	}
 }
 
-func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
-	p, err := expr.Compile(e, expr.Function("link", h.link))
+// ExpressionEvaluationErrorType is the Temporal ApplicationError type used for
+// errors raised by the expression engine itself (compile errors, runtime errors
+// such as fetching a field on nil). Those errors are deterministic: evaluating
+// the same expression against the same payload always fails the same way, so
+// they are returned as non-retryable to avoid wedging the calling workflow.
+const ExpressionEvaluationErrorType = "EXPRESSION_EVALUATION"
+
+// linkFunctionError marks an error returned by the link() custom function so
+// eval can tell it apart from errors produced by the expression engine. expr
+// wraps (via *file.Error.Unwrap) any error returned by a custom function, but
+// also some of its own deterministic errors (e.g. invalid regexp), so the
+// marker is the only reliable way to identify link() errors.
+type linkFunctionError struct {
+	err error
+}
+
+func (e *linkFunctionError) Error() string { return e.err.Error() }
+func (e *linkFunctionError) Unwrap() error { return e.err }
+
+func (h *expressionEvaluator) linkFunction(params ...any) (any, error) {
+	ret, err := h.link(params...)
 	if err != nil {
-		return "", err
+		return nil, &linkFunctionError{err: err}
+	}
+	return ret, nil
+}
+
+func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
+	p, err := expr.Compile(e, expr.Function("link", h.linkFunction))
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("compiling expression: %s", err),
+			ExpressionEvaluationErrorType,
+			nil,
+		)
 	}
 
 	ret, err := expr.Run(p, map[string]any{
 		"event": rawObject,
 	})
 	if err != nil {
-		if err := errors.Unwrap(err); err != nil {
-			return nil, err
+		// Errors from link() are returned as is: transient ones (HTTP failure,
+		// bad status, decoding) stay retryable, while link() already returns
+		// non-retryable ApplicationErrors for deterministic cases.
+		var linkErr *linkFunctionError
+		if errors.As(err, &linkErr) {
+			return nil, linkErr.err
 		}
-		return nil, err
+		return nil, temporal.NewNonRetryableApplicationError(
+			fmt.Sprintf("evaluating expression: %s", err),
+			ExpressionEvaluationErrorType,
+			nil,
+		)
 	}
 
 	return ret, nil
