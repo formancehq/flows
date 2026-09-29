@@ -10,10 +10,7 @@ import (
 	"go.temporal.io/sdk/testsuite"
 )
 
-// The trigger activities used to run with no RetryPolicy, i.e. Temporal's unlimited default:
-// production saw InsertTriggerOccurrence reach attempt 20,916 and EvalTriggerVariables wedge a
-// trigger workflow for good. These tests pin that every trigger activity now gives up after
-// 15 attempts and fails the workflow instead.
+// Every trigger activity gives up after 15 attempts and fails the workflow.
 
 func TestRunTriggerGivesUpOnListTriggersAfterBoundedAttempts(t *testing.T) {
 	t.Parallel()

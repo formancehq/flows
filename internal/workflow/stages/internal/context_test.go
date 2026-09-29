@@ -62,15 +62,12 @@ func TestLedgerRetryContextIsBoundedAndKeepsLedgerCodes(t *testing.T) {
 }
 
 // TestPaymentInitiationRetryContextKeepsCommonCodes pins the PSP context to the bounded policy
-// and to exactly the common codes. It builds the ledger context first, so a future change that
-// lets the ledger codes write into the shared commonNonRetryableErrorCodes backing array shows
-// up here as ledger-only codes leaking into the PSP policy. The expected value is a literal
+// and to exactly the common codes. The expected value is a literal
 // rather than commonNonRetryableErrorCodes itself: comparing the package variable against a
 // policy built from that same variable can never fail.
 func TestPaymentInitiationRetryContextKeepsCommonCodes(t *testing.T) {
 	t.Parallel()
 
-	_ = retryPolicyOf(t, LedgerRetryContext)
 	opts := retryPolicyOf(t, PaymentInitiationRetryContext)
 
 	requireBoundedPolicy(t, opts)

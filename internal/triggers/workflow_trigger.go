@@ -1,8 +1,6 @@
 package triggers
 
 import (
-	"time"
-
 	"github.com/formancehq/go-libs/v3/pointer"
 	"github.com/formancehq/go-libs/v3/publish"
 	"github.com/formancehq/orchestration/internal/retry"
@@ -32,7 +30,7 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 
 	triggers := make([]Trigger, 0)
 	err := temporalworkflow.ExecuteActivity(
-		triggerActivityContext(ctx),
+		retry.ShortActivityContext(ctx),
 		ListTriggersActivity,
 		req,
 	).Get(ctx, &triggers)
@@ -72,7 +70,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 		execution.ID, execution.RunID,
 		trigger.ID, req.Event, temporalworkflow.Now(ctx))
 	err := temporalworkflow.ExecuteActivity(
-		triggerActivityContext(ctx),
+		retry.ShortActivityContext(ctx),
 		EvalTriggerVariables,
 		trigger,
 		req,
@@ -100,7 +98,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 	}
 
 	err = temporalworkflow.ExecuteActivity(
-		triggerActivityContext(ctx),
+		retry.ShortActivityContext(ctx),
 		InsertTriggerOccurrence,
 		occurrence,
 	).Get(ctx, nil)
@@ -109,7 +107,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 	}
 
 	err = temporalworkflow.ExecuteActivity(
-		triggerActivityContext(ctx),
+		retry.ShortActivityContext(ctx),
 		SendEventForTriggerTermination,
 		occurrence,
 	).Get(ctx, nil)
@@ -138,20 +136,6 @@ func NewWorkflow(stack string, taskQueue string, includeSearchAttributes bool) *
 		taskQueue:               taskQueue,
 		includeSearchAttributes: includeSearchAttributes,
 	}
-}
-
-// triggerActivityContext is the activity context for every trigger activity (listing triggers,
-// evaluating their variables, recording the occurrence and publishing its termination event).
-// These are quick database, expression and publisher operations, so each attempt keeps a short
-// 10s StartToCloseTimeout, but retries are bounded by retry.Policy: without a RetryPolicy
-// Temporal retries forever, which let a deterministic failure (e.g. a duplicate occurrence
-// insert, a broken expression) wedge a trigger workflow for good - one InsertTriggerOccurrence
-// reached attempt 20,916.
-func triggerActivityContext(ctx temporalworkflow.Context) temporalworkflow.Context {
-	return temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-		RetryPolicy:         retry.Policy(),
-	})
 }
 
 var ExecuteTrigger = triggerWorkflow{}.ExecuteTrigger
