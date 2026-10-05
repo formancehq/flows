@@ -1,8 +1,7 @@
 package workflow
 
 import (
-	"time"
-
+	"github.com/formancehq/orchestration/internal/retry"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/workflow"
@@ -29,16 +28,12 @@ type Workflows struct {
 
 func (w Workflows) Initiate(ctx workflow.Context, input Input) (*Instance, error) {
 	instance := &Instance{}
-	err := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	}), InsertNewInstanceActivity, input.Workflow.ID).Get(ctx, instance)
+	err := workflow.ExecuteActivity(retry.ShortActivityContext(ctx), InsertNewInstanceActivity, input.Workflow.ID).Get(ctx, instance)
 	if err != nil {
 		return nil, err
 	}
 
-	err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	}), SendWorkflowStartedEventActivity, instance).Get(ctx, nil)
+	err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowStartedEventActivity, instance).Get(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -74,16 +69,12 @@ func (w Workflows) Run(ctx workflow.Context, i Input, instance Instance) error {
 		instance.SetTerminated(workflow.Now(ctx))
 	}
 
-	err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	}), UpdateInstanceActivity, instance).Get(ctx, nil)
+	err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), UpdateInstanceActivity, instance).Get(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	}), SendWorkflowTerminationEventActivity, instance).Get(ctx, nil)
+	err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowTerminationEventActivity, instance).Get(ctx, nil)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/formancehq/orchestration/internal/retry"
 	"github.com/formancehq/orchestration/internal/schema"
 	"github.com/pkg/errors"
 	"go.temporal.io/sdk/temporal"
@@ -65,16 +66,12 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 		logger.Info("run stage", "index", ind, "workflowID", instance.ID)
 
 		stage := Stage{}
-		err := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), InsertNewStageActivity, instance, ind).Get(ctx, &stage)
+		err := workflow.ExecuteActivity(retry.ShortActivityContext(ctx), InsertNewStageActivity, instance, ind).Get(ctx, &stage)
 		if err != nil {
 			return err
 		}
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), SendWorkflowStageStartedEventActivity, instance, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowStageStartedEventActivity, instance, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
@@ -85,16 +82,12 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 		}
 		stage.SetTerminated(runError, workflow.Now(ctx).Round(time.Nanosecond))
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), UpdateStageActivity, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), UpdateStageActivity, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), SendWorkflowStageTerminationEventActivity, instance, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowStageTerminationEventActivity, instance, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
