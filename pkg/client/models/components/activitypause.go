@@ -2,6 +2,11 @@
 
 package components
 
+import (
+	"openapi/internal/utils"
+	"time"
+)
+
 // ActivityPause - Current pause of an activity in an active stage, read from Temporal on instance detail requests
 type ActivityPause struct {
 	// Stable activity identifier within the owning workflow execution
@@ -16,10 +21,23 @@ type ActivityPause struct {
 	LastFailure *string `json:"lastFailure,omitempty"`
 	// Application failure type of the most recent failed attempt, when available
 	LastFailureType *string `json:"lastFailureType,omitempty"`
+	// Pause timestamp reported by Temporal, when available; send this value with temporalRunID to resume this pause generation
+	PausedAt *time.Time `json:"pausedAt,omitempty"`
 	// Reason recorded by Temporal for this pause, when available
 	Reason *string `json:"reason,omitempty"`
 	// Attempt limit decoded from an ACTIVITY_ATTEMPT_LIMIT:<limit> pause reason, when valid
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
+}
+
+func (a ActivityPause) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(a, "", false)
+}
+
+func (a *ActivityPause) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &a, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *ActivityPause) GetActivityID() string {
@@ -62,6 +80,13 @@ func (o *ActivityPause) GetLastFailureType() *string {
 		return nil
 	}
 	return o.LastFailureType
+}
+
+func (o *ActivityPause) GetPausedAt() *time.Time {
+	if o == nil {
+		return nil
+	}
+	return o.PausedAt
 }
 
 func (o *ActivityPause) GetReason() *string {

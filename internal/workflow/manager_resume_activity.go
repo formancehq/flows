@@ -24,9 +24,26 @@ var (
 // run and pause timestamp prevent an old request from granting another budget
 // after the activity has paused again. Stage row locks serialize this API across
 // replicas; the Temporal transition itself is atomic and no-ops if unpaused.
-func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string, number int, activityID, runID string, pausedAt time.Time) error {
+func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string, number int, activityID, runID string, pausedAt time.Time) (result error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	outcome := "resumed"
+	defer func() {
+		if result != nil {
+			switch {
+			case errors.Is(result, ErrActivityResumeConflict):
+				outcome = "conflict"
+			case errors.Is(result, ErrInstanceNotFound), errors.Is(result, ErrActivityNotFound):
+				outcome = "not_found"
+			default:
+				outcome = "failed"
+			}
+		}
+		logging.FromContext(ctx).WithFields(map[string]any{
+			"instanceID": instanceID, "stage": number, "activityID": activityID,
+			"temporalRunID": runID, "pausedAt": pausedAt, "outcome": outcome,
+		}).Info("Workflow activity resume outcome")
+	}()
 	return m.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		instance := Instance{}
 		if err := tx.NewSelect().Model(&instance).Where("u.id = ?", instanceID).Scan(ctx); err != nil {
@@ -71,6 +88,7 @@ func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string,
 			}
 			if !pending.GetPaused() {
 				// A repeated request must never reset an active activity's budget.
+				outcome = "already_active"
 				return nil
 			}
 			if !resumablePause(pending, pausedAt) {
@@ -93,7 +111,6 @@ func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string,
 				}
 				return err
 			}
-			logging.FromContext(ctx).Infof("Resumed workflow activity instance=%s stage=%d activity=%s run=%s", instanceID, number, activityID, runID)
 			return nil
 		}
 		return ErrActivityNotFound
