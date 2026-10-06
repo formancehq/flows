@@ -78,11 +78,46 @@ The limit is recorded in workflow history and the activity header when the activ
 
 `GET /instances/{instanceID}` includes an optional `pendingActivities` array on unfinished stage statuses. It contains only paused activities, with their identity, actual Temporal run ID, last failure, attempt, reason and configured maximum where available. Stage history also exposes `paused`, `pauseReason`, `activityID`, `temporalRunID` and `lastFailureType`; a paused activity has no `nextExecution`. Reads derive these fields from Temporal rather than storing a second pause state in PostgreSQL.
 
-Instance lists retain their current `running` semantics and do not fetch Temporal for every row. The Console instance detail can display the pause and its cause. No Slack or external notification is sent. A paused instance remains nonterminal, so `wait=true` still waits until completion or cancellation.
+Instance lists retain their current `running` semantics and do not fetch Temporal for every row. API consumers can display the pause and its cause. No external notification is sent. A paused instance remains nonterminal, so `wait=true` still waits until completion or cancellation.
 
 ### Explicit Resume
 
-After resolving the blocking condition, inspect the current paused activity and resume that activity alone:
+After resolving the blocking condition, read `GET /instances/{instanceID}`
+(`/v2/instances/{instanceID}` for v2). Copy the stage number and the activity's
+`activityID`, `temporalRunID` and `pausedAt` from `pendingActivities`, then call:
+
+```http
+POST /v2/instances/{instanceID}/stages/{number}/activities/{activityID}/resume
+Content-Type: application/json
+Authorization: Bearer TOKEN
+
+{"temporalRunID":"OBSERVED_CHILD_RUN_ID","pausedAt":"OBSERVED_PAUSE_TIMESTAMP"}
+```
+
+The same route without `/v2` is available in v1. It requires the existing
+orchestration write authorization and returns `204` on success. It grants a
+fresh attempt budget without restarting the workflow, clearing heartbeat
+checkpoints or replaying completed operations. Repeated requests while the
+activity remains active return `204` without resetting its attempts again.
+
+`pausedAt` identifies the observed pause: after another pause, an old request
+returns `409` rather than granting another budget. Flows serializes resume
+requests per stage across API replicas. A stale run, terminal instance/stage,
+canceling activity or an attempt still settling after a pause returns `409`.
+Refresh the instance before deciding whether to retry. Missing resources return
+`404`, malformed requests `400`, and unavailable dependencies `500`.
+An activity that has already completed is not pending and returns `404`;
+a completed stage or instance returns `409`. The endpoint does not promise a
+replayed HTTP response after completion. A lost response can be reconciled with
+the instance detail; never restart the workflow to retry the resume request.
+
+Existing manually paused activities can also be resumed through this endpoint,
+provided Temporal exposes their pause timestamp. They retain their captured
+retry policy: legacy unlimited retries do not become bounded by this operation.
+Pause and resume operations performed directly in Temporal bypass Flows' stage
+lock; do not operate on the same activity concurrently through both paths.
+
+Operators can alternatively resume that activity directly in Temporal:
 
 ```sh
 temporal activity reset \

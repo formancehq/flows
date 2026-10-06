@@ -23,14 +23,15 @@ type Stage struct {
 
 // ActivityPause is a read-only projection of a paused Temporal activity.
 type ActivityPause struct {
-	ActivityID      string `json:"activityID"`
-	TemporalRunID   string `json:"temporalRunID"`
-	Name            string `json:"name"`
-	Attempt         int    `json:"attempt"`
-	LastFailure     string `json:"lastFailure,omitempty"`
-	LastFailureType string `json:"lastFailureType,omitempty"`
-	Reason          string `json:"reason,omitempty"`
-	MaxAttempts     *int   `json:"maxAttempts,omitempty"`
+	ActivityID      string     `json:"activityID"`
+	TemporalRunID   string     `json:"temporalRunID"`
+	Name            string     `json:"name"`
+	Attempt         int        `json:"attempt"`
+	LastFailure     string     `json:"lastFailure,omitempty"`
+	LastFailureType string     `json:"lastFailureType,omitempty"`
+	Reason          string     `json:"reason,omitempty"`
+	MaxAttempts     *int       `json:"maxAttempts,omitempty"`
+	PausedAt        *time.Time `json:"pausedAt,omitempty"`
 }
 
 func (s *Stage) SetTerminated(err error, date time.Time) {

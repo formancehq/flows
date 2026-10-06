@@ -436,6 +436,71 @@ paths:
       security:
         - Authorization:
             - orchestration:read
+  /instances/{instanceID}/stages/{number}/activities/{activityID}/resume:
+    parameters:
+      - in: path
+        name: instanceID
+        description: The instance id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: number
+        description: The nonnegative stage number
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      - in: path
+        name: activityID
+        description: The paused activity id
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    post:
+      summary: Resume a paused activity
+      description: |
+        Resume a paused activity identified by temporalRunID and pausedAt.
+        Use both values from the paused activity projection. A stale run id or
+        pause timestamp returns a conflict, preventing a delayed resend from
+        resuming an activity in a newer run or a subsequent pause generation.
+      operationId: resumeActivity
+      tags:
+        - orchestration.v1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - temporalRunID
+                - pausedAt
+              properties:
+                temporalRunID:
+                  type: string
+                  minLength: 1
+                  description: Expected Temporal run id from the paused activity projection
+                pausedAt:
+                  type: string
+                  format: date-time
+                  description: Nonzero RFC3339 timestamp from the paused activity projection identifying the pause generation
+      responses:
+        '204':
+          description: Activity resume accepted; no content
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - Authorization:
+            - orchestration:write
   /v2/_info:
     get:
       summary: Get server info
@@ -929,6 +994,72 @@ paths:
       security:
         - Authorization:
             - orchestration:read
+  /v2/instances/{instanceID}/stages/{number}/activities/{activityID}/resume:
+    parameters:
+      - in: path
+        name: instanceID
+        description: The instance id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: number
+        description: The nonnegative stage number
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      - in: path
+        name: activityID
+        description: The paused activity id
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    post:
+      summary: Resume a paused activity
+      description: |
+        Resume a paused activity identified by temporalRunID and pausedAt.
+        Use both values from the paused activity projection. A stale run id or
+        pause timestamp returns a conflict, preventing a delayed resend from
+        resuming an activity in a newer run or a subsequent pause generation.
+      operationId: v2ResumeActivity
+      x-speakeasy-name-override: ResumeActivity
+      tags:
+        - orchestration.v2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - temporalRunID
+                - pausedAt
+              properties:
+                temporalRunID:
+                  type: string
+                  minLength: 1
+                  description: Expected Temporal run id from the paused activity projection
+                pausedAt:
+                  type: string
+                  format: date-time
+                  description: Nonzero RFC3339 timestamp from the paused activity projection identifying the pause generation
+      responses:
+        '204':
+          description: Activity resume accepted; no content
+        '400':
+          $ref: '#/components/responses/V2ErrorResponse'
+        '404':
+          $ref: '#/components/responses/V2ErrorResponse'
+        '409':
+          $ref: '#/components/responses/V2ErrorResponse'
+        '500':
+          $ref: '#/components/responses/V2ErrorResponse'
+      security:
+        - Authorization:
+            - orchestration:write
   x-speakeasy-errors:
     statusCodes:
       - default
@@ -955,6 +1086,7 @@ components:
             - VALIDATION
             - NOT_FOUND
             - INTERNAL
+            - CONFLICT
         errorMessage:
           type: string
           description: Human-readable description of the error
@@ -1050,6 +1182,10 @@ components:
         lastFailureType:
           type: string
           description: Application failure type of the most recent failed attempt, when available
+        pausedAt:
+          type: string
+          format: date-time
+          description: Pause timestamp reported by Temporal, when available; send this value with temporalRunID to resume this pause generation
         reason:
           type: string
           description: Reason recorded by Temporal for this pause, when available
@@ -2482,6 +2618,7 @@ components:
             - VALIDATION
             - NOT_FOUND
             - INTERNAL
+            - CONFLICT
         errorMessage:
           type: string
           description: Human-readable description of the error
@@ -2577,6 +2714,10 @@ components:
         lastFailureType:
           type: string
           description: Application failure type of the most recent failed attempt, when available
+        pausedAt:
+          type: string
+          format: date-time
+          description: Pause timestamp reported by Temporal, when available; send this value with temporalRunID to resume this pause generation
         reason:
           type: string
           description: Reason recorded by Temporal for this pause, when available

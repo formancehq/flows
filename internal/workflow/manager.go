@@ -42,6 +42,7 @@ type WorkflowManager struct {
 	stack                   string
 	taskQueue               string
 	includeSearchAttributes bool
+	namespace               string
 }
 
 func (m *WorkflowManager) Create(ctx context.Context, config Config) (*Workflow, error) {
@@ -468,6 +469,9 @@ func (m *WorkflowManager) hydrateActiveStages(ctx context.Context, instance *Ins
 				LastFailureType: pending.GetLastFailure().GetApplicationFailureInfo().GetType(),
 				Reason:          activityPauseReason(pending),
 			}
+			if pausedAt := pending.GetPauseInfo().GetPauseTime(); pausedAt != nil {
+				paused.PausedAt = pointer.For(pausedAt.AsTime())
+			}
 			if limit, ok := strings.CutPrefix(paused.Reason, "ACTIVITY_ATTEMPT_LIMIT:"); ok {
 				if maxAttempts, err := strconv.Atoi(limit); err == nil && maxAttempts > 0 {
 					paused.MaxAttempts = &maxAttempts
@@ -478,14 +482,29 @@ func (m *WorkflowManager) hydrateActiveStages(ctx context.Context, instance *Ins
 	}
 }
 
-func NewManager(db *bun.DB, temporalClient client.Client, stack string, taskQueue string, includeSearchAttributes bool) *WorkflowManager {
-	return &WorkflowManager{
+type ManagerOption func(*WorkflowManager)
+
+func WithNamespace(namespace string) ManagerOption {
+	return func(m *WorkflowManager) {
+		if namespace != "" {
+			m.namespace = namespace
+		}
+	}
+}
+
+func NewManager(db *bun.DB, temporalClient client.Client, stack string, taskQueue string, includeSearchAttributes bool, options ...ManagerOption) *WorkflowManager {
+	m := &WorkflowManager{
 		db:                      db,
 		temporalClient:          temporalClient,
 		stack:                   stack,
 		taskQueue:               taskQueue,
 		includeSearchAttributes: includeSearchAttributes,
+		namespace:               client.DefaultNamespace,
 	}
+	for _, option := range options {
+		option(m)
+	}
+	return m
 }
 
 type ListInstancesOptions struct {
