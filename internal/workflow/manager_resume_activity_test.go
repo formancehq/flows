@@ -108,8 +108,9 @@ func resumeActivityFixture(t *testing.T) *resumeActivityDatabase {
 func resumeActivityDescription(pausedAt time.Time) *workflowservice.DescribeWorkflowExecutionResponse {
 	return &workflowservice.DescribeWorkflowExecutionResponse{
 		WorkflowExecutionInfo: &temporalworkflow.WorkflowExecutionInfo{
-			Execution: &common.WorkflowExecution{WorkflowId: "instance-2", RunId: "child-run"},
-			Status:    enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
+			Execution:       &common.WorkflowExecution{WorkflowId: "instance-2", RunId: "child-run"},
+			ParentExecution: &common.WorkflowExecution{WorkflowId: "instance-main", RunId: "parent-run"},
+			Status:          enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
 		},
 		PendingActivities: []*temporalworkflow.PendingActivityInfo{
 			{ActivityId: "unrelated", Paused: true},

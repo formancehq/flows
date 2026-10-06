@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/formancehq/go-libs/v3/logging"
@@ -55,19 +56,26 @@ func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string,
 		if instance.Terminated {
 			return ErrActivityResumeConflict
 		}
-		stage := Stage{}
-		if err := tx.NewSelect().Model(&stage).
+		// Lock every recorded run before reading Temporal, so replicas remain
+		// serialized even when a stage has historical runs. Lock in a stable order.
+		var stages []Stage
+		if err := tx.NewSelect().Model(&stages).
 			Where("instance_id = ? AND stage = ?", instanceID, number).
-			For("UPDATE").Scan(ctx); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return ErrActivityNotFound
-			}
+			OrderExpr("temporal_run_id ASC").For("UPDATE").Scan(ctx); err != nil {
 			return err
 		}
-		if stage.TerminatedAt != nil {
+		if len(stages) == 0 {
+			return ErrActivityNotFound
+		}
+		active := false
+		for _, stage := range stages {
+			active = active || stage.TerminatedAt == nil
+		}
+		if !active {
 			return ErrActivityResumeConflict
 		}
-		described, err := m.temporalClient.DescribeWorkflowExecution(ctx, stage.TemporalWorkflowID(), runID)
+		stageID := fmt.Sprintf("%s-%d", instanceID, number)
+		described, err := m.temporalClient.DescribeWorkflowExecution(ctx, stageID, runID)
 		if err != nil {
 			var missing *serviceerror.NotFound
 			if errors.As(err, &missing) {
@@ -77,6 +85,26 @@ func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string,
 		}
 		info := described.GetWorkflowExecutionInfo()
 		if info.GetExecution().GetRunId() != runID || info.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+			return ErrActivityResumeConflict
+		}
+		parent := info.GetParentExecution()
+		var selected *Stage
+		if parent.GetRunId() != "" {
+			if parent.GetWorkflowId() != instanceID+"-main" {
+				return ErrActivityResumeConflict
+			}
+			for index := range stages {
+				if stages[index].TemporalRunID == parent.GetRunId() {
+					selected = &stages[index]
+					break
+				}
+			}
+		} else if len(stages) == 1 {
+			// Legacy or standalone executions without parent metadata are only
+			// unambiguous when there is exactly one recorded stage run.
+			selected = &stages[0]
+		}
+		if selected == nil || selected.TerminatedAt != nil {
 			return ErrActivityResumeConflict
 		}
 		for _, pending := range described.GetPendingActivities() {
@@ -96,7 +124,7 @@ func (m *WorkflowManager) ResumeActivity(ctx context.Context, instanceID string,
 			}
 			_, err := m.temporalClient.WorkflowService().UnpauseActivity(ctx, &workflowservice.UnpauseActivityRequest{
 				Namespace:     m.namespace,
-				Execution:     &common.WorkflowExecution{WorkflowId: stage.TemporalWorkflowID(), RunId: runID},
+				Execution:     &common.WorkflowExecution{WorkflowId: stageID, RunId: runID},
 				Activity:      &workflowservice.UnpauseActivityRequest_Id{Id: activityID},
 				Identity:      "flows-api",
 				ResetAttempts: true,

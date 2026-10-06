@@ -144,7 +144,10 @@ activity remains active return `204` without resetting its attempts again.
 
 `pausedAt` identifies the observed pause: after another pause, an old request
 returns `409` rather than granting another budget. Flows serializes resume
-requests per stage across API replicas. A stale run, terminal instance/stage,
+requests per stage across API replicas. When a stage has several recorded runs,
+it selects the row matching the stage execution's parent run in Temporal, rather
+than an arbitrary historical row. Missing or inconsistent parent metadata is
+rejected when those rows are ambiguous. A stale run, terminal instance/stage,
 canceling activity or an attempt still settling after a pause returns `409`.
 Refresh the instance before deciding whether to retry. Missing resources return
 `404`, malformed requests `400`, and unavailable dependencies `500`.
