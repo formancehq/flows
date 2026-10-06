@@ -173,6 +173,6 @@ Resetting the activity attempt counter grants another configured attempt budget 
 
 ### Rollout
 
-Deploy the new interceptor to **every worker polling the task queue before enabling pause mode**. Older workers ignore the activity header and cannot enforce the pause budget. Keep workers that understand the header when disabling the option: existing activities still carry their captured limit. Use the same worker version for replay and continuation after activation; history contains the pause feature version and captured limits.
+Deploy the new interceptor to **every worker polling the task queue before accepting workflows with custom activity budgets or enabling pause mode**. Older workers ignore the activity header and cannot enforce the pause budget. Keep workers that understand the header when disabling the option: existing activities still carry their captured limit. Use the same worker version for replay and continuation after activation; history contains the pause feature version and captured limits.
 
 Verify `PauseActivity` support and permissions on the target Temporal deployment first. A finite schedule-to-close timeout can still terminate a paused activity. Existing activities scheduled before activation keep their original policy and are not automatically converted. The paused LTK backlog can remain paused while new activity protection is rolled out.
