@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/formancehq/go-libs/v3/pointer"
 
 	enums "go.temporal.io/api/enums/v1"
 	history "go.temporal.io/api/history/v1"
+	temporalworkflow "go.temporal.io/api/workflow/v1"
 
 	"github.com/formancehq/go-libs/v3/bun/bunpaginate"
 
@@ -262,16 +265,21 @@ func (m *WorkflowManager) ReadInstanceHistory(ctx context.Context, instanceID st
 }
 
 type ActivityHistory struct {
-	Name          string         `json:"name"`
-	Input         map[string]any `json:"input"`
-	Output        map[string]any `json:"output,omitempty"`
-	Error         string         `json:"error,omitempty"`
-	Terminated    bool           `json:"terminated"`
-	StartedAt     time.Time      `json:"startedAt"`
-	TerminatedAt  *time.Time     `json:"terminatedAt,omitempty"`
-	LastFailure   string         `json:"lastFailure,omitempty"`
-	Attempt       int            `json:"attempt"`
-	NextExecution *time.Time     `json:"nextExecution,omitempty"`
+	ActivityID      string         `json:"activityID,omitempty"`
+	TemporalRunID   string         `json:"temporalRunID,omitempty"`
+	Paused          bool           `json:"paused"`
+	PauseReason     string         `json:"pauseReason,omitempty"`
+	LastFailureType string         `json:"lastFailureType,omitempty"`
+	Name            string         `json:"name"`
+	Input           map[string]any `json:"input"`
+	Output          map[string]any `json:"output,omitempty"`
+	Error           string         `json:"error,omitempty"`
+	Terminated      bool           `json:"terminated"`
+	StartedAt       time.Time      `json:"startedAt"`
+	TerminatedAt    *time.Time     `json:"terminatedAt,omitempty"`
+	LastFailure     string         `json:"lastFailure,omitempty"`
+	Attempt         int            `json:"attempt"`
+	NextExecution   *time.Time     `json:"nextExecution,omitempty"`
 }
 
 func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID string, stage int) ([]*ActivityHistory, error) {
@@ -284,9 +292,15 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 		panic(err)
 	}
 
-	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, stageID, "",
+	runID := described.GetWorkflowExecutionInfo().GetExecution().GetRunId()
+	pendingByID := make(map[string]*temporalworkflow.PendingActivityInfo, len(described.PendingActivities))
+	for _, pending := range described.PendingActivities {
+		pendingByID[pending.GetActivityId()] = pending
+	}
+	historyIterator := m.temporalClient.GetWorkflowHistory(ctx, stageID, runID,
 		false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	ret := make([]*ActivityHistory, 0)
+	byScheduledEvent := make(map[int64]*ActivityHistory)
 	for historyIterator.HasNext() {
 		event, err := historyIterator.Next()
 		if err != nil {
@@ -301,7 +315,9 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 			}
 
 			activityHistory := &ActivityHistory{
-				Name: activityTaskScheduledEventAttributes.ActivityType.Name,
+				ActivityID:    activityTaskScheduledEventAttributes.ActivityId,
+				TemporalRunID: runID,
+				Name:          activityTaskScheduledEventAttributes.ActivityType.Name,
 				Input: map[string]any{
 					activityTaskScheduledEventAttributes.ActivityType.Name: input,
 				},
@@ -310,62 +326,83 @@ func (m *WorkflowManager) ReadStageHistory(ctx context.Context, instanceID strin
 			}
 
 			ret = append(ret, activityHistory)
+			byScheduledEvent[event.EventId] = activityHistory
 
-			if len(described.PendingActivities) > 0 &&
-				activityTaskScheduledEventAttributes.ActivityId == described.PendingActivities[0].ActivityId {
-				pendingActivity := described.PendingActivities[0]
+			if pendingActivity := pendingByID[activityHistory.ActivityID]; pendingActivity != nil {
 				if pendingActivity.LastFailure != nil {
 					activityHistory.LastFailure = pendingActivity.LastFailure.Message
+					activityHistory.LastFailureType = pendingActivity.LastFailure.GetApplicationFailureInfo().GetType()
 				}
 				activityHistory.Attempt = int(pendingActivity.Attempt)
-				activityHistory.NextExecution = pointer.For(pendingActivity.ScheduledTime.AsTime())
-				return ret, nil
+				activityHistory.Paused = pendingActivity.Paused
+				activityHistory.PauseReason = activityPauseReason(pendingActivity)
+				if !activityHistory.Paused {
+					if next := pendingActivity.GetNextAttemptScheduleTime(); next != nil {
+						activityHistory.NextExecution = pointer.For(next.AsTime())
+					}
+				}
 			}
 
-			for historyIterator.HasNext() {
-				event, err = historyIterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				switch event.EventType {
-				case enums.EVENT_TYPE_ACTIVITY_TASK_CANCELED:
-					activityHistory.Error = "cancelled"
-				case enums.EVENT_TYPE_ACTIVITY_TASK_COMPLETED:
-					result := event.Attributes.(*history.HistoryEvent_ActivityTaskCompletedEventAttributes).ActivityTaskCompletedEventAttributes.Result
-					if result != nil && len(result.Payloads) > 0 {
-						output := make(map[string]any)
-						if err := json.Unmarshal(result.Payloads[0].Data, &output); err != nil {
-							panic(err)
-						}
+		case enums.EVENT_TYPE_ACTIVITY_TASK_CANCELED,
+			enums.EVENT_TYPE_ACTIVITY_TASK_COMPLETED,
+			enums.EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT,
+			enums.EVENT_TYPE_ACTIVITY_TASK_FAILED:
+			var scheduledEventID int64
+			switch event.EventType {
+			case enums.EVENT_TYPE_ACTIVITY_TASK_CANCELED:
+				scheduledEventID = event.GetActivityTaskCanceledEventAttributes().GetScheduledEventId()
+			case enums.EVENT_TYPE_ACTIVITY_TASK_COMPLETED:
+				scheduledEventID = event.GetActivityTaskCompletedEventAttributes().GetScheduledEventId()
+			case enums.EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT:
+				scheduledEventID = event.GetActivityTaskTimedOutEventAttributes().GetScheduledEventId()
+			case enums.EVENT_TYPE_ACTIVITY_TASK_FAILED:
+				scheduledEventID = event.GetActivityTaskFailedEventAttributes().GetScheduledEventId()
+			}
+			activityHistory := byScheduledEvent[scheduledEventID]
+			if activityHistory == nil {
+				continue
+			}
+			switch event.EventType {
+			case enums.EVENT_TYPE_ACTIVITY_TASK_CANCELED:
+				activityHistory.Error = "cancelled"
+			case enums.EVENT_TYPE_ACTIVITY_TASK_COMPLETED:
+				result := event.Attributes.(*history.HistoryEvent_ActivityTaskCompletedEventAttributes).ActivityTaskCompletedEventAttributes.Result
+				if result != nil && len(result.Payloads) > 0 {
+					output := make(map[string]any)
+					if err := json.Unmarshal(result.Payloads[0].Data, &output); err != nil {
+						panic(err)
+					}
 
-						// notes(gfyrag): keep compat with format from ledger v1 (since we have moved to ledger v2 api)
-						// maybe we should define proper boundaries on activities, independent of the formance sdk
-						// to avoid breaking histories
-						switch activityTaskScheduledEventAttributes.ActivityType.Name {
-						case "CreateTransaction":
-							switch tx := output["data"].(type) {
-							case map[string]any:
-								tx["txid"] = tx["id"]
-								output["data"] = []any{tx}
-							}
-						}
-
-						activityHistory.Output = map[string]any{
-							activityTaskScheduledEventAttributes.ActivityType.Name: output,
+					// notes(gfyrag): keep compat with format from ledger v1 (since we have moved to ledger v2 api)
+					// maybe we should define proper boundaries on activities, independent of the formance sdk
+					// to avoid breaking histories
+					switch activityHistory.Name {
+					case "CreateTransaction":
+						switch tx := output["data"].(type) {
+						case map[string]any:
+							tx["txid"] = tx["id"]
+							output["data"] = []any{tx}
 						}
 					}
-				case enums.EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT:
-					activityHistory.Error = "timeout"
-				case enums.EVENT_TYPE_ACTIVITY_TASK_FAILED:
-					activityHistory.Error = event.Attributes.(*history.HistoryEvent_ActivityTaskFailedEventAttributes).
-						ActivityTaskFailedEventAttributes.Failure.Message
-				default:
-					continue
+
+					activityHistory.Output = map[string]any{
+						activityHistory.Name: output,
+					}
 				}
-				activityHistory.TerminatedAt = pointer.For(event.EventTime.AsTime())
-				activityHistory.Terminated = true
-				break
+			case enums.EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT:
+				activityHistory.Error = "timeout"
+			case enums.EVENT_TYPE_ACTIVITY_TASK_FAILED:
+				activityHistory.Error = event.Attributes.(*history.HistoryEvent_ActivityTaskFailedEventAttributes).
+					ActivityTaskFailedEventAttributes.Failure.Message
+			default:
+				continue
 			}
+			activityHistory.TerminatedAt = pointer.For(event.EventTime.AsTime())
+			activityHistory.Terminated = true
+			// History may advance after DescribeWorkflowExecution; terminal events win.
+			activityHistory.Paused = false
+			activityHistory.PauseReason = ""
+			activityHistory.NextExecution = nil
 		}
 	}
 	return ret, nil
@@ -385,7 +422,60 @@ func (m *WorkflowManager) GetInstance(ctx context.Context, instanceID string) (*
 		}
 		return nil, err
 	}
+	m.hydrateActiveStages(ctx, &instance)
 	return &instance, nil
+}
+
+func activityPauseReason(pending *temporalworkflow.PendingActivityInfo) string {
+	info := pending.GetPauseInfo()
+	if manual := info.GetManual(); manual != nil {
+		return manual.GetReason()
+	}
+	return info.GetRule().GetReason()
+}
+
+func (m *WorkflowManager) hydrateActiveStages(ctx context.Context, instance *Instance) {
+	if instance.Terminated {
+		return
+	}
+	for i := range instance.Statuses {
+		stage := &instance.Statuses[i]
+		if stage.TerminatedAt != nil {
+			continue
+		}
+		stage.PendingActivities = nil
+		stage.PauseStateUnavailable = false
+		described, err := m.temporalClient.DescribeWorkflowExecution(ctx, stage.TemporalWorkflowID(), "")
+		if err != nil {
+			if _, ok := err.(*serviceerror.NotFound); ok {
+				// Older instances can retain stage rows after Temporal history expires.
+				continue
+			}
+			// Pause visibility is optional; do not fail the SQL-backed detail read
+			// or expose Temporal's internal error message to the caller.
+			stage.PauseStateUnavailable = true
+			continue
+		}
+		runID := described.GetWorkflowExecutionInfo().GetExecution().GetRunId()
+		for _, pending := range described.PendingActivities {
+			if !pending.GetPaused() {
+				continue
+			}
+			paused := ActivityPause{
+				ActivityID: pending.GetActivityId(), TemporalRunID: runID,
+				Name: pending.GetActivityType().GetName(), Attempt: int(pending.GetAttempt()),
+				LastFailure:     pending.GetLastFailure().GetMessage(),
+				LastFailureType: pending.GetLastFailure().GetApplicationFailureInfo().GetType(),
+				Reason:          activityPauseReason(pending),
+			}
+			if limit, ok := strings.CutPrefix(paused.Reason, "ACTIVITY_ATTEMPT_LIMIT:"); ok {
+				if maxAttempts, err := strconv.Atoi(limit); err == nil && maxAttempts > 0 {
+					paused.MaxAttempts = &maxAttempts
+				}
+			}
+			stage.PendingActivities = append(stage.PendingActivities, paused)
+		}
+	}
 }
 
 func NewManager(db *bun.DB, temporalClient client.Client, stack string, taskQueue string, includeSearchAttributes bool) *WorkflowManager {

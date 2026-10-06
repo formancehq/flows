@@ -1019,6 +1019,44 @@ components:
         error:
           type: string
           description: Why the stage failed, absent when it succeeded
+        pendingActivities:
+          type: array
+          description: Paused activities hydrated on instance detail reads only; absent when none are paused or legacy Temporal execution is unavailable
+          items:
+            $ref: '#/components/schemas/ActivityPause'
+        pauseStateUnavailable:
+          type: boolean
+          description: True when Temporal pause state could not be read; display UNKNOWN rather than inferring active from absent pendingActivities. Omitted on successful reads and missing legacy executions.
+    ActivityPause:
+      type: object
+      description: Current pause of an activity in an active stage, read from Temporal on instance detail requests
+      required: [activityID, temporalRunID, name, attempt]
+      properties:
+        activityID:
+          type: string
+          description: Stable activity identifier within the owning workflow execution
+        temporalRunID:
+          type: string
+          description: Run identifier of the described stage workflow execution
+        name:
+          type: string
+          description: Activity type name
+        attempt:
+          type: integer
+          description: Current attempt counter reported by Temporal
+        lastFailure:
+          type: string
+          description: Message of the most recent failed attempt, when available
+        lastFailureType:
+          type: string
+          description: Application failure type of the most recent failed attempt, when available
+        reason:
+          type: string
+          description: Reason recorded by Temporal for this pause, when available
+        maxAttempts:
+          type: integer
+          minimum: 1
+          description: Attempt limit decoded from an ACTIVITY_ATTEMPT_LIMIT:<limit> pause reason, when valid
     WorkflowInstance:
       type: object
       description: One run of a workflow, tracking its per-stage progress
@@ -1069,6 +1107,21 @@ components:
         - terminated
         - attempt
       properties:
+        activityID:
+          type: string
+          description: Stable identifier of the activity within its workflow execution
+        temporalRunID:
+          type: string
+          description: Run identifier of the described stage workflow execution
+        paused:
+          type: boolean
+          description: Whether Temporal has paused this pending activity; a pause is not a terminal failure
+        pauseReason:
+          type: string
+          description: Reason recorded by Temporal for the activity pause, when available
+        lastFailureType:
+          type: string
+          description: Application failure type of the most recent failed attempt, when available
         name:
           type: string
           description: Name of the activity this history entry records
@@ -1099,7 +1152,7 @@ components:
         nextExecution:
           type: string
           format: date-time
-          description: When the next retry is scheduled, absent once the activity is settled
+          description: When the next retry is scheduled, absent while paused, when no retry is scheduled, or once settled
     WorkflowInstanceHistory:
       type: object
       required:
@@ -2493,6 +2546,44 @@ components:
         error:
           type: string
           description: Why the stage failed, absent when it succeeded
+        pendingActivities:
+          type: array
+          description: Paused activities hydrated on instance detail reads only; absent when none are paused or legacy Temporal execution is unavailable
+          items:
+            $ref: '#/components/schemas/V2ActivityPause'
+        pauseStateUnavailable:
+          type: boolean
+          description: True when Temporal pause state could not be read; display UNKNOWN rather than inferring active from absent pendingActivities. Omitted on successful reads and missing legacy executions.
+    V2ActivityPause:
+      type: object
+      description: Current pause of an activity in an active stage, read from Temporal on instance detail requests
+      required: [activityID, temporalRunID, name, attempt]
+      properties:
+        activityID:
+          type: string
+          description: Stable activity identifier within the owning workflow execution
+        temporalRunID:
+          type: string
+          description: Run identifier of the described stage workflow execution
+        name:
+          type: string
+          description: Activity type name
+        attempt:
+          type: integer
+          description: Current attempt counter reported by Temporal
+        lastFailure:
+          type: string
+          description: Message of the most recent failed attempt, when available
+        lastFailureType:
+          type: string
+          description: Application failure type of the most recent failed attempt, when available
+        reason:
+          type: string
+          description: Reason recorded by Temporal for this pause, when available
+        maxAttempts:
+          type: integer
+          minimum: 1
+          description: Attempt limit decoded from an ACTIVITY_ATTEMPT_LIMIT:<limit> pause reason, when valid
     V2WorkflowInstance:
       type: object
       description: One run of a workflow, tracking its per-stage progress
@@ -2543,6 +2634,21 @@ components:
         - terminated
         - attempt
       properties:
+        activityID:
+          type: string
+          description: Stable identifier of the activity within its workflow execution
+        temporalRunID:
+          type: string
+          description: Run identifier of the described stage workflow execution
+        paused:
+          type: boolean
+          description: Whether Temporal has paused this pending activity; a pause is not a terminal failure
+        pauseReason:
+          type: string
+          description: Reason recorded by Temporal for the activity pause, when available
+        lastFailureType:
+          type: string
+          description: Application failure type of the most recent failed attempt, when available
         name:
           type: string
           description: Name of the activity this history entry records
@@ -2573,7 +2679,7 @@ components:
         nextExecution:
           type: string
           format: date-time
-          description: When the next retry is scheduled, absent once the activity is settled
+          description: When the next retry is scheduled, absent while paused, when no retry is scheduled, or once settled
     V2WorkflowInstanceHistory:
       type: object
       required:

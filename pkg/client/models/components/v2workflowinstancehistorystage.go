@@ -8,6 +8,12 @@ import (
 )
 
 type V2WorkflowInstanceHistoryStage struct {
+	ActivityID      *string `json:"activityID,omitempty"`
+	TemporalRunID   *string `json:"temporalRunID,omitempty"`
+	Paused          *bool   `json:"paused,omitempty"`
+	PauseReason     *string `json:"pauseReason,omitempty"`
+	LastFailureType *string `json:"lastFailureType,omitempty"`
+
 	Name          string                                `json:"name"`
 	Input         V2WorkflowInstanceHistoryStageInput   `json:"input"`
 	Output        *V2WorkflowInstanceHistoryStageOutput `json:"output,omitempty"`
@@ -99,4 +105,39 @@ func (o *V2WorkflowInstanceHistoryStage) GetNextExecution() *time.Time {
 		return nil
 	}
 	return o.NextExecution
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetActivityID() *string {
+	if o == nil {
+		return nil
+	}
+	return o.ActivityID
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetTemporalRunID() *string {
+	if o == nil {
+		return nil
+	}
+	return o.TemporalRunID
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetPaused() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.Paused
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetPauseReason() *string {
+	if o == nil {
+		return nil
+	}
+	return o.PauseReason
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetLastFailureType() *string {
+	if o == nil {
+		return nil
+	}
+	return o.LastFailureType
 }

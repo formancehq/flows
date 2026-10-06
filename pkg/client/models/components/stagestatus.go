@@ -8,11 +8,13 @@ import (
 )
 
 type StageStatus struct {
-	Stage        float64    `json:"stage"`
-	InstanceID   string     `json:"instanceID"`
-	StartedAt    time.Time  `json:"startedAt"`
-	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
-	Error        *string    `json:"error,omitempty"`
+	PauseStateUnavailable *bool           `json:"pauseStateUnavailable,omitempty"`
+	PendingActivities     []ActivityPause `json:"pendingActivities,omitempty"`
+	Stage                 float64         `json:"stage"`
+	InstanceID            string          `json:"instanceID"`
+	StartedAt             time.Time       `json:"startedAt"`
+	TerminatedAt          *time.Time      `json:"terminatedAt,omitempty"`
+	Error                 *string         `json:"error,omitempty"`
 }
 
 func (s StageStatus) MarshalJSON() ([]byte, error) {
@@ -59,4 +61,18 @@ func (o *StageStatus) GetError() *string {
 		return nil
 	}
 	return o.Error
+}
+
+func (o *StageStatus) GetPendingActivities() []ActivityPause {
+	if o == nil {
+		return nil
+	}
+	return o.PendingActivities
+}
+
+func (o *StageStatus) GetPauseStateUnavailable() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.PauseStateUnavailable
 }
