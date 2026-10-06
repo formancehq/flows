@@ -141,5 +141,6 @@ func pauseAfterFailure(ctx context.Context, info activity.Info, limit int, failu
 		// policy with an unbounded billing loop on unsupported Temporal versions.
 		return temporal.NewNonRetryableApplicationError(fmt.Sprintf("could not pause exhausted activity: %v", err), "ACTIVITY_PAUSE_FAILED", failure)
 	}
+	activity.GetLogger(ctx).Info("Paused exhausted stage activity", "ActivityID", info.ActivityID, "Attempt", info.Attempt, "MaximumAttempts", limit)
 	return failure
 }

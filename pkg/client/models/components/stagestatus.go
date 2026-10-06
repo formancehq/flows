@@ -8,13 +8,20 @@ import (
 )
 
 type StageStatus struct {
-	PauseStateUnavailable *bool           `json:"pauseStateUnavailable,omitempty"`
-	PendingActivities     []ActivityPause `json:"pendingActivities,omitempty"`
-	Stage                 float64         `json:"stage"`
-	InstanceID            string          `json:"instanceID"`
-	StartedAt             time.Time       `json:"startedAt"`
-	TerminatedAt          *time.Time      `json:"terminatedAt,omitempty"`
-	Error                 *string         `json:"error,omitempty"`
+	// Zero-based position of the stage within the workflow
+	Stage float64 `json:"stage"`
+	// Identifier of the workflow instance this stage belongs to
+	InstanceID string `json:"instanceID"`
+	// When the stage started
+	StartedAt time.Time `json:"startedAt"`
+	// When the stage finished, absent while it is still running
+	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
+	// Why the stage failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// Paused activities hydrated on instance detail reads only; absent when none are paused or legacy Temporal execution is unavailable
+	PendingActivities []ActivityPause `json:"pendingActivities,omitempty"`
+	// True when Temporal pause state could not be read; display UNKNOWN rather than inferring active from absent pendingActivities. Omitted on successful reads and missing legacy executions.
+	PauseStateUnavailable *bool `json:"pauseStateUnavailable,omitempty"`
 }
 
 func (s StageStatus) MarshalJSON() ([]byte, error) {
