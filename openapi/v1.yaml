@@ -537,6 +537,13 @@ components:
         name:
           type: string
           description: Human-readable name for the workflow
+        activityMaxAttempts:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+          default: 15
+          description: Total attempts per stage activity, including the initial attempt. Stored at workflow creation; defaults to 15 when omitted.
         stages:
           type: array
           description: The stages executed in order when the workflow runs

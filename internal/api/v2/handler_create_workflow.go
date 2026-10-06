@@ -39,6 +39,11 @@ func createWorkflow(m api.Backend) http.HandlerFunc {
 			}
 		}
 
+		if err := config.Validate(); err != nil {
+			sharedapi.BadRequest(w, "VALIDATION", err)
+			return
+		}
+
 		workflow, err := m.Create(r.Context(), config)
 		if err != nil {
 			sharedapi.InternalServerError(w, r, errors.Wrap(err, "creating workflow"))

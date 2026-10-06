@@ -1,19 +1,22 @@
 # Activity Retries
 
-Every step Flows runs against another service or its own database is executed as a Temporal activity. If an activity fails, Flows retries it with a bounded policy. If the activity still fails after the last attempt, the workflow that scheduled it fails. No activity retries forever.
+Every step Flows runs against another service or its own database is executed as a Temporal activity. Retryable stage operations use the workflow's configured attempt budget. With pause mode disabled, exhausting that budget fails the stage and workflow instance; with pause mode enabled, the activity pauses instead. Non-retryable errors fail immediately. Trigger and bookkeeping activities retain their bounded failure policy.
 
 ## Retry Policy
 
-All activities share the same policy:
+The default stage activity policy is shown below. The maximum attempts comes
+from [`activityMaxAttempts`](#per-workflow-attempt-budget), stored in each new
+workflow configuration. Trigger and bookkeeping activities keep their fixed
+15-attempt policy.
 
 | Setting | Value |
 |---------|-------|
 | Initial interval | 2s |
 | Backoff coefficient | ×2 |
 | Maximum interval | 200s |
-| Maximum attempts | **15** |
+| Maximum attempts | **15** by default; configurable per workflow for stage activities |
 
-The 14 waits between attempts add up to about 28 minutes. Counting how long each attempt may run, an activity gives up after roughly **30 to 43 minutes**.
+With the default 15-attempt budget, the 14 waits between attempts add up to about 28 minutes. Counting how long each attempt may run, an activity reaches its budget after roughly **30 to 43 minutes**.
 
 Per-attempt timeouts:
 
@@ -32,13 +35,20 @@ Some errors fail the same way on every attempt. Flows does not retry these; the 
 | Ledger, wallet and payment read operations (`send`, `update` stages) | `VALIDATION`, `CONFLICT`, `NO_SCRIPT`, `COMPILATION_FAILED`, `INSUFFICIENT_FUND` |
 | PSP transfer initiation (`CreateTransferInitiation`, `StripeTransfer`) | `VALIDATION`, `CONFLICT` |
 
-Flows retries every other error, up to the 15-attempt limit.
+With pause mode disabled, Flows retries every other stage error up to the
+workflow's configured attempt budget. Non-retryable errors still fail on the
+first attempt even when the budget is larger. Trigger and bookkeeping activities
+retain their 15-attempt limit. Pause mode changes `INSUFFICIENT_FUND` handling
+as described below.
 
 ## When Retries Run Out
 
 ### Stage Operations
 
-The stage fails with the last activity error, and the workflow instance ends as failed. Before this policy existed, the instance stayed "running" forever.
+With pause mode disabled, the stage fails with the last activity error when its
+configured attempt budget runs out, and the workflow instance ends as failed.
+Non-retryable errors can fail the stage earlier. With pause mode enabled,
+exhausted retryable stage activities pause as described below.
 
 Flows does not roll back ledger or wallet operations that succeeded earlier in the same stage. For example, a cross-ledger `send` may have committed its first transaction and failed on the second. Check the ledger and wallet state before you re-run the workflow.
 
@@ -66,13 +76,45 @@ Workers and `serve --worker` accept two options:
 | Option | Default | Effect |
 |--------|---------|--------|
 | `--pause-stage-activities` | `false` | Pause retryable stage operations at their attempt limit instead of terminating the stage. Requires Temporal's native `PauseActivity` API. |
-| `--stage-activity-attempts` | `15` | Total attempts per stage activity before pausing, including the initial attempt. Must be a positive 32-bit integer. |
+| `--stage-activity-attempts` | `15` | Fallback attempt budget for legacy or synthetic workflows without `activityMaxAttempts`. Must be a positive 32-bit integer. |
 
 With pause mode enabled, `INSUFFICIENT_FUND` becomes retryable until the configured limit. Validation, conflict and compilation errors remain terminal. Trigger and database/publisher bookkeeping activities retain their bounded failure policy.
 
 The workflow stays unfinished while its activity is paused. Workers do not wait for an operator: Temporal stops dispatching that activity. Earlier successful operations stay completed. This uses the original activity execution, preserving `RunID-ActivityID` and heartbeat details. It does not reset or restart the workflow.
 
 The limit is recorded in workflow history and the activity header when the activity is scheduled. A configuration change does not alter the limit for an already scheduled activity. If a timeout or worker crash consumes the final attempt, the next worker invocation pauses without calling the business operation again. If the pause control RPC fails, the activity returns a non-retryable `ACTIVITY_PAUSE_FAILED` error instead of executing the business operation beyond the limit.
+
+### Per-Workflow Attempt Budget
+
+Set `activityMaxAttempts` in the workflow configuration when creating a workflow
+through either API version. It counts the initial attempt and accepts integers
+from `1` through `2147483647`. Omitting it stores `15` in the new workflow's
+configuration; explicit `0`, negative values and larger values are rejected.
+Creating and reading the workflow return the stored value in `config`.
+
+For example, create a workflow with a three-attempt budget:
+
+```http
+POST /v2/workflows
+Content-Type: application/json
+Authorization: Bearer TOKEN
+
+{
+  "name": "three-attempt-workflow",
+  "activityMaxAttempts": 3,
+  "stages": []
+}
+```
+
+The same configuration is accepted at `POST /workflows` in v1. This budget is
+per stage activity, not a shared counter across the workflow. It applies whether
+pause mode is enabled or disabled, independently of the worker fallback value.
+Pausing still requires `--pause-stage-activities`. With pause mode
+enabled, an exhausted retryable stage activity pauses after its third attempt.
+The worker flag supplies a fallback only for legacy or synthetic workflows
+whose configuration has no value; it does not override a newly created
+workflow's stored budget. Already scheduled activities keep their captured
+limit. Trigger and bookkeeping activities keep their own bounded policies.
 
 ### Visibility
 

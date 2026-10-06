@@ -17,6 +17,15 @@ import (
 )
 
 const pauseAttemptsHeader = "formance-stage-pause-attempts"
+const workflowAttemptsHeader = "formance-workflow-activity-attempts"
+
+type stageActivityAttemptsKey struct{}
+
+// WithStageActivityAttempts applies a workflow definition's validated budget
+// to its stage activities and descendants. The definition is immutable input.
+func WithStageActivityAttempts(ctx workflow.Context, attempts int) workflow.Context {
+	return workflow.WithValue(ctx, stageActivityAttemptsKey{}, attempts)
+}
 
 // StagePauseInterceptor uses Temporal's native activity pause so a resume keeps
 // the original activity ID, heartbeat and payment idempotency key. A zero limit
@@ -48,6 +57,17 @@ type pauseWorkflowInbound struct {
 	attempts int
 }
 
+func (i *pauseWorkflowInbound) ExecuteWorkflow(ctx workflow.Context, in *interceptor.ExecuteWorkflowInput) (any, error) {
+	if payload := interceptor.WorkflowHeader(ctx)[workflowAttemptsHeader]; payload != nil {
+		var attempts int
+		if err := converter.GetDefaultDataConverter().FromPayload(payload, &attempts); err != nil || attempts < 1 || attempts > 2147483647 {
+			return nil, temporal.NewNonRetryableApplicationError("invalid workflow activity budget", "INVALID_PAUSE_LIMIT", err)
+		}
+		ctx = WithStageActivityAttempts(ctx, attempts)
+	}
+	return i.Next.ExecuteWorkflow(ctx, in)
+}
+
 func (i *pauseWorkflowInbound) Init(next interceptor.WorkflowOutboundInterceptor) error {
 	return i.Next.Init(&pauseWorkflowOutbound{WorkflowOutboundInterceptorBase: interceptor.WorkflowOutboundInterceptorBase{Next: next}, attempts: i.attempts})
 }
@@ -57,15 +77,32 @@ type pauseWorkflowOutbound struct {
 	attempts int
 }
 
+func (i *pauseWorkflowOutbound) ExecuteChildWorkflow(ctx workflow.Context, name string, args ...any) workflow.ChildWorkflowFuture {
+	if attempts, ok := ctx.Value(stageActivityAttemptsKey{}).(int); ok && workflow.GetVersion(ctx, "workflow-activity-attempts-header", workflow.DefaultVersion, 1) != workflow.DefaultVersion {
+		payload, err := converter.GetDefaultDataConverter().ToPayload(attempts)
+		if err != nil {
+			panic(err)
+		}
+		interceptor.WorkflowHeader(ctx)[workflowAttemptsHeader] = payload
+	}
+	return i.Next.ExecuteChildWorkflow(ctx, name, args...)
+}
+
 func (i *pauseWorkflowOutbound) ExecuteActivity(ctx workflow.Context, name string, args ...any) workflow.Future {
 	if !stageActivity(name) || workflow.GetVersion(ctx, "stage-activity-pause", workflow.DefaultVersion, 1) == workflow.DefaultVersion {
 		return i.Next.ExecuteActivity(ctx, name, args...)
 	}
 	var attempts int
-	if err := workflow.SideEffect(ctx, func(workflow.Context) any { return i.attempts }).Get(&attempts); err != nil {
+	configured, hasConfigured := ctx.Value(stageActivityAttemptsKey{}).(int)
+	if err := workflow.SideEffect(ctx, func(workflow.Context) any {
+		if i.attempts > 0 && hasConfigured {
+			return configured
+		}
+		return i.attempts
+	}).Get(&attempts); err != nil {
 		panic(err)
 	}
-	if attempts > 0 {
+	if attempts > 0 || hasConfigured {
 		options := workflow.GetActivityOptions(ctx)
 		policy := temporal.RetryPolicy{InitialInterval: 2 * time.Second, BackoffCoefficient: 2, MaximumInterval: 200 * time.Second}
 		if options.RetryPolicy != nil {
@@ -73,15 +110,21 @@ func (i *pauseWorkflowOutbound) ExecuteActivity(ctx workflow.Context, name strin
 		}
 		// The worker stops dispatch at the limit. A server retry limit would instead
 		// complete the activity on its last failure, even if it had been paused.
-		policy.MaximumAttempts = 0
-		policy.NonRetryableErrorTypes = slices.DeleteFunc(slices.Clone(policy.NonRetryableErrorTypes), func(code string) bool { return code == "INSUFFICIENT_FUND" })
+		if attempts > 0 {
+			policy.MaximumAttempts = 0
+			policy.NonRetryableErrorTypes = slices.DeleteFunc(slices.Clone(policy.NonRetryableErrorTypes), func(code string) bool { return code == "INSUFFICIENT_FUND" })
+		} else {
+			policy.MaximumAttempts = int32(configured)
+		}
 		options.RetryPolicy = &policy
 		ctx = workflow.WithActivityOptions(ctx, options)
-		payload, err := converter.GetDefaultDataConverter().ToPayload(attempts)
-		if err != nil {
-			panic(err)
+		if attempts > 0 {
+			payload, err := converter.GetDefaultDataConverter().ToPayload(attempts)
+			if err != nil {
+				panic(err)
+			}
+			interceptor.WorkflowHeader(ctx)[pauseAttemptsHeader] = payload
 		}
-		interceptor.WorkflowHeader(ctx)[pauseAttemptsHeader] = payload
 	}
 	return i.Next.ExecuteActivity(ctx, name, args...)
 }
