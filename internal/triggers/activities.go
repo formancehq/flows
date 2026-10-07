@@ -78,17 +78,19 @@ func (a Activities) ListTriggers(ctx context.Context, request ProcessEventReques
 	return ret, nil
 }
 
-// ExpressionEvaluationErrorType flags expression compile and runtime errors: they are
-// deterministic for a given payload, so they are non-retryable.
+// ExpressionEvaluationErrorType flags expression compile and runtime errors.
+// Runtime errors following a successful link() fetch may resolve on a later attempt.
 const ExpressionEvaluationErrorType = "EXPRESSION_EVALUATION"
 
 func (a Activities) EvalTriggerVariables(ctx context.Context, trigger Trigger, request ProcessEventRequest) (map[string]string, error) {
 	vars, err := a.expressionEvaluator.evalVariables(request.Event.Payload, trigger.Vars)
 	if err != nil {
-		// link() classifies its own errors; anything else comes from the expression engine.
-		var appErr *temporal.ApplicationError
-		if errors.As(err, &appErr) {
-			return nil, err
+		// Preserve link() failures, including permanent errors after an earlier successful fetch.
+		if appErr, ok := errors.AsType[*temporal.ApplicationError](err); ok {
+			return nil, appErr
+		}
+		if _, ok := errors.AsType[*linkedExpressionError](err); ok {
+			return nil, temporal.NewApplicationError(err.Error(), ExpressionEvaluationErrorType)
 		}
 		return nil, temporal.NewNonRetryableApplicationError(err.Error(), ExpressionEvaluationErrorType, nil)
 	}

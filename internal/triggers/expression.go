@@ -81,8 +81,23 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 	}
 }
 
+// linkedExpressionError preserves the plain evaluator message while indicating that
+// a runtime error followed a successful fetch of mutable remote data.
+type linkedExpressionError struct {
+	error
+}
+
+func (e *linkedExpressionError) Unwrap() error { return e.error }
+
 func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
-	p, err := expr.Compile(e, expr.Function("link", h.link))
+	fetchedLink := false
+	p, err := expr.Compile(e, expr.Function("link", func(params ...any) (any, error) {
+		ret, err := h.link(params...)
+		if err == nil {
+			fetchedLink = true
+		}
+		return ret, err
+	}))
 	if err != nil {
 		return "", err
 	}
@@ -91,8 +106,11 @@ func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
 		"event": rawObject,
 	})
 	if err != nil {
-		if err := errors.Unwrap(err); err != nil {
-			return nil, err
+		if cause := errors.Unwrap(err); cause != nil {
+			err = cause
+		}
+		if fetchedLink {
+			return nil, &linkedExpressionError{error: err}
 		}
 		return nil, err
 	}

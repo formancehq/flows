@@ -32,6 +32,9 @@ func requireApplicationError(t *testing.T, err error, errType string, nonRetryab
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, errType, appErr.Type())
 	require.Equal(t, nonRetryable, appErr.NonRetryable())
+	failure := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
+	require.Equal(t, errType, failure.GetApplicationFailureInfo().GetType())
+	require.Equal(t, nonRetryable, failure.GetApplicationFailureInfo().GetNonRetryable())
 }
 
 func linkPayload(uri string) map[string]any {
@@ -165,4 +168,45 @@ func TestFilterEvaluationErrorDoesNotMatch(t *testing.T) {
 	}, Trigger{
 		TriggerData: TriggerData{Filter: &filter},
 	}))
+}
+
+func TestEvalLinkedExpressionErrors(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"metadata":null}}`))
+	}))
+	t.Cleanup(srv.Close)
+	a := NewActivities(nil, nil, NewExpressionEvaluator(srv.Client()), publish.NoOpPublisher)
+
+	for name, tc := range map[string]struct {
+		expression   string
+		nonRetryable bool
+	}{
+		"mutable linked data":                    {`link(event, "source_account").metadata.payout_cycle`, false},
+		"compile error with link":                {`link(event, "source_account") +`, true},
+		"unexecuted link":                        {`false ? link(event, "source_account") : event.missing.foo`, true},
+		"permanent error after successful fetch": {`[link(event, "source_account"), link(event, "unknown")]`, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			payload := linkPayload(srv.URL)
+			// The shared evaluator keeps its original API error message.
+			_, rawErr := a.expressionEvaluator.evalVariable(payload, tc.expression)
+			require.Error(t, rawErr)
+			_, err := a.EvalTriggerVariables(t.Context(), Trigger{
+				TriggerData: TriggerData{Vars: map[string]string{"v": tc.expression}},
+			}, ProcessEventRequest{Event: publish.EventMessage{Payload: payload}})
+			errType := ExpressionEvaluationErrorType
+			if name == "permanent error after successful fetch" {
+				errType = "APPLICATION"
+			}
+			requireApplicationError(t, err, errType, tc.nonRetryable)
+			require.Contains(t, err.Error(), rawErr.Error())
+			// An earlier fetch in this or another concurrent call must not taint a local error.
+			_, err = a.EvalTriggerVariables(t.Context(), Trigger{
+				TriggerData: TriggerData{Vars: map[string]string{"v": payoutCycleExpression}},
+			}, ProcessEventRequest{Event: publish.EventMessage{Payload: payload}})
+			requireApplicationError(t, err, ExpressionEvaluationErrorType, true)
+		})
+	}
 }
