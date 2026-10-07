@@ -1,9 +1,10 @@
 package internal
 
 import (
+	"slices"
 	"time"
 
-	"go.temporal.io/sdk/temporal"
+	"github.com/formancehq/orchestration/internal/retry"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -16,50 +17,30 @@ const (
 	ErrorCodeInsufficientFund = "INSUFFICIENT_FUND"
 )
 
-// commonNonRetryableErrorCodes are the error codes both retry contexts below treat as
-// non-retryable: VALIDATION and CONFLICT can surface from either the ledger operations
-// InfiniteRetryContext guards or the PSP activities PaymentInitiationRetryContext guards.
+// commonNonRetryableErrorCodes can surface from both the ledger/wallet operations and the PSP
+// activities.
 var commonNonRetryableErrorCodes = []string{
 	ErrorCodeValidation,
 	ErrorCodeConflict,
 }
 
-func InfiniteRetryContext(ctx workflow.Context) workflow.Context {
-	return workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 60 * time.Second,
-		RetryPolicy: &temporal.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 2,
-			MaximumInterval:    100 * time.Second,
-			// NO_SCRIPT/COMPILATION_FAILED are Numscript compile-time errors that only
-			// CreateTransaction (a ledger operation this context guards) can return.
-			// INSUFFICIENT_FUND is a settled business outcome from CreateTransaction or
-			// DebitWallet - nothing between attempts changes the source balance, and this
-			// context sets no MaximumAttempts, so retrying it loops forever.
-			NonRetryableErrorTypes: append(append([]string{}, commonNonRetryableErrorCodes...),
-				ErrorCodeNoScript, ErrorCodeCompilationFailed, ErrorCodeInsufficientFund),
-		},
-	})
+// ledgerNonRetryableErrorCodes adds ledger-only terminal errors: NO_SCRIPT/COMPILATION_FAILED are
+// Numscript compile errors, and INSUFFICIENT_FUND fails identically until the balance changes.
+var ledgerNonRetryableErrorCodes = slices.Concat(commonNonRetryableErrorCodes,
+	[]string{ErrorCodeNoScript, ErrorCodeCompilationFailed, ErrorCodeInsufficientFund})
+
+const stageActivityStartToCloseTimeout = 60 * time.Second
+
+// LedgerRetryContext is the bounded retry context for the ledger, wallet and payment read
+// operations of the send and update stages. Retries of one activity reuse its idempotency key
+// (RunID + ActivityID), so they never double-post.
+func LedgerRetryContext(ctx workflow.Context) workflow.Context {
+	return retry.ActivityContext(ctx, stageActivityStartToCloseTimeout, ledgerNonRetryableErrorCodes...)
 }
 
-// PaymentInitiationRetryContext is InfiniteRetryContext's bounded counterpart for activities that
-// call out to a PSP (CreateTransferInitiation, StripeTransfer). Unlike the internal ledger
-// operations InfiniteRetryContext is meant for, these activities can hit real-world PSP latency
-// and conflicts that self-heal (see createTransferInitiationWithSelfHeal) rather than fail
-// outright, but a request that never succeeds - or a self-heal fetch that itself keeps failing -
-// must still eventually stop retrying rather than loop forever. MaximumAttempts bounds that. With
-// a 2s initial interval doubling up to a 200s cap, the 14 backoff waits between 15 attempts alone
-// add up to ~28 minutes; with StartToCloseTimeout factored in (each attempt can itself take up to
-// 60s before failing), worst case reaches ~43 minutes - giving up after around 40 minutes.
+// PaymentInitiationRetryContext is the bounded retry context for activities that call a PSP
+// (CreateTransferInitiation, StripeTransfer). Only the common codes are terminal: PSP latency and
+// conflicts can self-heal (see createTransferInitiationWithSelfHeal).
 func PaymentInitiationRetryContext(ctx workflow.Context) workflow.Context {
-	return workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 60 * time.Second,
-		RetryPolicy: &temporal.RetryPolicy{
-			InitialInterval:        2 * time.Second,
-			BackoffCoefficient:     2,
-			MaximumInterval:        200 * time.Second,
-			MaximumAttempts:        15,
-			NonRetryableErrorTypes: commonNonRetryableErrorCodes,
-		},
-	})
+	return retry.ActivityContext(ctx, stageActivityStartToCloseTimeout, commonNonRetryableErrorCodes...)
 }

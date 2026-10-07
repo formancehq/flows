@@ -1,10 +1,9 @@
 package triggers
 
 import (
-	"time"
-
 	"github.com/formancehq/go-libs/v3/pointer"
 	"github.com/formancehq/go-libs/v3/publish"
+	"github.com/formancehq/orchestration/internal/retry"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/workflow"
 	"go.temporal.io/api/enums/v1"
@@ -31,9 +30,7 @@ func (w triggerWorkflow) RunTrigger(ctx temporalworkflow.Context, req ProcessEve
 
 	triggers := make([]Trigger, 0)
 	err := temporalworkflow.ExecuteActivity(
-		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}),
+		retry.ShortActivityContext(ctx),
 		ListTriggersActivity,
 		req,
 	).Get(ctx, &triggers)
@@ -73,9 +70,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 		execution.ID, execution.RunID,
 		trigger.ID, req.Event, temporalworkflow.Now(ctx))
 	err := temporalworkflow.ExecuteActivity(
-		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}),
+		retry.ShortActivityContext(ctx),
 		EvalTriggerVariables,
 		trigger,
 		req,
@@ -103,9 +98,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 	}
 
 	err = temporalworkflow.ExecuteActivity(
-		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}),
+		retry.ShortActivityContext(ctx),
 		InsertTriggerOccurrence,
 		occurrence,
 	).Get(ctx, nil)
@@ -114,9 +107,7 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 	}
 
 	err = temporalworkflow.ExecuteActivity(
-		temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}),
+		retry.ShortActivityContext(ctx),
 		SendEventForTriggerTermination,
 		occurrence,
 	).Get(ctx, nil)

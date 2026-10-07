@@ -53,7 +53,7 @@ func justError[T any](v T, err error) error {
 
 func getWalletFromReference(ctx workflow.Context, ref WalletReference) (*wallets.Wallet, error) {
 	if ref.ID != "" {
-		walletSource, err := activities.GetWallet(internal.InfiniteRetryContext(ctx), ref.ID)
+		walletSource, err := activities.GetWallet(internal.LedgerRetryContext(ctx), ref.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func getWalletFromReference(ctx workflow.Context, ref WalletReference) (*wallets
 			Name:      walletSource.Name,
 		}, nil
 	} else {
-		wallets, err := activities.ListWallets(internal.InfiniteRetryContext(ctx), activities.ListWalletsRequest{
+		wallets, err := activities.ListWallets(internal.LedgerRetryContext(ctx), activities.ListWalletsRequest{
 			Name: ref.Name,
 		})
 		if err != nil {
@@ -149,7 +149,7 @@ func paymentAccountName(paymentID string) string {
 }
 
 func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSource, m metadata.Metadata) (*payments.Payment, error) {
-	payment, err := activities.GetPayment(internal.InfiniteRetryContext(ctx), source.ID)
+	payment, err := activities.GetPayment(internal.LedgerRetryContext(ctx), source.ID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "retrieving payment: %s", source.ID)
 	}
@@ -200,7 +200,7 @@ func savePayment(ctx workflow.Context, timestamp *time.Time, source *PaymentSour
 		}
 	}
 
-	_, err = activities.CreateTransaction(internal.InfiniteRetryContext(ctx), ledgerName, txRequest)
+	_, err = activities.CreateTransaction(internal.LedgerRetryContext(ctx), ledgerName, txRequest)
 	if err != nil {
 		applicationError := &temporal.ApplicationError{}
 		if errors.As(err, &applicationError) {
@@ -260,7 +260,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 			Identifier: sourceWallet.ID,
 			Type:       "WALLET",
 		}
-		return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
+		return activities.CreditWallet(internal.LedgerRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 			Amount:    *amount,
 			Balance:   &destination.Balance,
 			Metadata:  m,
@@ -269,7 +269,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 		})
 	}
 
-	if err := justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
+	if err := justError(activities.DebitWallet(internal.LedgerRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
 		Amount:    *amount,
 		Balances:  []string{source.Balance},
 		Timestamp: timestamp,
@@ -280,7 +280,7 @@ func runWalletToWallet(ctx workflow.Context, timestamp *time.Time, source *Walle
 		return err
 	}
 
-	return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
+	return activities.CreditWallet(internal.LedgerRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 		Amount:    *amount,
 		Balance:   &destination.Balance,
 		Timestamp: timestamp,
@@ -305,7 +305,7 @@ func runWalletToPayment(ctx workflow.Context, timestamp *time.Time, source *Wall
 	}
 
 	// IMPORTANT: Debit wallet FIRST to validate balance before initiating external transfer
-	if err := justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
+	if err := justError(activities.DebitWallet(internal.LedgerRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
 		Amount:    *amount,
 		Balances:  []string{source.Balance},
 		Metadata:  m,
@@ -355,7 +355,7 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 		return err
 	}
 	if sourceWallet.Ledger == destination.Ledger {
-		return justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
+		return justError(activities.DebitWallet(internal.LedgerRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
 			Amount: *amount,
 			Destination: &wallets.Subject{
 				LedgerAccountSubject: &wallets.LedgerAccountSubject{
@@ -369,7 +369,7 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 		}))
 	}
 
-	if err := justError(activities.DebitWallet(internal.InfiniteRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
+	if err := justError(activities.DebitWallet(internal.LedgerRetryContext(ctx), sourceWallet.ID, &activities.DebitWalletRequestPayload{
 		Amount:    *amount,
 		Balances:  []string{source.Balance},
 		Timestamp: timestamp,
@@ -418,7 +418,7 @@ func runWalletToAccount(ctx workflow.Context, timestamp *time.Time, source *Wall
 		}
 	}
 
-	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, txRequest))
+	return justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), destination.Ledger, txRequest))
 }
 
 func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *WalletDestination, amount *wallets.Monetary, m metadata.Metadata) error {
@@ -430,7 +430,7 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 		return err
 	}
 	if destinationWallet.Ledger == source.Ledger {
-		return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
+		return activities.CreditWallet(internal.LedgerRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 			Amount: *amount,
 			Sources: []wallets.Subject{{
 				LedgerAccountSubject: &wallets.LedgerAccountSubject{
@@ -484,11 +484,11 @@ func runAccountToWallet(ctx workflow.Context, timestamp *time.Time, source *Ledg
 		}
 	}
 
-	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, txRequest)); err != nil {
+	if err := justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), source.Ledger, txRequest)); err != nil {
 		return err
 	}
 
-	return activities.CreditWallet(internal.InfiniteRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
+	return activities.CreditWallet(internal.LedgerRetryContext(ctx), destinationWallet.ID, &activities.CreditWalletRequestPayload{
 		Amount: *amount,
 		Sources: []wallets.Subject{{
 			LedgerAccountSubject: &wallets.LedgerAccountSubject{
@@ -509,7 +509,7 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 		return errors.New("amount must be specified")
 	}
 	if source.Ledger == destination.Ledger {
-		return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, activities.PostTransaction{
+		return justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), destination.Ledger, activities.PostTransaction{
 			Postings: []ledger.V2Posting{{
 				Amount:      amount.Amount,
 				Asset:       amount.Asset,
@@ -565,7 +565,7 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 		}
 	}
 
-	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, sourceTxRequest)); err != nil {
+	if err := justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), source.Ledger, sourceTxRequest)); err != nil {
 		return err
 	}
 
@@ -601,14 +601,14 @@ func runAccountToAccount(ctx workflow.Context, timestamp *time.Time, source *Led
 		}
 	}
 
-	return justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), destination.Ledger, destTxRequest))
+	return justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), destination.Ledger, destTxRequest))
 }
 
 func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *LedgerAccountSource, destination *PaymentDestination, amount *wallets.Monetary, m metadata.Metadata) error {
 	if amount == nil {
 		return errors.New("amount must be specified")
 	}
-	account, err := activities.GetAccount(internal.InfiniteRetryContext(ctx), source.Ledger, source.ID)
+	account, err := activities.GetAccount(internal.LedgerRetryContext(ctx), source.Ledger, source.ID)
 	if err != nil {
 		return errors.Wrapf(err, "reading account: %s", source.ID)
 	}
@@ -650,7 +650,7 @@ func runAccountToPayment(ctx workflow.Context, timestamp *time.Time, source *Led
 		}
 	}
 
-	if err := justError(activities.CreateTransaction(internal.InfiniteRetryContext(ctx), source.Ledger, txRequest)); err != nil {
+	if err := justError(activities.CreateTransaction(internal.LedgerRetryContext(ctx), source.Ledger, txRequest)); err != nil {
 		return err
 	}
 
