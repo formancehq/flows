@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -86,6 +87,31 @@ func TestEvalDeterministicErrorsAreNonRetryable(t *testing.T) {
 	}
 }
 
+func TestEvalLinkHTTPErrorClassification(t *testing.T) {
+	t.Parallel()
+
+	for status := http.StatusBadRequest; status < http.StatusInternalServerError; status++ {
+		t.Run(http.StatusText(status)+fmt.Sprint(status), func(t *testing.T) {
+			t.Parallel()
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+			}))
+			t.Cleanup(srv.Close)
+
+			a := NewActivities(nil, nil, NewExpressionEvaluator(srv.Client()), publish.NoOpPublisher)
+			_, err := a.EvalTriggerVariables(t.Context(), Trigger{
+				TriggerData: TriggerData{Vars: map[string]string{"v": `link(event, "source_account").role`}},
+			}, ProcessEventRequest{Event: publish.EventMessage{Payload: linkPayload(srv.URL)}})
+			if status == http.StatusRequestTimeout || status == http.StatusTooManyRequests {
+				requireApplicationError(t, err, "LINK", false)
+			} else {
+				requireApplicationError(t, err, "APPLICATION", true)
+			}
+			require.Contains(t, err.Error(), fmt.Sprintf("unexpected status code when reading resource: %d", status))
+		})
+	}
+}
+
 func TestEvalLinkTransientErrorsStayRetryable(t *testing.T) {
 	t.Parallel()
 
@@ -107,9 +133,9 @@ func TestEvalLinkTransientErrorsStayRetryable(t *testing.T) {
 		uri     string
 		message string
 	}{
-		"status code >= 400": {failingSrv.URL, "unexpected status code when reading resource: 500"},
-		"decoding failure":   {badBodySrv.URL, "decoding response"},
-		"http get failure":   {closedURL, "reading resource"},
+		"server error":     {failingSrv.URL, "unexpected status code when reading resource: 500"},
+		"decoding failure": {badBodySrv.URL, "decoding response"},
+		"http get failure": {closedURL, "reading resource"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

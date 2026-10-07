@@ -23,7 +23,7 @@ func nonRetryableLinkError(format string, args ...any) error {
 	return temporal.NewNonRetryableApplicationError(msg, "APPLICATION", errors.New(msg))
 }
 
-// retryableLinkError flags transient link() failures (network, status, body) so eval
+// retryableLinkError flags transient link() failures (network, transient status, body) so eval
 // does not treat them as deterministic expression errors.
 func retryableLinkError(err error) error {
 	return temporal.NewApplicationError(err.Error(), "LINK")
@@ -61,7 +61,12 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 		if err != nil {
 			return nil, retryableLinkError(errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI))
 		}
-		if rsp.StatusCode >= 400 {
+		defer func() { _ = rsp.Body.Close() }()
+		if rsp.StatusCode >= http.StatusBadRequest && rsp.StatusCode < http.StatusInternalServerError &&
+			rsp.StatusCode != http.StatusRequestTimeout && rsp.StatusCode != http.StatusTooManyRequests {
+			return nil, nonRetryableLinkError("unexpected status code when reading resource: %d", rsp.StatusCode)
+		}
+		if rsp.StatusCode >= http.StatusBadRequest {
 			return nil, retryableLinkError(fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode))
 		}
 

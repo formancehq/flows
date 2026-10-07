@@ -190,6 +190,7 @@ With a sample event payload in the request body. The response will show:
 
 - If a `filter` expression fails to compile, the trigger creation will be rejected with an `ExprCompilationError`.
 - If a `vars` expression fails to compile, the trigger creation will be rejected.
-- If variable evaluation fails at runtime, the trigger occurrence is recorded with an error and the workflow is not started.
+- Deterministic variable expression errors stop retries immediately. The occurrence is recorded with an error, no workflow is started, and `FAILED_TRIGGER` is published.
+- `link()` HTTP 4xx responses are non-retryable except 408 (request timeout) and 429 (rate limiting). Network errors, HTTP 5xx responses and response decoding failures remain retryable.
 - If `EvalTriggerVariables` still fails after 15 attempts (about 30 to 43 minutes), the occurrence is recorded with that error and the workflow is not started.
 - If listing triggers, recording the occurrence or publishing the termination event still fails after 15 attempts, the trigger workflow fails. See [Activity Retries](retries.md).
