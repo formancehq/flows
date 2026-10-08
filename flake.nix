@@ -4,13 +4,13 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
 
-    nur = {
-      url = "github:nix-community/NUR";
-      inputs.nixpkgs.follows = "nixpkgs";
+    goreleaser = {
+      url = "github:goreleaser/nur/52282e9a2d7c6882e9e0e8675d593b928c89e323";
+      flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, nur }:
+  outputs = { self, nixpkgs, goreleaser }:
     let
       goVersion = 26;
 
@@ -26,7 +26,7 @@
           let
             pkgs = import nixpkgs {
               inherit system;
-              overlays = [ self.overlays.default nur.overlays.default ];
+              overlays = [ self.overlays.default  ];
               config.allowUnfree = true;
             };
           in
@@ -92,7 +92,7 @@
               gotools
               golangci-lint
               ginkgo
-              pkgs.nur.repos.goreleaser.goreleaser-pro
+              (pkgs.callPackage "${goreleaser}/pkgs/goreleaser-pro" { })
               self.packages.${system}.speakeasy
               just
               mockgen
