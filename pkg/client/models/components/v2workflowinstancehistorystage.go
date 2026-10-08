@@ -8,16 +8,36 @@ import (
 )
 
 type V2WorkflowInstanceHistoryStage struct {
-	Name          string                                `json:"name"`
-	Input         V2WorkflowInstanceHistoryStageInput   `json:"input"`
-	Output        *V2WorkflowInstanceHistoryStageOutput `json:"output,omitempty"`
-	Error         *string                               `json:"error,omitempty"`
-	Terminated    bool                                  `json:"terminated"`
-	StartedAt     time.Time                             `json:"startedAt"`
-	TerminatedAt  *time.Time                            `json:"terminatedAt,omitempty"`
-	LastFailure   *string                               `json:"lastFailure,omitempty"`
-	Attempt       int64                                 `json:"attempt"`
-	NextExecution *time.Time                            `json:"nextExecution,omitempty"`
+	// Stable identifier of the activity within its workflow execution
+	ActivityID *string `json:"activityID,omitempty"`
+	// Run identifier of the described stage workflow execution
+	TemporalRunID *string `json:"temporalRunID,omitempty"`
+	// Whether Temporal has paused this pending activity; a pause is not a terminal failure
+	Paused *bool `json:"paused,omitempty"`
+	// Reason recorded by Temporal for the activity pause, when available
+	PauseReason *string `json:"pauseReason,omitempty"`
+	// Application failure type of the most recent failed attempt, when available
+	LastFailureType *string `json:"lastFailureType,omitempty"`
+	// Name of the activity this history entry records
+	Name string `json:"name"`
+	// Arguments an activity was called with, keyed by activity name
+	Input V2WorkflowInstanceHistoryStageInput `json:"input"`
+	// Result an activity returned, keyed by activity name
+	Output *V2WorkflowInstanceHistoryStageOutput `json:"output,omitempty"`
+	// Why the activity failed, absent when it succeeded
+	Error *string `json:"error,omitempty"`
+	// Whether the activity has finished
+	Terminated bool `json:"terminated"`
+	// When the activity started
+	StartedAt time.Time `json:"startedAt"`
+	// When the activity finished, absent while it is still running
+	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
+	// Error reported by the most recent failed attempt
+	LastFailure *string `json:"lastFailure,omitempty"`
+	// How many times the activity has been attempted
+	Attempt int64 `json:"attempt"`
+	// When the next retry is scheduled, absent while paused, when no retry is scheduled, or once settled
+	NextExecution *time.Time `json:"nextExecution,omitempty"`
 }
 
 func (v V2WorkflowInstanceHistoryStage) MarshalJSON() ([]byte, error) {
@@ -29,6 +49,41 @@ func (v *V2WorkflowInstanceHistoryStage) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	return nil
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetActivityID() *string {
+	if o == nil {
+		return nil
+	}
+	return o.ActivityID
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetTemporalRunID() *string {
+	if o == nil {
+		return nil
+	}
+	return o.TemporalRunID
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetPaused() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.Paused
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetPauseReason() *string {
+	if o == nil {
+		return nil
+	}
+	return o.PauseReason
+}
+
+func (o *V2WorkflowInstanceHistoryStage) GetLastFailureType() *string {
+	if o == nil {
+		return nil
+	}
+	return o.LastFailureType
 }
 
 func (o *V2WorkflowInstanceHistoryStage) GetName() string {

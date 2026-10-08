@@ -12,8 +12,8 @@ import (
 
 func NewModule(stack string, taskQueue string) fx.Option {
 	ret := []fx.Option{
-		fx.Provide(func(db *bun.DB, temporalClient client.Client) *WorkflowManager {
-			return NewManager(db, temporalClient, stack, taskQueue, true)
+		fx.Provide(func(db *bun.DB, temporalClient client.Client, options client.Options) *WorkflowManager {
+			return NewManager(db, temporalClient, stack, taskQueue, true, WithNamespace(options.Namespace))
 		}),
 		fx.Provide(func() *Workflows {
 			return NewWorkflows(stack, true)

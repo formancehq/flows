@@ -83,6 +83,8 @@ func newServeCommand() *cobra.Command {
 	cmd.Flags().String(stackClientSecretFlag, "", "Stack client secret")
 	cmd.Flags().StringSlice(topicsFlag, []string{}, "Topics to listen")
 	cmd.Flags().String(stackFlag, "", "Stack")
+	cmd.Flags().Bool(pauseStageActivitiesFlag, false, "Pause exhausted stage activities instead of failing (requires Temporal activity pause support)")
+	cmd.Flags().Int(stageActivityAttemptsFlag, 15, "Total stage activity attempts before pausing, including the initial attempt")
 
 	service.AddFlags(cmd.Flags())
 	publish.AddFlags(ServiceName, cmd.Flags())
