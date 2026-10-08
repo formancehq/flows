@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/formancehq/go-libs/v3/bun/bunpaginate"
 
@@ -14,6 +15,7 @@ import (
 type Backend interface {
 	CreateTrigger(context context.Context, data triggers.TriggerData) (*triggers.Trigger, error)
 	AbortRun(ctx context.Context, id string) error
+	ResumeActivity(ctx context.Context, instanceID string, stage int, activityID, temporalRunID string, pausedAt time.Time) error
 	Create(ctx context.Context, config workflow.Config) (*workflow.Workflow, error)
 	DeleteWorkflow(ctx context.Context, id string) error
 	ListInstances(ctx context.Context, pagination workflow.ListInstancesQuery) (*bunpaginate.Cursor[workflow.Instance], error)

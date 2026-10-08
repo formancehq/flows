@@ -12,6 +12,7 @@ package api
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	bunpaginate "github.com/formancehq/go-libs/v3/bun/bunpaginate"
 	triggers "github.com/formancehq/orchestration/internal/triggers"
@@ -262,6 +263,20 @@ func (m *MockBackend) ReadWorkflow(ctx context.Context, id string) (workflow.Wor
 func (mr *MockBackendMockRecorder) ReadWorkflow(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkflow", reflect.TypeOf((*MockBackend)(nil).ReadWorkflow), ctx, id)
+}
+
+// ResumeActivity mocks base method.
+func (m *MockBackend) ResumeActivity(ctx context.Context, instanceID string, stage int, activityID, temporalRunID string, pausedAt time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResumeActivity", ctx, instanceID, stage, activityID, temporalRunID, pausedAt)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResumeActivity indicates an expected call of ResumeActivity.
+func (mr *MockBackendMockRecorder) ResumeActivity(ctx, instanceID, stage, activityID, temporalRunID, pausedAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeActivity", reflect.TypeOf((*MockBackend)(nil).ResumeActivity), ctx, instanceID, stage, activityID, temporalRunID, pausedAt)
 }
 
 // RunWorkflow mocks base method.

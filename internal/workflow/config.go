@@ -2,9 +2,12 @@ package workflow
 
 import (
 	"fmt"
+	"math"
 	"time"
 
+	"github.com/formancehq/orchestration/internal/retry"
 	"github.com/formancehq/orchestration/internal/schema"
+	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/pkg/errors"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
@@ -13,11 +16,15 @@ import (
 type RawStage map[string]map[string]any
 
 type Config struct {
-	Name   string     `json:"name"`
-	Stages []RawStage `json:"stages"`
+	Name                string     `json:"name"`
+	Stages              []RawStage `json:"stages"`
+	ActivityMaxAttempts *int       `json:"activityMaxAttempts,omitempty"`
 }
 
 func (c *Config) runStage(ctx workflow.Context, s Stage, stage RawStage, variables map[string]string) (err error) {
+	if c.ActivityMaxAttempts != nil {
+		ctx = temporalworker.WithStageActivityAttempts(ctx, *c.ActivityMaxAttempts)
+	}
 	var (
 		name  string
 		value map[string]any
@@ -65,16 +72,12 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 		logger.Info("run stage", "index", ind, "workflowID", instance.ID)
 
 		stage := Stage{}
-		err := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), InsertNewStageActivity, instance, ind).Get(ctx, &stage)
+		err := workflow.ExecuteActivity(retry.ShortActivityContext(ctx), InsertNewStageActivity, instance, ind).Get(ctx, &stage)
 		if err != nil {
 			return err
 		}
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), SendWorkflowStageStartedEventActivity, instance, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowStageStartedEventActivity, instance, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
@@ -85,16 +88,12 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 		}
 		stage.SetTerminated(runError, workflow.Now(ctx).Round(time.Nanosecond))
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), UpdateStageActivity, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), UpdateStageActivity, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
 
-		err = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-			StartToCloseTimeout: 10 * time.Second,
-		}), SendWorkflowStageTerminationEventActivity, instance, stage).Get(ctx, nil)
+		err = workflow.ExecuteActivity(retry.ShortActivityContext(ctx), SendWorkflowStageTerminationEventActivity, instance, stage).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
@@ -110,6 +109,9 @@ func (c *Config) run(ctx workflow.Context, instance Instance, variables map[stri
 }
 
 func (c *Config) Validate() error {
+	if c.ActivityMaxAttempts != nil && (*c.ActivityMaxAttempts < 1 || *c.ActivityMaxAttempts > math.MaxInt32) {
+		return fmt.Errorf("activityMaxAttempts must be between 1 and %d", math.MaxInt32)
+	}
 	for _, rawStage := range c.Stages {
 		if len(rawStage) == 0 {
 			return fmt.Errorf("empty specification")

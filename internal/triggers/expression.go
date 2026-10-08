@@ -18,13 +18,20 @@ type expressionEvaluator struct {
 	httpClient *http.Client
 }
 
+func nonRetryableLinkError(format string, args ...any) error {
+	msg := fmt.Sprintf(format, args...)
+	return temporal.NewNonRetryableApplicationError(msg, "APPLICATION", errors.New(msg))
+}
+
+// retryableLinkError flags transient link() failures (network, transient status, body) so eval
+// does not treat them as deterministic expression errors.
+func retryableLinkError(err error) error {
+	return temporal.NewApplicationError(err.Error(), "LINK")
+}
+
 func (h *expressionEvaluator) link(params ...any) (any, error) {
 	if len(params) != 2 {
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("expect two arguments, got %d", len(params)),
-			"APPLICATION",
-			fmt.Errorf("expect two arguments, got %d", len(params)),
-		)
+		return nil, nonRetryableLinkError("expect two arguments, got %d", len(params))
 	}
 
 	data, _ := json.Marshal(params[0])
@@ -34,12 +41,12 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 	}
 	o := &object{}
 	if err := json.Unmarshal(data, o); err != nil {
-		return nil, err
+		return nil, nonRetryableLinkError("reading links: %s", err)
 	}
 
 	rel, ok := params[1].(string)
 	if !ok {
-		return nil, errors.New("second parameter must be a string")
+		return nil, nonRetryableLinkError("second parameter must be a string")
 	}
 
 	filteredLinks := collectionutils.Filter(o.Links, func(link api.Link) bool {
@@ -48,37 +55,49 @@ func (h *expressionEvaluator) link(params ...any) (any, error) {
 
 	switch len(filteredLinks) {
 	case 0:
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("link '%s' not defined for object", rel),
-			"APPLICATION",
-			fmt.Errorf("link '%s' not defined for object", rel),
-		)
+		return nil, nonRetryableLinkError("link '%s' not defined for object", rel)
 	case 1:
 		rsp, err := h.httpClient.Get(filteredLinks[0].URI)
 		if err != nil {
-			return nil, errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI)
+			return nil, retryableLinkError(errors.Wrapf(err, "reading resource: %s", filteredLinks[0].URI))
 		}
-		if rsp.StatusCode >= 400 {
-			return nil, fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode)
+		defer func() { _ = rsp.Body.Close() }()
+		if rsp.StatusCode >= http.StatusBadRequest && rsp.StatusCode < http.StatusInternalServerError &&
+			rsp.StatusCode != http.StatusRequestTimeout && rsp.StatusCode != http.StatusTooManyRequests {
+			return nil, nonRetryableLinkError("unexpected status code when reading resource: %d", rsp.StatusCode)
+		}
+		if rsp.StatusCode >= http.StatusBadRequest {
+			return nil, retryableLinkError(fmt.Errorf("unexpected status code when reading resource: %d", rsp.StatusCode))
 		}
 
 		apiResponse := api.BaseResponse[map[string]any]{}
 		if err := json.NewDecoder(rsp.Body).Decode(&apiResponse); err != nil {
-			return nil, errors.Wrap(err, "decoding response")
+			return nil, retryableLinkError(errors.Wrap(err, "decoding response"))
 		}
 
 		return apiResponse.Data, nil
 	default:
-		return nil, temporal.NewNonRetryableApplicationError(
-			fmt.Sprintf("multiple link '%s' found for object", rel),
-			"APPLICATION",
-			fmt.Errorf("multiple link '%s' found for object", rel),
-		)
+		return nil, nonRetryableLinkError("multiple link '%s' found for object", rel)
 	}
 }
 
+// linkedExpressionError preserves the plain evaluator message while indicating that
+// a runtime error followed a successful fetch of mutable remote data.
+type linkedExpressionError struct {
+	error
+}
+
+func (e *linkedExpressionError) Unwrap() error { return e.error }
+
 func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
-	p, err := expr.Compile(e, expr.Function("link", h.link))
+	fetchedLink := false
+	p, err := expr.Compile(e, expr.Function("link", func(params ...any) (any, error) {
+		ret, err := h.link(params...)
+		if err == nil {
+			fetchedLink = true
+		}
+		return ret, err
+	}))
 	if err != nil {
 		return "", err
 	}
@@ -87,8 +106,11 @@ func (h *expressionEvaluator) eval(rawObject any, e string) (any, error) {
 		"event": rawObject,
 	})
 	if err != nil {
-		if err := errors.Unwrap(err); err != nil {
-			return nil, err
+		if cause := errors.Unwrap(err); cause != nil {
+			err = cause
+		}
+		if fetchedLink {
+			return nil, &linkedExpressionError{error: err}
 		}
 		return nil, err
 	}

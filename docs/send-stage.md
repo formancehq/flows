@@ -250,6 +250,12 @@ The payment destination supports all PSP connectors configured in the Payments s
 
 The orchestration service delegates validation to the Payments service, allowing new connectors to work without code changes.
 
+## Retries and Failures
+
+Each ledger, wallet and PSP operation in a `send` stage is retried up to 15 times (about 30 to 43 minutes) before the stage fails. Validation, conflict, Numscript compilation and insufficient funds errors fail at once without retries.
+
+If a stage fails, operations it already committed are not rolled back. A cross-ledger transfer, for example, may have posted its first transaction only. Check ledger and wallet state before re-running. See [Activity Retries](retries.md) for the full policy.
+
 ## Complete Examples
 
 ### Ledger to Payout with Tracking

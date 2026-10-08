@@ -17,6 +17,9 @@ type Workflow struct {
 }
 
 func New(config Config) Workflow {
+	if config.ActivityMaxAttempts == nil {
+		config.ActivityMaxAttempts = new(15)
+	}
 	now := time.Now().Round(time.Nanosecond)
 	return Workflow{
 		ID:        uuid.NewString(),

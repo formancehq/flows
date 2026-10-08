@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/formancehq/go-libs/v3/auth"
@@ -36,13 +37,15 @@ var (
 )
 
 const (
-	stackFlag             = "stack"
-	stackURLFlag          = "stack-url"
-	stackClientIDFlag     = "stack-client-id"
-	stackClientSecretFlag = "stack-client-secret"
-	topicsFlag            = "topics"
-	listenFlag            = "listen"
-	workerFlag            = "worker"
+	stackFlag                 = "stack"
+	stackURLFlag              = "stack-url"
+	stackClientIDFlag         = "stack-client-id"
+	stackClientSecretFlag     = "stack-client-secret"
+	topicsFlag                = "topics"
+	listenFlag                = "listen"
+	workerFlag                = "worker"
+	pauseStageActivitiesFlag  = "pause-stage-activities"
+	stageActivityAttemptsFlag = "stage-activity-attempts"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -70,6 +73,10 @@ func Execute() {
 }
 
 func commonOptions(cmd *cobra.Command) (fx.Option, error) {
+	attempts, _ := cmd.Flags().GetInt(stageActivityAttemptsFlag)
+	if attempts < 1 || attempts > math.MaxInt32 {
+		return nil, fmt.Errorf("%s must be between 1 and 2147483647", stageActivityAttemptsFlag)
+	}
 	connectionOptions, err := bunconnect.ConnectionOptionsFromFlags(cmd)
 	if err != nil {
 		return nil, err

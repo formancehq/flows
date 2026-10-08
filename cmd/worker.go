@@ -15,6 +15,7 @@ import (
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/internal/triggers"
 	"github.com/spf13/cobra"
+	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 	"go.uber.org/fx"
 )
@@ -41,11 +42,17 @@ func workerOptions(cmd *cobra.Command) (fx.Option, error) {
 		return nil, fmt.Errorf("reading flag --%s: %w", temporal.TemporalMaxParallelActivitiesFlag, err)
 	}
 	topics, _ := cmd.Flags().GetStringSlice(topicsFlag)
+	attempts, _ := cmd.Flags().GetInt(stageActivityAttemptsFlag)
+	pause, _ := cmd.Flags().GetBool(pauseStageActivitiesFlag)
+	if !pause {
+		attempts = 0
+	}
 
 	return fx.Options(
 		stackClientModule(cmd),
 		temporalworker.NewWorkerModule(temporalTaskQueue, worker.Options{
 			TaskQueueActivitiesPerSecond: temporalMaxParallelActivities,
+			Interceptors:                 []interceptor.WorkerInterceptor{&temporalworker.StagePauseInterceptor{Attempts: attempts}},
 		}),
 		triggers.NewListenerModule(
 			stack,
@@ -79,6 +86,8 @@ func newWorkerCommand() *cobra.Command {
 	ret.Flags().String(stackClientSecretFlag, "", "Stack client secret")
 	ret.Flags().StringSlice(topicsFlag, []string{}, "Topics to listen")
 	ret.Flags().String(stackFlag, "", "Stack")
+	ret.Flags().Bool(pauseStageActivitiesFlag, false, "Pause exhausted stage activities instead of failing (requires Temporal activity pause support)")
+	ret.Flags().Int(stageActivityAttemptsFlag, 15, "Total stage activity attempts before pausing, including the initial attempt")
 
 	publish.AddFlags(ServiceName, ret.Flags())
 	bunconnect.AddFlags(ret.Flags())

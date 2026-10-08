@@ -47,6 +47,7 @@ func newRouter(backend api.Backend, authenticator auth.Authenticator, debug bool
 				r.Route("/stages", func(r chi.Router) {
 					r.Route("/{number}", func(r chi.Router) {
 						r.Get("/history", readStageHistory(backend))
+						r.Post("/activities/{activityID}/resume", resumeActivity(backend))
 					})
 				})
 			})

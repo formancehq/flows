@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -14,6 +15,7 @@ import (
 	"github.com/uptrace/bun"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.temporal.io/sdk/temporal"
 )
 
 type Activities struct {
@@ -76,13 +78,33 @@ func (a Activities) ListTriggers(ctx context.Context, request ProcessEventReques
 	return ret, nil
 }
 
+// ExpressionEvaluationErrorType flags expression compile and runtime errors.
+// Runtime errors following a successful link() fetch may resolve on a later attempt.
+const ExpressionEvaluationErrorType = "EXPRESSION_EVALUATION"
+
 func (a Activities) EvalTriggerVariables(ctx context.Context, trigger Trigger, request ProcessEventRequest) (map[string]string, error) {
-	return a.expressionEvaluator.evalVariables(request.Event.Payload, trigger.Vars)
+	vars, err := a.expressionEvaluator.evalVariables(request.Event.Payload, trigger.Vars)
+	if err != nil {
+		// Preserve link() failures, including permanent errors after an earlier successful fetch.
+		if appErr, ok := errors.AsType[*temporal.ApplicationError](err); ok {
+			return nil, appErr
+		}
+		if _, ok := errors.AsType[*linkedExpressionError](err); ok {
+			return nil, temporal.NewApplicationError(err.Error(), ExpressionEvaluationErrorType)
+		}
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), ExpressionEvaluationErrorType, nil)
+	}
+	return vars, nil
 }
 
 func (a Activities) InsertTriggerOccurrence(ctx context.Context, occurrence Occurrence) error {
+	// Idempotent: the occurrence id is part of the recorded activity input, so a
+	// Temporal retry after a lost ack (the row was committed but the result never
+	// reached the server) replays the exact same row. Without this, the retry
+	// fails forever on triggers_occurrences_pkey and wedges ExecuteTrigger.
 	_, err := a.db.NewInsert().
 		Model(pointer.For(occurrence)).
+		On("CONFLICT (id) DO NOTHING").
 		Exec(ctx)
 	return err
 }

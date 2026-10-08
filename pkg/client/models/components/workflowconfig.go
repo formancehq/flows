@@ -2,9 +2,29 @@
 
 package components
 
+import (
+	"openapi/internal/utils"
+)
+
+// WorkflowConfig - The stages a workflow runs, in order
 type WorkflowConfig struct {
-	Name   *string          `json:"name,omitempty"`
+	// Human-readable name for the workflow
+	Name *string `json:"name,omitempty"`
+	// Total attempts per stage activity, including the initial attempt. Stored at workflow creation; defaults to 15 when omitted.
+	ActivityMaxAttempts *int `default:"15" json:"activityMaxAttempts"`
+	// The stages executed in order when the workflow runs
 	Stages []map[string]any `json:"stages"`
+}
+
+func (w WorkflowConfig) MarshalJSON() ([]byte, error) {
+	return utils.MarshalJSON(w, "", false)
+}
+
+func (w *WorkflowConfig) UnmarshalJSON(data []byte) error {
+	if err := utils.UnmarshalJSON(data, &w, "", false, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *WorkflowConfig) GetName() *string {
@@ -12,6 +32,13 @@ func (o *WorkflowConfig) GetName() *string {
 		return nil
 	}
 	return o.Name
+}
+
+func (o *WorkflowConfig) GetActivityMaxAttempts() *int {
+	if o == nil {
+		return nil
+	}
+	return o.ActivityMaxAttempts
 }
 
 func (o *WorkflowConfig) GetStages() []map[string]any {
