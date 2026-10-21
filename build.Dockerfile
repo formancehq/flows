@@ -1,4 +1,4 @@
-FROM ghcr.io/formancehq/base:22.04
+FROM ghcr.io/formancehq/base:26.04
 ARG TARGETPLATFORM
 COPY $TARGETPLATFORM/orchestration /usr/bin/orchestration
 ENV OTEL_SERVICE_NAME orchestration
