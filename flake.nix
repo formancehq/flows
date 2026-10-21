@@ -2,6 +2,10 @@
   description = "Flows dev env";
 
   inputs = {
+    go-tooling = {
+      url = "github:NixOS/nixpkgs/8cec5ef1131078ea76689e84c362b0ed6a1fb6a1";
+      flake = false;
+    };
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
 
     goreleaser = {
@@ -10,10 +14,8 @@
     };
   };
 
-  outputs = { self, nixpkgs, goreleaser }:
+  outputs = { go-tooling, self, nixpkgs, goreleaser }:
     let
-      goVersion = 26;
-
       supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -50,7 +52,14 @@
     in
     {
       overlays.default = final: prev: {
-        go = final."go_1_${toString goVersion}";
+        go = prev.callPackage "${go-tooling}/pkgs/development/compilers/go/1.27.nix" {
+          buildGo127Module = final.buildGo127Module;
+        };
+        buildGo127Module = prev.buildGoModule.override { go = final.go; };
+        mockgen = prev.mockgen.override { buildGoModule = final.buildGo127Module; };
+        golangci-lint = prev.callPackage "${go-tooling}/pkgs/by-name/go/golangci-lint/package.nix" {
+          buildGo127Module = final.buildGo127Module;
+        };
       };
 
       packages = forEachSupportedSystem ({ pkgs, system }:
@@ -87,6 +96,8 @@
       devShells = forEachSupportedSystem ({ pkgs, system }:
         {
           default = pkgs.mkShell {
+            GOTOOLCHAIN = "local";
+            GOROOT = "${pkgs.go}/share/go";
             packages = with pkgs; [
               go
               gotools
