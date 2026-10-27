@@ -2,6 +2,13 @@
   description = "Flows dev env";
 
   inputs = {
+    # Published stable Go compiler and matching module builder only.
+    nixpkgs-go-stable = {
+      url = "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.2605.1016949%2Brev-1f607aa79b6356ed45d3cd3c8079c196e79efa2c/01a17424-ae2d-7b20-83c4-cf14527294c3/source.tar.gz";
+      flake = false;
+    };
+
+    # Retain golangci-lint 2.15.0; stable currently provides 2.12.2.
     go-tooling = {
       url = "github:NixOS/nixpkgs/8cec5ef1131078ea76689e84c362b0ed6a1fb6a1";
       flake = false;
@@ -14,7 +21,7 @@
     };
   };
 
-  outputs = { go-tooling, self, nixpkgs, goreleaser }:
+  outputs = { go-tooling, self, nixpkgs, nixpkgs-go-stable, goreleaser }:
     let
       supportedSystems = [
         "x86_64-linux"
@@ -51,16 +58,18 @@
 
     in
     {
-      overlays.default = final: prev: {
-        go = prev.callPackage "${go-tooling}/pkgs/development/compilers/go/1.27.nix" {
-          buildGo127Module = final.buildGo127Module;
+      overlays.default = final: prev:
+        let
+          goPkgs = import nixpkgs-go-stable { system = prev.stdenv.hostPlatform.system; };
+        in
+        {
+          go = goPkgs.go_1_27;
+          buildGo127Module = goPkgs.buildGo127Module;
+          mockgen = prev.mockgen.override { buildGoModule = final.buildGo127Module; };
+          golangci-lint = goPkgs.callPackage "${go-tooling}/pkgs/by-name/go/golangci-lint/package.nix" {
+            buildGo127Module = final.buildGo127Module;
+          };
         };
-        buildGo127Module = prev.buildGoModule.override { go = final.go; };
-        mockgen = prev.mockgen.override { buildGoModule = final.buildGo127Module; };
-        golangci-lint = prev.callPackage "${go-tooling}/pkgs/by-name/go/golangci-lint/package.nix" {
-          buildGo127Module = final.buildGo127Module;
-        };
-      };
 
       packages = forEachSupportedSystem ({ pkgs, system }:
         {
