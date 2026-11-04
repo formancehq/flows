@@ -73,18 +73,18 @@ func (mr *MockBackendMockRecorder) Create(ctx, config any) *gomock.Call {
 }
 
 // CreateTrigger mocks base method.
-func (m *MockBackend) CreateTrigger(context context.Context, data triggers.TriggerData) (*triggers.Trigger, error) {
+func (m *MockBackend) CreateTrigger(arg0 context.Context, data triggers.TriggerData) (*triggers.Trigger, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateTrigger", context, data)
+	ret := m.ctrl.Call(m, "CreateTrigger", arg0, data)
 	ret0, _ := ret[0].(*triggers.Trigger)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateTrigger indicates an expected call of CreateTrigger.
-func (mr *MockBackendMockRecorder) CreateTrigger(context, data any) *gomock.Call {
+func (mr *MockBackendMockRecorder) CreateTrigger(arg0, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTrigger", reflect.TypeOf((*MockBackend)(nil).CreateTrigger), context, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTrigger", reflect.TypeOf((*MockBackend)(nil).CreateTrigger), arg0, data)
 }
 
 // DeleteTrigger mocks base method.
