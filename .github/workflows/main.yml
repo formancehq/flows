@@ -38,6 +38,8 @@ jobs:
     uses: formancehq/ci/.github/workflows/go-build.yml@v1
     with:
       build-condition: main-only
+      # RFC-0013: publish dev builds as vX.Y.Z-dev.N.gSHA instead of the bare SHA.
+      dev-version: true
     secrets:
       NUMARY_GITHUB_TOKEN: ${{ secrets.NUMARY_GITHUB_TOKEN }}
       SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
@@ -58,7 +60,7 @@ jobs:
       - uses: formancehq/ci/actions/deploy-staging@v1
         with:
           component: orchestration
-          tag: ${{ github.sha }}
+          tag: ${{ needs.GoReleaser.outputs.version }}
           auth-token: ${{ secrets.ARGOCD_REGION_AUTH_TOKEN }}
           ts-oauth-client-id: ${{ secrets.TS_OIDC_OAUTH_CLIENT_ID }}
           ts-audience: ${{ secrets.TS_OIDC_AUDIENCE }}
