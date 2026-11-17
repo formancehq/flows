@@ -41,7 +41,9 @@ func (m *TriggerManager) ListTriggers(ctx context.Context, paramsQuery ListTrigg
 		func(query *bun.SelectQuery) *bun.SelectQuery {
 
 			if paramsQuery.Options.Name != "" {
-				query = query.Where("Name ILIKE '%?%';", paramsQuery.Options.Name)
+				// Pass the complete pattern to Bun for SQL string escaping.
+				// Preserve user-supplied % and _ as ILIKE wildcards.
+				query = query.Where("Name ILIKE ?", "%"+paramsQuery.Options.Name+"%")
 			}
 			return query.Where("deleted_at is null")
 		})

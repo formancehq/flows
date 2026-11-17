@@ -186,6 +186,16 @@ With a sample event payload in the request body. The response will show:
 - The evaluated variable values
 - Any errors in the expressions
 
+## Listing and Searching Triggers
+
+`GET /triggers` (API v1) and `GET /v2/triggers` (API v2) accept an optional `name` query parameter that filters the returned triggers:
+
+- The match is a **case-insensitive substring search** (`ILIKE '%<name>%'`): `?name=ments-s` returns `payments-sync`.
+- The filter value is a SQL `LIKE` pattern, so `%` and `_` keep their wildcard meaning: `?name=100%` and `?name=100_` both match `100%_coverage`. PostgreSQL LIKE backslash escaping remains available for literal wildcard characters.
+- Bun escapes the complete pattern as SQL string data. Quotes, comment markers and SQL-looking text cannot change the query structure.
+- Soft-deleted triggers (`deleted_at` set) are always excluded.
+- On API v2 the `name` filter is carried inside the pagination cursor, so it applies to every page of a walk.
+
 ## Error Handling
 
 - If a `filter` expression fails to compile, the trigger creation will be rejected with an `ExprCompilationError`.
