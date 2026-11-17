@@ -91,10 +91,13 @@ func (w triggerWorkflow) ExecuteTrigger(ctx temporalworkflow.Context, req Proces
 				Workflow:  *trigger.Workflow,
 				Variables: vars,
 			}).Get(ctx, instance); err != nil {
-			return err
+			if !workflow.IsWorkflowNotFoundError(err) {
+				return err
+			}
+			occurrence.Error = pointer.For(workflow.ErrWorkflowNotFound.Error())
+		} else {
+			occurrence.WorkflowInstanceID = pointer.For(instance.ID)
 		}
-
-		occurrence.WorkflowInstanceID = pointer.For(instance.ID)
 	}
 
 	err = temporalworkflow.ExecuteActivity(

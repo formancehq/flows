@@ -205,3 +205,20 @@ With a sample event payload in the request body. The response will show:
 - `link()` HTTP 4xx responses are non-retryable except 408 (request timeout) and 429 (rate limiting). Network errors, HTTP 5xx responses and response decoding failures remain retryable.
 - If `EvalTriggerVariables` still fails after 15 attempts (about 30 to 43 minutes), the occurrence is recorded with that error and the workflow is not started.
 - If listing triggers, recording the occurrence or publishing the termination event still fails after 15 attempts, the trigger workflow fails. See [Activity Retries](retries.md).
+
+## Deleted workflow definitions
+
+API v1 and v2 reject new runs of missing or deleted definitions with HTTP 404.
+Both trigger discovery paths exclude deleted definitions. An already-loaded
+trigger snapshot is checked again when its child attempts to create an instance.
+A rejected start records an occurrence with an error and no workflow instance ID,
+and publishes `FAILED_TRIGGER`.
+
+Instance admission locks the definition row until the instance insertion commits.
+Deletion uses the same row: if deletion commits first, admission is rejected; if
+admission commits first, that instance may continue after deletion. Activity
+retries return an existing admission even after deletion. No running instance is
+cancelled, and definition/instance detail and history reads retain their existing
+behavior. No schema migration is required. During a rolling upgrade, old workers
+can still admit deleted definitions; enforcement requires all workers to run the
+updated activity implementation.

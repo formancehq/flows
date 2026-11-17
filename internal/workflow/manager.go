@@ -89,8 +89,12 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 	workflow := Workflow{}
 	if err := m.db.NewSelect().
 		Where("id = ?", id).
+		Where("deleted_at IS NULL").
 		Model(&workflow).
 		Scan(ctx); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrWorkflowNotFound
+		}
 		return nil, err
 	}
 
@@ -114,6 +118,9 @@ func (m *WorkflowManager) RunWorkflow(ctx context.Context, id string, variables 
 
 	instance := &Instance{}
 	if err := run.Get(ctx, instance); err != nil {
+		if IsWorkflowNotFoundError(err) {
+			return nil, ErrWorkflowNotFound
+		}
 		return nil, err
 	}
 
