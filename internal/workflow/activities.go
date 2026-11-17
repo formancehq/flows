@@ -2,12 +2,15 @@ package workflow
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/formancehq/orchestration/internal/temporalworker"
 	"github.com/formancehq/orchestration/pkg/events"
 	"github.com/uptrace/bun"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 )
 
 type Activities struct {
@@ -70,10 +73,34 @@ func (a Activities) SendWorkflowStageTerminationEvent(ctx context.Context, insta
 
 func (a Activities) InsertNewInstance(ctx context.Context, workflowID string) (*Instance, error) {
 	instance := NewInstance(activity.GetInfo(ctx).WorkflowExecution.ID, workflowID)
-	if _, err := a.db.
-		NewInsert().
-		Model(&instance).
-		Exec(ctx); err != nil {
+	// The row lock conflicts with DeleteWorkflow's UPDATE. Keep it until the
+	// instance is durable: a stale API/trigger snapshot cannot admit a new run
+	// after deletion commits. Existing admissions may finish, including retries
+	// after the activity committed but its acknowledgement was lost.
+	err := a.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var definition Workflow
+		if err := tx.NewSelect().Model(&definition).Where("id = ?", workflowID).
+			For("UPDATE").Scan(ctx); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return temporal.NewNonRetryableApplicationError(ErrWorkflowNotFound.Error(), WorkflowNotFoundErrorType, nil)
+			}
+			return err
+		}
+		err := tx.NewSelect().Model(&instance).Where("u.id = ?", instance.ID).
+			Where("u.workflow_id = ?", workflowID).Scan(ctx)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if definition.DeletedAt != nil {
+			return temporal.NewNonRetryableApplicationError(ErrWorkflowNotFound.Error(), WorkflowNotFoundErrorType, nil)
+		}
+		_, err = tx.NewInsert().Model(&instance).Exec(ctx)
+		return err
+	})
+	if err != nil {
 		return nil, err
 	}
 

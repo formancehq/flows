@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -21,6 +22,10 @@ func runWorkflow(backend api2.Backend) http.HandlerFunc {
 			}
 		}
 		instance, err := backend.RunWorkflow(r.Context(), workflowID(r), input)
+		if errors.Is(err, workflow.ErrWorkflowNotFound) {
+			api.NotFound(w, err)
+			return
+		}
 		if err != nil {
 			api.InternalServerError(w, r, err)
 			return
